@@ -1,0 +1,7 @@
+name: oaslananka/fovux-mcp
+description: >-
+  Local-first edge-AI computer vision workbench MCP server. Provides YOLO
+  dataset, training, evaluation, export, and inference tools.
+version: "4.1.8"
+command: fovux-mcp serve
+transport: stdio

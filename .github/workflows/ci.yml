@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+  workflow_dispatch:
+    inputs:
+      run_slow:
+        description: "Run slow backend validation"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+  schedule:
+    - cron: "17 2 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ci:
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2022]
+        python-version: ["3.11", "3.12", "3.13"]
+        node-version: ["22", "24.14.1"]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Check action SHA pinning
+        shell: bash
+        run: |
+          if grep -R "^[[:space:]]*uses:" .github/workflows/ | grep -v "@[0-9a-f]\{40\}"; then
+            echo "ERROR: Unpinned actions found. Use SHA-pinned refs."
+            exit 1
+          fi
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        if: hashFiles('fovux-mcp/pyproject.toml') != ''
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        if: hashFiles('fovux-mcp/pyproject.toml') != ''
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        if: hashFiles('fovux-studio/package.json') != ''
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version: "1.26.2"
+          cache: false
+
+      - name: Install Task
+        shell: bash
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@v3.50.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install actionlint
+        shell: bash
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install Gitleaks
+        shell: bash
+        run: |
+          go install github.com/zricethezav/gitleaks/v8@v8.30.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install pnpm
+        if: hashFiles('fovux-studio/package.json') != ''
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
+          pnpm --version
+
+      - name: Install dependencies
+        run: task install
+
+      - name: Run CI
+        run: task ci
+
+  ci-required:
+    name: ci-required
+    needs: ci
+    if: github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Confirm CI matrix passed
+        run: |
+          set -euo pipefail
+          echo "CI matrix passed."

@@ -1,0 +1,67 @@
+stages:
+  - stage: FovuxStudio_Lint
+    displayName: "fovux-studio — Lint"
+    dependsOn: []
+    jobs:
+      - job: Lint
+        pool:
+          vmImage: ubuntu-24.04
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: "24.14.1"
+          - task: Cache@2
+            inputs:
+              key: 'pnpm | "$(Agent.OS)" | fovux-studio/pnpm-lock.yaml'
+              restoreKeys: |
+                pnpm | "$(Agent.OS)"
+              path: $(PNPM_STORE_PATH)
+          - pwsh: |
+              corepack enable
+              corepack prepare pnpm@10.33.0 --activate
+              pnpm config set store-dir "$(PNPM_STORE_PATH)"
+            displayName: Install pnpm
+          - pwsh: |
+              Set-Location fovux-studio
+              pnpm install --frozen-lockfile
+            displayName: Install deps
+          - pwsh: |
+              Set-Location fovux-studio
+              pnpm check
+            displayName: Lint + typecheck + test
+          - pwsh: |
+              Set-Location fovux-studio
+              pnpm audit:prod
+            displayName: pnpm audit
+
+  - stage: FovuxStudio_Build
+    displayName: "fovux-studio — Build"
+    dependsOn: FovuxStudio_Lint
+    jobs:
+      - job: Build
+        pool:
+          vmImage: ubuntu-24.04
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: "24.14.1"
+          - task: Cache@2
+            inputs:
+              key: 'pnpm | "$(Agent.OS)" | fovux-studio/pnpm-lock.yaml'
+              restoreKeys: |
+                pnpm | "$(Agent.OS)"
+              path: $(PNPM_STORE_PATH)
+          - pwsh: |
+              corepack enable
+              corepack prepare pnpm@10.33.0 --activate
+              pnpm config set store-dir "$(PNPM_STORE_PATH)"
+            displayName: Install pnpm
+          - pwsh: |
+              Set-Location fovux-studio
+              pnpm install --frozen-lockfile
+              pnpm build
+              pnpm dlx @vscode/vsce@3.9.1 package --out fovux-studio.vsix --no-dependencies
+            displayName: Build VSIX
+          - publish: fovux-studio/fovux-studio.vsix
+            artifact: fovux-studio-vsix
+            displayName: Publish VSIX

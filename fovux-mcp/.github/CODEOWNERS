@@ -1,0 +1,12 @@
+# Global owners — review required for all changes
+* @oaslananka
+
+# Core source
+/src/ @oaslananka
+/tests/ @oaslananka
+
+# CI/CD — extra scrutiny
+/.github/workflows/ @oaslananka
+
+# Security policy
+/SECURITY.md @oaslananka

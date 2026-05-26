@@ -1,0 +1,11 @@
+services:
+  fovux-mcp:
+    build: .
+    volumes:
+      - ~/.fovux:/data/.fovux
+    ports:
+      - "127.0.0.1:7823:7823"
+    environment:
+      FOVUX_HOME: /data/.fovux
+      FOVUX_LOG_LEVEL: INFO
+    restart: unless-stopped

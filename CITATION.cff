@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use Fovux in your research, please cite it as below."
+title: "Fovux: Local-first Edge-AI Computer Vision Workbench"
+type: software
+authors:
+  - family-names: "Aslan"
+    given-names: "Osman"
+    alias: "oaslananka"
+repository-code: "https://github.com/oaslananka/fovux"
+url: "https://oaslananka.github.io/fovux/"
+license: Apache-2.0
+version: "4.1.4"
+date-released: "2026-04-27"
+keywords:
+  - computer-vision
+  - yolo
+  - mcp
+  - edge-ai
+  - model-context-protocol

@@ -1,0 +1,127 @@
+name: CodeQL SAST
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 3"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  analyze:
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+          - language: javascript-typescript
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Install CodeQL CLI
+        shell: bash
+        env:
+          CODEQL_BUNDLE_SHA256: 50cb365972321aa315ea4536f496f5dd285e158a0849c6d801f6dc523a17402b
+        run: |
+          set -euo pipefail
+          version="2.25.3"
+          bundle="$RUNNER_TEMP/codeql-bundle.tar.zst"
+          install_dir="$RUNNER_TEMP/codeql-bundle"
+          curl -fsSL --retry 3 -o "$bundle" \
+            "https://github.com/github/codeql-action/releases/download/codeql-bundle-v${version}/codeql-bundle-linux64.tar.zst"
+          echo "${CODEQL_BUNDLE_SHA256}  $bundle" | sha256sum --check -
+          mkdir -p "$install_dir"
+          tar --zstd -xf "$bundle" -C "$install_dir"
+          "$install_dir/codeql/codeql" version --format=json > "$RUNNER_TEMP/codeql-version.json"
+          echo "$install_dir/codeql" >> "$GITHUB_PATH"
+
+      - name: Create CodeQL database
+        shell: bash
+        run: |
+          set -euo pipefail
+          db="$RUNNER_TEMP/codeql-db/${{ matrix.language }}"
+          log="$RUNNER_TEMP/codeql-create-${{ matrix.language }}.log"
+          mkdir -p "$(dirname "$db")"
+          if ! codeql database create "$db" \
+            --language="${{ matrix.language }}" \
+            --source-root=. \
+            --build-mode=none \
+            --threads=0 \
+            --ram=4096 \
+            --overwrite >"$log" 2>&1; then
+            tail -n 120 "$log"
+            exit 1
+          fi
+
+      - name: Analyze CodeQL database
+        shell: bash
+        run: |
+          set -euo pipefail
+          db="$RUNNER_TEMP/codeql-db/${{ matrix.language }}"
+          sarif="$RUNNER_TEMP/codeql-${{ matrix.language }}.sarif"
+          log="$RUNNER_TEMP/codeql-analyze-${{ matrix.language }}.log"
+          if ! codeql database analyze "$db" \
+            --format=sarif-latest \
+            --output="$sarif" \
+            --sarif-category="/language:${{ matrix.language }}" \
+            --threads=0 \
+            --ram=4096 >"$log" 2>&1; then
+            tail -n 120 "$log"
+            exit 1
+          fi
+
+      - name: Upload CodeQL SARIF
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          sarif="$RUNNER_TEMP/codeql-${{ matrix.language }}.sarif"
+          log="$RUNNER_TEMP/codeql-upload-${{ matrix.language }}.log"
+          if ! codeql github upload-results \
+            --repository="$GITHUB_REPOSITORY" \
+            --ref="$GITHUB_REF" \
+            --commit="$GITHUB_SHA" \
+            --sarif="$sarif" >"$log" 2>&1; then
+            tail -n 120 "$log"
+            exit 1
+          fi
+
+  codeql-required:
+    name: codeql-required
+    needs: analyze
+    if: github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Confirm CodeQL passed
+        run: |
+          set -euo pipefail
+          echo "CodeQL passed."

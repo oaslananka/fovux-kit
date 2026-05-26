@@ -1,0 +1,38 @@
+name: Stale Issues
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  stale:
+    if: github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f
+        with:
+          days-before-stale: 60
+          days-before-close: 14
+          stale-issue-message: >-
+            This issue has been automatically marked as stale because it has
+            not had activity in the last 60 days. It will be closed in 14 days
+            if no further activity occurs.
+          stale-pr-message: >-
+            This PR has been automatically marked as stale because it has not
+            had activity in the last 60 days.
+          exempt-issue-labels: "priority:p0,pinned,security"
+          exempt-pr-labels: "priority:p0,pinned,security"

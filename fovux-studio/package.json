@@ -1,0 +1,880 @@
+{
+  "name": "fovux-studio",
+  "displayName": "Fovux Studio",
+  "description": "Visual companion for Fovux MCP — run dashboards, dataset inspector, export wizard.",
+  "version": "4.1.8",
+  "publisher": "oaslananka",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "engines": {
+    "vscode": "^1.98.0",
+    "node": ">=22.0.0"
+  },
+  "extensionKind": [
+    "workspace",
+    "ui"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Fovux Studio can display runs and models in untrusted workspaces but cannot start servers or launch training.",
+      "restrictedConfigurations": [
+        "fovux.home",
+        "fovux.serverCommand"
+      ]
+    }
+  },
+  "categories": [
+    "Machine Learning",
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "computer-vision",
+    "yolo",
+    "mcp",
+    "edge-ai",
+    "ultralytics"
+  ],
+  "icon": "resources/icon.png",
+  "galleryBanner": {
+    "color": "#1a1a2e",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oaslananka/fovux"
+  },
+  "bugs": {
+    "url": "https://github.com/oaslananka/fovux/issues"
+  },
+  "homepage": "https://github.com/oaslananka/fovux/tree/main/fovux-studio",
+  "activationEvents": [
+    "onView:fovux.runsView",
+    "onView:fovux.modelsView",
+    "onView:fovux.exportsView",
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "fovux.startTraining",
+        "title": "Fovux: Start Training…",
+        "category": "Fovux",
+        "icon": "$(run)"
+      },
+      {
+        "command": "fovux.startServer",
+        "title": "Fovux: Start Local Server",
+        "category": "Fovux",
+        "icon": "$(server-process)"
+      },
+      {
+        "command": "fovux.stopServer",
+        "title": "Fovux: Stop Local Server",
+        "category": "Fovux",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "fovux.openDashboard",
+        "title": "Fovux: Open Dashboard",
+        "category": "Fovux",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "fovux.openTimeline",
+        "title": "Fovux: Open Run Timeline",
+        "category": "Fovux",
+        "icon": "$(history)"
+      },
+      {
+        "command": "fovux.openDatasetInspector",
+        "title": "Fovux: Inspect Dataset…",
+        "category": "Fovux",
+        "icon": "$(search)"
+      },
+      {
+        "command": "fovux.openAnnotationEditor",
+        "title": "Fovux: Open Annotation Editor…",
+        "category": "Fovux",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "fovux.openExportWizard",
+        "title": "Fovux: Export Model…",
+        "category": "Fovux",
+        "icon": "$(package)"
+      },
+      {
+        "command": "fovux.compareRuns",
+        "title": "Fovux: Compare Selected Runs",
+        "category": "Fovux",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "fovux.openRunInExplorer",
+        "title": "Fovux: Reveal Run in File Explorer",
+        "category": "Fovux",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "fovux.stopRun",
+        "title": "Fovux: Stop Run",
+        "category": "Fovux",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "fovux.resumeRun",
+        "title": "Fovux: Resume Run",
+        "category": "Fovux",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "fovux.copyRunId",
+        "title": "Fovux: Copy Run ID",
+        "category": "Fovux",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "fovux.revealPath",
+        "title": "Fovux: Reveal Path",
+        "category": "Fovux",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "fovux.deleteRun",
+        "title": "Fovux: Delete Run",
+        "category": "Fovux",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "fovux.tagRun",
+        "title": "Fovux: Tag Run…",
+        "category": "Fovux",
+        "icon": "$(tag)"
+      },
+      {
+        "command": "fovux.openFovuxHome",
+        "title": "Fovux: Reveal FOVUX_HOME",
+        "category": "Fovux",
+        "icon": "$(home)"
+      },
+      {
+        "command": "fovux.refreshViews",
+        "title": "Fovux: Refresh Views",
+        "category": "Fovux",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "fovux.selectProfile",
+        "title": "Fovux: Select FOVUX_HOME Profile",
+        "category": "Fovux",
+        "icon": "$(account)"
+      },
+      {
+        "command": "fovux.installBackend",
+        "title": "Fovux: Install Backend (fovux-mcp)",
+        "category": "Fovux",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "fovux.runDoctor",
+        "title": "Fovux: Run Doctor Check",
+        "category": "Fovux",
+        "icon": "$(heart-filled)"
+      },
+      {
+        "command": "fovux.openUpgradeGuide",
+        "title": "Fovux: Open Upgrade Guide",
+        "category": "Fovux",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "fovux.openSecurityDoc",
+        "title": "Fovux: Open Security Policy",
+        "category": "Fovux",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "fovux.validateDataset",
+        "title": "Fovux: Validate Dataset",
+        "category": "Fovux",
+        "icon": "$(check)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "fovux.startTraining",
+        "key": "ctrl+shift+f t",
+        "mac": "cmd+shift+f t",
+        "when": "fovux.serverRunning"
+      },
+      {
+        "command": "fovux.openDashboard",
+        "key": "ctrl+shift+f d",
+        "mac": "cmd+shift+f d"
+      },
+      {
+        "command": "fovux.openDatasetInspector",
+        "key": "ctrl+shift+f i",
+        "mac": "cmd+shift+f i"
+      },
+      {
+        "command": "fovux.refreshViews",
+        "key": "ctrl+shift+f r",
+        "mac": "cmd+shift+f r",
+        "when": "view =~ /^fovux\\./i"
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "fovux_callTool",
+        "toolReferenceName": "fovux",
+        "displayName": "Call Fovux MCP Tool",
+        "modelDescription": "Call a local fovux-mcp tool after user confirmation. Use for computer-vision dataset, training, evaluation, export, inference, and run-management tasks.",
+        "icon": "$(eye)",
+        "tags": [
+          "fovux",
+          "mcp",
+          "computer-vision"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tool": {
+              "type": "string",
+              "description": "The fovux-mcp tool name, for example train_status or dataset_inspect."
+            },
+            "args": {
+              "type": "object",
+              "description": "JSON object passed as the tool arguments.",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "tool"
+          ]
+        }
+      },
+      {
+        "name": "fovux_dataset_inspect",
+        "toolReferenceName": "fovux_dataset_inspect",
+        "displayName": "Inspect Dataset",
+        "modelDescription": "Analyze a YOLO dataset directory and generate a quality report including class distribution, image counts, and annotation statistics.",
+        "tags": [
+          "fovux",
+          "dataset"
+        ],
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dataset_path": {
+              "type": "string",
+              "description": "Path to the YOLO dataset directory containing data.yaml."
+            }
+          },
+          "required": [
+            "dataset_path"
+          ]
+        }
+      },
+      {
+        "name": "fovux_dataset_validate",
+        "toolReferenceName": "fovux_dataset_validate",
+        "displayName": "Validate Dataset",
+        "modelDescription": "Validate a YOLO dataset for structural correctness: checks data.yaml, image-label pairing, and annotation format.",
+        "tags": [
+          "fovux",
+          "dataset"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dataset_path": {
+              "type": "string",
+              "description": "Path to the YOLO dataset directory."
+            }
+          },
+          "required": [
+            "dataset_path"
+          ]
+        }
+      },
+      {
+        "name": "fovux_dataset_find_duplicates",
+        "toolReferenceName": "fovux_dataset_find_duplicates",
+        "displayName": "Find Dataset Duplicates",
+        "modelDescription": "Detect duplicate or near-duplicate images in a YOLO dataset using perceptual hashing.",
+        "tags": [
+          "fovux",
+          "dataset"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dataset_path": {
+              "type": "string",
+              "description": "Path to the YOLO dataset directory."
+            },
+            "threshold": {
+              "type": "number",
+              "description": "Hash distance threshold (default 8)."
+            }
+          },
+          "required": [
+            "dataset_path"
+          ]
+        }
+      },
+      {
+        "name": "fovux_train_start",
+        "toolReferenceName": "fovux_train_start",
+        "displayName": "Start Training",
+        "modelDescription": "Launch a new YOLO training run with specified dataset, model, epochs, batch size, and device.",
+        "tags": [
+          "fovux",
+          "training"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dataset_path": {
+              "type": "string",
+              "description": "Path to the YOLO training dataset."
+            },
+            "model": {
+              "type": "string",
+              "description": "Model architecture (e.g., yolov8n.pt)."
+            },
+            "epochs": {
+              "type": "integer",
+              "description": "Number of training epochs."
+            },
+            "batch": {
+              "type": "integer",
+              "description": "Batch size."
+            },
+            "imgsz": {
+              "type": "integer",
+              "description": "Training image size."
+            },
+            "device": {
+              "type": "string",
+              "description": "Device: auto, cpu, 0, 1, etc."
+            }
+          },
+          "required": [
+            "dataset_path"
+          ]
+        }
+      },
+      {
+        "name": "fovux_train_status",
+        "toolReferenceName": "fovux_train_status",
+        "displayName": "Training Status",
+        "modelDescription": "Get the current metrics and status for an ongoing or completed YOLO training run.",
+        "tags": [
+          "fovux",
+          "training"
+        ],
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "run_id": {
+              "type": "string",
+              "description": "ID of the training run."
+            }
+          },
+          "required": [
+            "run_id"
+          ]
+        }
+      },
+      {
+        "name": "fovux_train_stop",
+        "toolReferenceName": "fovux_train_stop",
+        "displayName": "Stop Training",
+        "modelDescription": "Stop a running YOLO training run by its run ID.",
+        "tags": [
+          "fovux",
+          "training"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "run_id": {
+              "type": "string",
+              "description": "ID of the training run to stop."
+            }
+          },
+          "required": [
+            "run_id"
+          ]
+        }
+      },
+      {
+        "name": "fovux_eval_run",
+        "toolReferenceName": "fovux_eval_run",
+        "displayName": "Run Evaluation",
+        "modelDescription": "Evaluate a YOLO model checkpoint against a validation dataset and return mAP metrics.",
+        "tags": [
+          "fovux",
+          "evaluation"
+        ],
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkpoint": {
+              "type": "string",
+              "description": "Model checkpoint path or name."
+            },
+            "dataset_path": {
+              "type": "string",
+              "description": "Validation dataset path."
+            }
+          },
+          "required": [
+            "checkpoint",
+            "dataset_path"
+          ]
+        }
+      },
+      {
+        "name": "fovux_eval_compare",
+        "toolReferenceName": "fovux_eval_compare",
+        "displayName": "Compare Evaluations",
+        "modelDescription": "Compare metrics between two training runs side by side.",
+        "tags": [
+          "fovux",
+          "evaluation"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "run_id_a": {
+              "type": "string",
+              "description": "First run ID."
+            },
+            "run_id_b": {
+              "type": "string",
+              "description": "Second run ID."
+            }
+          },
+          "required": [
+            "run_id_a",
+            "run_id_b"
+          ]
+        }
+      },
+      {
+        "name": "fovux_export_onnx",
+        "toolReferenceName": "fovux_export_onnx",
+        "displayName": "Export to ONNX",
+        "modelDescription": "Export a PyTorch YOLO checkpoint to ONNX format with configurable opset and input shapes.",
+        "tags": [
+          "fovux",
+          "export"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkpoint": {
+              "type": "string",
+              "description": "Model checkpoint to export."
+            },
+            "imgsz": {
+              "type": "integer",
+              "description": "Export image size."
+            }
+          },
+          "required": [
+            "checkpoint"
+          ]
+        }
+      },
+      {
+        "name": "fovux_export_tflite",
+        "toolReferenceName": "fovux_export_tflite",
+        "displayName": "Export to TFLite",
+        "modelDescription": "Export a YOLO checkpoint to TensorFlow Lite format for mobile and edge deployment.",
+        "tags": [
+          "fovux",
+          "export"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkpoint": {
+              "type": "string",
+              "description": "Model checkpoint to export."
+            },
+            "imgsz": {
+              "type": "integer",
+              "description": "Export image size."
+            }
+          },
+          "required": [
+            "checkpoint"
+          ]
+        }
+      },
+      {
+        "name": "fovux_quantize_int8",
+        "toolReferenceName": "fovux_quantize_int8",
+        "displayName": "Quantize INT8",
+        "modelDescription": "Quantize a model to INT8 precision using a calibration dataset for edge deployment.",
+        "tags": [
+          "fovux",
+          "export"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkpoint": {
+              "type": "string",
+              "description": "Model checkpoint to quantize."
+            },
+            "calibration_dataset": {
+              "type": "string",
+              "description": "Path to calibration dataset."
+            }
+          },
+          "required": [
+            "checkpoint",
+            "calibration_dataset"
+          ]
+        }
+      },
+      {
+        "name": "fovux_doctor",
+        "toolReferenceName": "fovux_doctor",
+        "displayName": "System Doctor",
+        "modelDescription": "Run a diagnostic health check covering CUDA, disk, CPU, RAM, dependencies, and active training runs.",
+        "tags": [
+          "fovux",
+          "system"
+        ],
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "fovux",
+          "title": "Fovux",
+          "icon": "$(eye)"
+        }
+      ]
+    },
+    "views": {
+      "fovux": [
+        {
+          "id": "fovux.runsView",
+          "name": "Runs",
+          "icon": "$(graph)"
+        },
+        {
+          "id": "fovux.modelsView",
+          "name": "Models",
+          "icon": "$(package)"
+        },
+        {
+          "id": "fovux.exportsView",
+          "name": "Exports",
+          "icon": "$(archive)"
+        },
+        {
+          "id": "fovux.doctorView",
+          "name": "System Health",
+          "icon": "$(heart)"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "fovux.runsView",
+        "contents": "No runs yet.\n[Open Dashboard](command:fovux.openDashboard)\n[Inspect a Dataset](command:fovux.openDatasetInspector)\n[Reveal FOVUX_HOME](command:fovux.openFovuxHome)"
+      },
+      {
+        "view": "fovux.modelsView",
+        "contents": "No models yet.\n[Export a Model](command:fovux.openExportWizard)\n[Reveal FOVUX_HOME](command:fovux.openFovuxHome)"
+      },
+      {
+        "view": "fovux.exportsView",
+        "contents": "No export history yet.\n[Export a Model](command:fovux.openExportWizard)\n[Reveal FOVUX_HOME](command:fovux.openFovuxHome)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "fovux.startServer",
+          "when": "view == fovux.runsView",
+          "group": "navigation"
+        },
+        {
+          "command": "fovux.startTraining",
+          "when": "view == fovux.runsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fovux.openDashboard",
+          "when": "view == fovux.runsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "fovux.openTimeline",
+          "when": "view == fovux.runsView",
+          "group": "navigation@2.5"
+        },
+        {
+          "command": "fovux.refreshViews",
+          "when": "view == fovux.runsView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "fovux.openAnnotationEditor",
+          "when": "view == fovux.runsView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "fovux.openExportWizard",
+          "when": "view == fovux.modelsView",
+          "group": "navigation"
+        },
+        {
+          "command": "fovux.refreshViews",
+          "when": "view == fovux.modelsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fovux.openExportWizard",
+          "when": "view == fovux.exportsView",
+          "group": "navigation"
+        },
+        {
+          "command": "fovux.refreshViews",
+          "when": "view == fovux.exportsView",
+          "group": "navigation@1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "fovux.stopRun",
+          "when": "view == fovux.runsView && viewItem == fovuxRunRunning",
+          "group": "inline"
+        },
+        {
+          "command": "fovux.resumeRun",
+          "when": "view == fovux.runsView && viewItem == fovuxRunResumable",
+          "group": "inline"
+        },
+        {
+          "command": "fovux.copyRunId",
+          "when": "view == fovux.runsView && (viewItem == fovuxRun || viewItem == fovuxRunRunning || viewItem == fovuxRunResumable)",
+          "group": "navigation"
+        },
+        {
+          "command": "fovux.tagRun",
+          "when": "view == fovux.runsView && (viewItem == fovuxRun || viewItem == fovuxRunRunning || viewItem == fovuxRunResumable)",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fovux.openRunInExplorer",
+          "when": "view == fovux.runsView && (viewItem == fovuxRun || viewItem == fovuxRunRunning || viewItem == fovuxRunResumable)",
+          "group": "navigation@2"
+        },
+        {
+          "command": "fovux.deleteRun",
+          "when": "view == fovux.runsView && (viewItem == fovuxRun || viewItem == fovuxRunResumable)",
+          "group": "navigation@9"
+        },
+        {
+          "command": "fovux.revealPath",
+          "when": "view == fovux.exportsView && viewItem == fovuxExport",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Fovux Studio",
+      "properties": {
+        "fovux.home": {
+          "type": "string",
+          "default": "",
+          "description": "Path to FOVUX_HOME directory. Leave empty to use ~/.fovux or FOVUX_HOME env var."
+        },
+        "fovux.httpPort": {
+          "type": "number",
+          "default": 7823,
+          "description": "Port for the fovux-mcp HTTP transport."
+        },
+        "fovux.serverCommand": {
+          "type": "string",
+          "default": "fovux-mcp",
+          "description": "Command used by Fovux Studio to start the local fovux-mcp server."
+        },
+        "fovux.pollIntervalMs": {
+          "type": "number",
+          "default": 2000,
+          "description": "Polling interval in milliseconds for active run metrics."
+        },
+        "fovux.activeProfile": {
+          "type": "string",
+          "default": "",
+          "description": "Name of the active FOVUX_HOME profile from fovux.profiles."
+        },
+        "fovux.profiles": {
+          "type": "array",
+          "default": [],
+          "description": "Named FOVUX_HOME profiles for switching between local Fovux workspaces.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "home"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "home": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "fovux.experimental.allowIncompatibleServer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow tool calls to a fovux-mcp server outside the supported version range. Use at your own risk."
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "fovux.gettingStarted",
+        "title": "Getting Started with Fovux",
+        "description": "Set up your local computer vision workbench in 5 minutes.",
+        "steps": [
+          {
+            "id": "installBackend",
+            "title": "Install the Backend",
+            "description": "Install `fovux-mcp` to power your tools.\n[Install Backend](command:fovux.installBackend)",
+            "media": {
+              "markdown": "resources/walkthroughs/01-install-backend.md"
+            },
+            "completionEvents": [
+              "onContext:fovux.walkthrough.backendInstalled"
+            ]
+          },
+          {
+            "id": "setProfile",
+            "title": "Set Your Profile",
+            "description": "Configure your FOVUX_HOME directory.",
+            "media": {
+              "markdown": "resources/walkthroughs/02-set-profile.md"
+            },
+            "completionEvents": [
+              "onSettingChanged:fovux.home"
+            ]
+          },
+          {
+            "id": "startServer",
+            "title": "Start the Server",
+            "description": "Start the local HTTP server.\n[Start Server](command:fovux.startServer)",
+            "media": {
+              "markdown": "resources/walkthroughs/03-start-server.md"
+            },
+            "completionEvents": [
+              "onCommand:fovux.startServer"
+            ]
+          },
+          {
+            "id": "runDoctor",
+            "title": "Run Doctor",
+            "description": "Check your environment.\n[Run Doctor](command:fovux.runDoctor)",
+            "media": {
+              "markdown": "resources/walkthroughs/04-run-doctor.md"
+            },
+            "completionEvents": [
+              "onContext:fovux.walkthrough.doctorRan"
+            ]
+          },
+          {
+            "id": "openDashboard",
+            "title": "Open the Dashboard",
+            "description": "View your runs, models, and exports.\n[Open Dashboard](command:fovux.openDashboard)",
+            "media": {
+              "markdown": "resources/walkthroughs/05-open-dashboard.md"
+            },
+            "completionEvents": [
+              "onCommand:fovux.openDashboard"
+            ]
+          },
+          {
+            "id": "inspectDataset",
+            "title": "Inspect a Dataset",
+            "description": "Validate your YOLO dataset.\n[Inspect Dataset](command:fovux.openDatasetInspector)",
+            "media": {
+              "markdown": "resources/walkthroughs/06-inspect-dataset.md"
+            },
+            "completionEvents": [
+              "onCommand:fovux.openDatasetInspector"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run build",
+    "build": "pnpm exec tsup",
+    "dev": "pnpm exec tsup --watch",
+    "format": "prettier --check \"src/**/*.{ts,tsx}\" \"test/**/*.ts\" \"*.{json,md,mjs}\"",
+    "format:write": "prettier --write \"src/**/*.{ts,tsx}\" \"test/**/*.ts\" \"*.{json,md,mjs}\"",
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm exec vitest run",
+    "test:unit": "pnpm exec vitest run test/suite --coverage",
+    "test:e2e": "vscode-test",
+    "test:a11y": "pnpm exec vitest run test/suite/a11y",
+    "coverage": "pnpm exec vitest run --coverage --coverage.thresholds.lines=85",
+    "audit:prod": "pnpm audit --prod",
+    "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test",
+    "verify": "pnpm check && pnpm build && pnpm audit:prod",
+    "package": "pnpm dlx @vscode/vsce@3.9.1 package",
+    "check:bundle-size": "node scripts/check-bundle-size.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/vscode": "1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.3",
+    "@typescript-eslint/parser": "^8.59.3",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "prettier": "^3.8.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.6"
+  },
+  "dependencies": {
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  }
+}

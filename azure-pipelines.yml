@@ -1,0 +1,16 @@
+trigger: none
+
+pr: none
+
+variables:
+  RUN_SLOW_TESTS: "false"
+  RUN_NIGHTLY: "false"
+  RUN_SECONDARY_OS: "false"
+  UV_CACHE_DIR: "$(Pipeline.Workspace)/.uv-cache"
+  PNPM_STORE_PATH: "$(Pipeline.Workspace)/.pnpm-store"
+
+stages:
+  - template: pipelines/mcp.yml
+  - template: pipelines/studio.yml
+  - template: pipelines/slow.yml
+  - template: pipelines/nightly.yml

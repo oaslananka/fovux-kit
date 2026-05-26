@@ -1,0 +1,24 @@
+name: Documentation
+description: Report missing, stale, or unclear documentation.
+title: "[Docs]: "
+labels: ["type:docs", "area:docs", "status:triage"]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page or file
+      description: Link the page, README section, or file path.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is missing, stale, wrong, or unclear?
+    validations:
+      required: true
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested change
+      description: Optional wording or structure that would solve the issue.

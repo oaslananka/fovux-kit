@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.oaslananka/fovux-mcp",
+  "description": "Local-first edge-AI computer vision workbench MCP server: YOLO dataset inspection, training, evaluation, export, quantization, inference, and run-management tools.",
+  "repository": {
+    "url": "https://github.com/oaslananka/fovux",
+    "source": "github",
+    "directory": "fovux-mcp"
+  },
+  "version": "4.1.8",
+  "websiteUrl": "https://oaslananka.github.io/fovux/",
+  "packages": [
+    {
+      "registry_type": "pypi",
+      "registry_base_url": "https://pypi.org",
+      "identifier": "fovux-mcp",
+      "version": "4.1.8",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "remotes": [
+    {
+      "type": "http",
+      "url": "http://127.0.0.1:7823"
+    }
+  ]
+}

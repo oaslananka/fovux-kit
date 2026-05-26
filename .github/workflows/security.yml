@@ -1,0 +1,164 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * 4"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  security-events: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  gitleaks:
+    name: Gitleaks secret scan
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version: "1.26.2"
+          cache: false
+      - name: Install Gitleaks
+        run: go install github.com/zricethezav/gitleaks/v8@v8.30.1
+      - name: Gitleaks scan
+        run: gitleaks detect --no-banner --redact
+
+  trivy-fs:
+    name: Trivy filesystem scan
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-fs
+
+  pip-audit:
+    name: pip-audit (fovux-mcp)
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+      - name: Run pip-audit
+        working-directory: fovux-mcp
+        run: |
+          set -euo pipefail
+          uv sync --frozen --extra dev
+          uv export --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
+          uv run pip-audit --requirement requirements-audit.txt --strict
+
+  pnpm-audit:
+    name: pnpm audit (fovux-studio)
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version-file: .nvmrc
+      - name: Run pnpm audit
+        working-directory: fovux-studio
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
+          pnpm install --frozen-lockfile
+          pnpm audit --prod
+
+  osv-scan:
+    name: OSV lockfile scan
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Install OSV scanner
+        env:
+          OSV_SCANNER_VERSION: v2.3.6
+          OSV_SCANNER_SHA256: f689e183ef0d573d2459738aae457d411a26241ae58b5088de1af288b3355604
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            --output osv-scanner \
+            "https://github.com/google/osv-scanner/releases/download/${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256}  osv-scanner" | sha256sum --check -
+          chmod +x osv-scanner
+          sudo install -m 0755 osv-scanner /usr/local/bin/osv-scanner
+      - name: Run OSV scanner
+        run: |
+          set -euo pipefail
+          osv-scanner scan source --lockfile fovux-mcp/uv.lock --lockfile fovux-studio/pnpm-lock.yaml .
+
+  security-required:
+    name: security-required
+    needs: [gitleaks, trivy-fs, pip-audit, pnpm-audit, osv-scan]
+    if: github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Confirm security scans passed
+        run: |
+          set -euo pipefail
+          echo "Security scans passed."

@@ -1,0 +1,91 @@
+name: Scorecard supply-chain security
+on:
+  branch_protection_rule:
+  workflow_dispatch:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    - cron: "20 7 * * 2"
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  analysis:
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    name: Scorecard analysis
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Install Scorecard
+        env:
+          SCORECARD_VERSION: "5.5.0"
+          SCORECARD_SHA256: 83b90a05c1540ef1390db1cd5711e5fd04be9c1d8537fb84d39d02092d6a8dff
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            --output scorecard.tar.gz \
+            "https://github.com/ossf/scorecard/releases/download/v${SCORECARD_VERSION}/scorecard_${SCORECARD_VERSION}_linux_amd64.tar.gz"
+          echo "${SCORECARD_SHA256}  scorecard.tar.gz" | sha256sum --check -
+          tar -xzf scorecard.tar.gz scorecard
+          sudo install -m 0755 scorecard /usr/local/bin/scorecard
+
+      - name: "Run analysis"
+        env:
+          GITHUB_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          scorecard \
+            --repo=github.com/oaslananka-lab/fovux \
+            --checks=Binary-Artifacts,Branch-Protection,Dangerous-Workflow,Dependency-Update-Tool,License,Pinned-Dependencies,SAST,Security-Policy,Token-Permissions,Vulnerabilities \
+            --format=json \
+            --show-details \
+            --output results.json
+
+      - name: Enforce minimum score
+        run: |
+          set -euo pipefail
+          jq -e '.score >= 7.0' results.json
+
+      - name: "Upload artifact"
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: scorecard-results
+          path: results.json
+          retention-days: 5
+
+  scorecard-required:
+    name: scorecard-required
+    needs: analysis
+    if: github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Confirm Scorecard passed
+        run: |
+          set -euo pipefail
+          echo "Scorecard passed."

@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible problem in Fovux.
+title: "[Bug]: "
+labels: ["type:bug", "status:triage"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - fovux-mcp
+        - fovux-studio
+        - monorepo / CI
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Include commands, paths with sensitive parts redacted, and screenshots when useful.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python, Node, VS Code, Fovux version, and relevant dependency versions.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste relevant logs. Redact bearer tokens, file paths, and private dataset names.
+      render: text

@@ -1,0 +1,67 @@
+name: Docs Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "fovux-mcp/docs/**"
+      - "fovux-mcp/mkdocs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    if: github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        working-directory: fovux-mcp
+        run: uv sync --frozen --extra dev
+
+      - name: Deploy docs
+        working-directory: fovux-mcp
+        run: uv run mkdocs gh-deploy --strict --force
+
+      - name: Mirror docs branch to personal repository
+        env:
+          GH_TOKEN: ${{ secrets.MIRROR_PAT }}
+          PERSONAL_REPO: oaslananka/fovux
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::error::MIRROR_PAT is required to keep gh-pages mirrored."
+            exit 1
+          fi
+          git remote add personal "https://x-access-token:${GH_TOKEN}@github.com/${PERSONAL_REPO}.git"
+          git fetch origin gh-pages
+          push_args=(--force-with-lease)
+          if git -c http.https://github.com/.extraheader= ls-remote --exit-code --heads personal gh-pages >/dev/null; then
+            git -c http.https://github.com/.extraheader= fetch personal +refs/heads/gh-pages:refs/remotes/personal/gh-pages
+            push_args=(--force-with-lease=refs/heads/gh-pages:refs/remotes/personal/gh-pages)
+          fi
+          git -c http.https://github.com/.extraheader= push personal "${push_args[@]}" refs/remotes/origin/gh-pages:refs/heads/gh-pages

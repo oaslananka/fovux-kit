@@ -1,0 +1,37 @@
+stages:
+  - stage: FovuxSlow
+    displayName: "Slow Validation"
+    dependsOn:
+      - FovuxMCP_Test
+      - FovuxStudio_Lint
+    condition: or(eq(variables['RUN_SLOW_TESTS'], 'true'), eq(variables['Build.CronSchedule.DisplayName'], 'Weekly Slow'))
+    jobs:
+      - job: FovuxMCP_Slow
+        displayName: "fovux-mcp slow integration"
+        pool:
+          vmImage: ubuntu-24.04
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: "3.13"
+          - task: Cache@2
+            inputs:
+              key: 'uv | "$(Agent.OS)" | fovux-mcp/uv.lock'
+              restoreKeys: |
+                uv | "$(Agent.OS)"
+              path: $(UV_CACHE_DIR)
+          - pwsh: |
+              Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
+              if ($IsWindows) {
+                Write-Host "##vso[task.prependpath]$env:USERPROFILE\.local\bin"
+              } else {
+                Write-Host "##vso[task.prependpath]$env:HOME/.local/bin"
+              }
+            displayName: Install uv
+          - pwsh: |
+              $env:UV_CACHE_DIR = "$(UV_CACHE_DIR)"
+              Set-Location fovux-mcp
+              uv sync --frozen --extra dev
+              $env:FOVUX_RUN_SLOW_TESTS = "1"
+              uv run pytest tests/integration/test_e2e_training.py -m slow -q
+            displayName: Slow E2E training

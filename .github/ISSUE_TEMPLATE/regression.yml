@@ -1,0 +1,44 @@
+name: Regression
+description: Report behavior that worked in an earlier version.
+title: "[Regression]: "
+labels: ["regression", "type:bug", "status:triage"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - fovux-mcp
+        - fovux-studio
+        - monorepo / CI
+    validations:
+      required: true
+  - type: input
+    id: last-working
+    attributes:
+      label: Last working version or commit
+    validations:
+      required: true
+  - type: input
+    id: first-broken
+    attributes:
+      label: First broken version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Describe what changed and how it affects your workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true

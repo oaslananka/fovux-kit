@@ -1,0 +1,1 @@
+"""Fovux MCP test package."""

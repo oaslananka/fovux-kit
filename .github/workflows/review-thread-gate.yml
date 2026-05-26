@@ -1,0 +1,80 @@
+name: Review Thread Gate
+
+on:
+  pull_request_review:
+    types: [submitted, dismissed]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
+  pull_request:
+    types: [synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: review-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check-threads:
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check unresolved review threads
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          script: |
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    headRefOid
+                    reviewThreads(first: 100, after: $cursor) {
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                      }
+                      nodes {
+                        isResolved
+                        isOutdated
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+            const number = context.payload.pull_request.number;
+            let cursor = null;
+            let unresolved = 0;
+            let sha = context.payload.pull_request.head.sha;
+
+            do {
+              const result = await github.graphql(query, { owner, repo, number, cursor });
+              const pullRequest = result.repository.pullRequest;
+              sha = pullRequest.headRefOid || sha;
+              const threads = pullRequest.reviewThreads;
+              unresolved += threads.nodes.filter((thread) => !thread.isResolved && !thread.isOutdated).length;
+              cursor = threads.pageInfo.hasNextPage ? threads.pageInfo.endCursor : null;
+            } while (cursor);
+
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha,
+              state: unresolved > 0 ? 'pending' : 'success',
+              context: 'Review Threads',
+              description: unresolved > 0
+                ? `${unresolved} unresolved review thread(s)`
+                : 'All review threads resolved',
+            });

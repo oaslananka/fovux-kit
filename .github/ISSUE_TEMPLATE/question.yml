@@ -1,0 +1,28 @@
+name: Question
+description: Ask a focused usage or integration question.
+title: "[Question]: "
+labels: ["status:triage"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - fovux-mcp
+        - fovux-studio
+        - documentation
+        - CI / release
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Include the exact command, workflow, or integration you are trying to use.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Versions, OS, dataset shape, logs, or screenshots when useful.

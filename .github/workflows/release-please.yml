@@ -1,0 +1,462 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release-please:
+    name: release-please-main
+    if: github.repository == 'oaslananka-lab/fovux' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    outputs:
+      mcp_release_created: ${{ steps.rp.outputs['fovux-mcp--release_created'] }}
+      mcp_tag_name: ${{ steps.rp.outputs['fovux-mcp--tag_name'] }}
+      mcp_version: ${{ steps.rp.outputs['fovux-mcp--version'] }}
+      studio_release_created: ${{ steps.rp.outputs['fovux-studio--release_created'] }}
+      studio_tag_name: ${{ steps.rp.outputs['fovux-studio--tag_name'] }}
+      studio_version: ${{ steps.rp.outputs['fovux-studio--version'] }}
+
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
+        id: rp
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Synchronize release pull request metadata
+        if: steps.rp.outputs.prs != '' && steps.rp.outputs.prs != '[]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_PULL_REQUESTS: ${{ steps.rp.outputs.prs }}
+        run: |
+          set -euo pipefail
+          branches="$(
+            jq -r '.[] | .headBranchName // .headRefName // .head_branch // empty' \
+              <<<"$RELEASE_PULL_REQUESTS" | sort -u
+          )"
+
+          if [[ -z "$branches" ]]; then
+            echo "No release pull request branches found."
+            exit 0
+          fi
+
+          while IFS= read -r branch; do
+            [[ -z "$branch" ]] && continue
+            workdir="$(mktemp -d)"
+            trap 'rm -rf "$workdir"' RETURN
+            git clone --branch "$branch" --depth 1 \
+              "https://github.com/${GITHUB_REPOSITORY}.git" "$workdir"
+            cd "$workdir"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            python3 scripts/sync_mcp_metadata.py
+            if git diff --quiet; then
+              cd -
+              rm -rf "$workdir"
+              trap - RETURN
+              continue
+            fi
+            git add mcp.json fovux-mcp/server.json fovux-mcp/smithery.yaml fovux-mcp/uv.lock
+            git commit -m "chore(release): sync release metadata"
+            git remote set-url origin \
+              "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            git push origin "HEAD:${branch}"
+            cd -
+            rm -rf "$workdir"
+            trap - RETURN
+          done <<<"$branches"
+
+      - name: Dispatch release pull request checks
+        if: steps.rp.outputs.prs != '' && steps.rp.outputs.prs != '[]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_PULL_REQUESTS: ${{ steps.rp.outputs.prs }}
+        run: |
+          set -euo pipefail
+          branches="$(
+            jq -r '.[] | .headBranchName // .headRefName // .head_branch // empty' \
+              <<<"$RELEASE_PULL_REQUESTS" | sort -u
+          )"
+
+          if [[ -z "$branches" ]]; then
+            echo "No release pull request branches found."
+            exit 0
+          fi
+
+          while IFS= read -r branch; do
+            [[ -z "$branch" ]] && continue
+            for workflow in ci.yml security.yml codeql.yml scorecard.yml release-please.yml; do
+              gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref "$branch"
+            done
+          done <<<"$branches"
+
+  release-please-check:
+    name: release-please
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      github.event_name != 'push' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Validate release automation
+        run: |
+          set -euo pipefail
+          node scripts/validate_release_automation.mjs
+
+  publish-mcp:
+    needs: release-please
+    if: >
+      needs.release-please.outputs.mcp_release_created == 'true' &&
+      github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    environment: pypi-production
+    timeout-minutes: 30
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ needs.release-please.outputs.mcp_tag_name }}
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+
+      - name: Build Python package
+        working-directory: fovux-mcp
+        run: |
+          set -euo pipefail
+          uv build
+
+      - name: Generate SBOM and checksums
+        run: |
+          set -euo pipefail
+          uv run --project fovux-mcp python scripts/build_spdx_sbom.py \
+            --name fovux-mcp \
+            --output fovux-mcp-sbom.spdx.json
+          sha256sum fovux-mcp/dist/* fovux-mcp-sbom.spdx.json > fovux-mcp.sha256
+
+      - name: Attest Python release assets
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
+        with:
+          subject-checksums: fovux-mcp.sha256
+
+      - name: Attach Python release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.mcp_tag_name }}
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" \
+            fovux-mcp/dist/* \
+            fovux-mcp-sbom.spdx.json \
+            fovux-mcp.sha256
+
+      - name: Publish Python package
+        working-directory: fovux-mcp
+        env:
+          PYPI_TRUSTED_PUBLISHING_ENABLED: ${{ vars.PYPI_TRUSTED_PUBLISHING_ENABLED }}
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ "$PYPI_TRUSTED_PUBLISHING_ENABLED" == "true" ]]; then
+            uv publish dist/*
+          elif [[ -n "${PYPI_TOKEN:-}" ]]; then
+            uv publish --token "$PYPI_TOKEN" dist/*
+          else
+            echo "::error::PyPI trusted publishing or PYPI_TOKEN is required for a release."
+            exit 1
+          fi
+
+      - name: Verify Python release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.mcp_tag_name }}
+          PACKAGE_VERSION: ${{ needs.release-please.outputs.mcp_version }}
+        run: |
+          set -euo pipefail
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          test -n "$PACKAGE_VERSION"
+
+  publish-studio:
+    needs: release-please
+    if: >
+      needs.release-please.outputs.studio_release_created == 'true' &&
+      github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    environment: vsce-production
+    timeout-minutes: 30
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ needs.release-please.outputs.studio_tag_name }}
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version-file: .nvmrc
+
+      - name: Build VSIX
+        working-directory: fovux-studio
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm dlx @vscode/vsce@3.9.1 package --out fovux-studio.vsix
+
+      - name: Generate SBOM and checksums
+        run: |
+          set -euo pipefail
+          node scripts/build_node_spdx_sbom.mjs \
+            --package fovux-studio/package.json \
+            --output fovux-studio-sbom.spdx.json
+          sha256sum fovux-studio/fovux-studio.vsix fovux-studio-sbom.spdx.json > fovux-studio.sha256
+
+      - name: Attest Studio release assets
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
+        with:
+          subject-checksums: fovux-studio.sha256
+
+      - name: Attach Studio release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.studio_tag_name }}
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" \
+            fovux-studio/fovux-studio.vsix \
+            fovux-studio-sbom.spdx.json \
+            fovux-studio.sha256
+
+      - name: Publish Studio extension
+        working-directory: fovux-studio
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${VSCE_PAT:-}" || -z "${OVSX_PAT:-}" ]]; then
+            echo "::notice::Skipping VS Marketplace/Open VSX publish until VSCE_PAT and OVSX_PAT are configured."
+            exit 0
+          fi
+          pnpm dlx @vscode/vsce@3.9.1 publish --packagePath fovux-studio.vsix --pat "$VSCE_PAT"
+          pnpm dlx ovsx@0.10.11 publish fovux-studio.vsix --pat "$OVSX_PAT"
+
+      - name: Verify Studio release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.studio_tag_name }}
+          PACKAGE_VERSION: ${{ needs.release-please.outputs.studio_version }}
+        run: |
+          set -euo pipefail
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          test -n "$PACKAGE_VERSION"
+
+  mirror-release-refs:
+    needs: release-please
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      (
+        needs.release-please.outputs.mcp_release_created == 'true' ||
+        needs.release-please.outputs.studio_release_created == 'true'
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Mirror release refs and assets to personal repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MIRROR_PAT: ${{ secrets.MIRROR_PAT }}
+          PERSONAL_REPO: oaslananka/fovux
+          MCP_RELEASE_CREATED: ${{ needs.release-please.outputs.mcp_release_created }}
+          MCP_TAG: ${{ needs.release-please.outputs.mcp_tag_name }}
+          STUDIO_RELEASE_CREATED: ${{ needs.release-please.outputs.studio_release_created }}
+          STUDIO_TAG: ${{ needs.release-please.outputs.studio_tag_name }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${MIRROR_PAT:-}" ]]; then
+            echo "::error::MIRROR_PAT is required to mirror release refs and assets to ${PERSONAL_REPO}."
+            exit 1
+          fi
+
+          personal_ruleset="$(
+            GH_TOKEN="$MIRROR_PAT" gh api "repos/${PERSONAL_REPO}/rulesets" \
+              --jq '.[] | select(.name == "main-protection").id' | head -n 1
+          )"
+          if [[ -z "$personal_ruleset" ]]; then
+            echo "::error::main-protection ruleset was not found in ${PERSONAL_REPO}."
+            exit 1
+          fi
+          transition="$(mktemp)"
+          personal_final="$(mktemp)"
+          cat >"$transition" <<'JSON'
+          {
+            "name": "main-protection",
+            "target": "branch",
+            "enforcement": "active",
+            "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
+            "rules": [{ "type": "deletion" }],
+            "bypass_actors": []
+          }
+          JSON
+          jq '.rules |= map(select(.type != "required_status_checks"))' \
+            .github/rulesets/main.json >"$personal_final"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git config --global --unset-all http.https://github.com/.extraheader || true
+          git fetch origin --tags
+          git remote add personal "https://x-access-token:${MIRROR_PAT}@github.com/${PERSONAL_REPO}.git"
+          git fetch personal +refs/heads/main:refs/remotes/personal/main --tags
+
+          personal_main="$(git rev-parse refs/remotes/personal/main)"
+          org_main="$(git rev-parse HEAD)"
+          if [[ "$personal_main" != "$org_main" ]]; then
+            personal_tree="$(git rev-parse "refs/remotes/personal/main^{tree}")"
+            org_tree="$(git rev-parse "HEAD^{tree}")"
+            if [[ "$personal_tree" == "$org_tree" ]]; then
+              echo "Personal main already has the same tree as org main."
+            else
+              echo "Synchronizing personal main to org main with force-with-lease."
+              trap 'GH_TOKEN="$MIRROR_PAT" gh api -X PUT "repos/${PERSONAL_REPO}/rulesets/${personal_ruleset}" --input "$personal_final" >/dev/null || true' EXIT
+              GH_TOKEN="$MIRROR_PAT" gh api -X PUT "repos/${PERSONAL_REPO}/rulesets/${personal_ruleset}" --input "$transition" >/dev/null
+              git push personal "HEAD:refs/heads/main" --force-with-lease="refs/heads/main:${personal_main}"
+              GH_TOKEN="$MIRROR_PAT" gh api -X PUT "repos/${PERSONAL_REPO}/rulesets/${personal_ruleset}" --input "$personal_final" >/dev/null
+              trap - EXIT
+            fi
+          fi
+
+          mirror_release_record() {
+            local tag="$1"
+            local workdir
+            workdir="$(mktemp -d)"
+            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json name,body >"$workdir/release.json"
+            jq -r '.body // ""' "$workdir/release.json" >"$workdir/body.md"
+            git push personal "refs/tags/${tag}:refs/tags/${tag}"
+            local title
+            title="$(jq -r '.name' "$workdir/release.json")"
+            if GH_TOKEN="$MIRROR_PAT" gh release view "$tag" --repo "$PERSONAL_REPO" >/dev/null 2>&1; then
+              GH_TOKEN="$MIRROR_PAT" gh release edit "$tag" \
+                --repo "$PERSONAL_REPO" \
+                --title "$title" \
+                --notes-file "$workdir/body.md"
+            else
+              GH_TOKEN="$MIRROR_PAT" gh release create "$tag" \
+                --repo "$PERSONAL_REPO" \
+                --title "$title" \
+                --notes-file "$workdir/body.md"
+            fi
+            rm -rf "$workdir"
+          }
+
+          if [[ "$MCP_RELEASE_CREATED" == "true" ]]; then
+            mirror_release_record "$MCP_TAG"
+          fi
+          if [[ "$STUDIO_RELEASE_CREATED" == "true" ]]; then
+            mirror_release_record "$STUDIO_TAG"
+          fi
+
+  mirror-mcp-assets:
+    needs: [release-please, publish-mcp, mirror-release-refs]
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      needs.release-please.outputs.mcp_release_created == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Mirror Python release assets to personal repository
+        env:
+          GH_TOKEN: ${{ secrets.MIRROR_PAT }}
+          PERSONAL_REPO: oaslananka/fovux
+          RELEASE_TAG: ${{ needs.release-please.outputs.mcp_tag_name }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::error::MIRROR_PAT is required to mirror release refs and assets to ${PERSONAL_REPO}."
+            exit 1
+          fi
+          workdir="$(mktemp -d)"
+          trap 'rm -rf "$workdir"' EXIT
+          mkdir -p "$workdir/assets"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$workdir/assets"
+          shopt -s nullglob
+          assets=("$workdir"/assets/*)
+          if (( ${#assets[@]} == 0 )); then
+            echo "::error::No release assets found on ${GITHUB_REPOSITORY} for ${RELEASE_TAG}."
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" --repo "$PERSONAL_REPO" "${assets[@]}" --clobber
+
+  mirror-studio-assets:
+    needs: [release-please, publish-studio, mirror-release-refs]
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      needs.release-please.outputs.studio_release_created == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Mirror Studio release assets to personal repository
+        env:
+          GH_TOKEN: ${{ secrets.MIRROR_PAT }}
+          PERSONAL_REPO: oaslananka/fovux
+          RELEASE_TAG: ${{ needs.release-please.outputs.studio_tag_name }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::error::MIRROR_PAT is required to mirror release refs and assets to ${PERSONAL_REPO}."
+            exit 1
+          fi
+          workdir="$(mktemp -d)"
+          trap 'rm -rf "$workdir"' EXIT
+          mkdir -p "$workdir/assets"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$workdir/assets"
+          shopt -s nullglob
+          assets=("$workdir"/assets/*)
+          if (( ${#assets[@]} == 0 )); then
+            echo "::error::No release assets found on ${GITHUB_REPOSITORY} for ${RELEASE_TAG}."
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" --repo "$PERSONAL_REPO" "${assets[@]}" --clobber

@@ -1,0 +1,59 @@
+name: PR Size Labeler
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  label-size:
+    if: >
+      github.repository == 'oaslananka-lab/fovux' &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Label by changed line count
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          changed="$(
+            gh pr view "$PR_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json additions,deletions \
+              --jq '.additions + .deletions'
+          )"
+
+          if [ "$changed" -le 10 ]; then label="size/XS";
+          elif [ "$changed" -le 50 ]; then label="size/S";
+          elif [ "$changed" -le 250 ]; then label="size/M";
+          elif [ "$changed" -le 500 ]; then label="size/L";
+          else label="size/XL"; fi
+
+          current_labels="$(
+            gh pr view "$PR_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json labels \
+              --jq '.labels[].name'
+          )"
+          for old in "size/XS" "size/S" "size/M" "size/L" "size/XL"; do
+            if printf '%s\n' "$current_labels" | grep -Fxq "$old"; then
+              gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label "$old"
+            fi
+          done
+
+          gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label "$label"

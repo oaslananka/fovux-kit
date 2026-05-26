@@ -1,0 +1,13 @@
+.venv
+dist
+htmlcov
+.coverage
+coverage.xml
+junit.xml
+nightly-compat-report.txt
+requirements-audit.txt
+__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.egg-info

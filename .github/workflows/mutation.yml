@@ -1,0 +1,62 @@
+name: Mutation Testing (fovux-mcp)
+
+on:
+  schedule:
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Module to mutate, for example fovux.tools"
+        required: false
+        default: "fovux"
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  mutate:
+    if: github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+      - name: Install project
+        working-directory: fovux-mcp
+        run: uv sync --frozen --extra dev
+
+      - name: Run mutation tests
+        working-directory: fovux-mcp
+        run: |
+          set -euo pipefail
+          uv run --with mutmut mutmut run
+
+      - name: Report
+        if: always()
+        working-directory: fovux-mcp
+        run: |
+          set -euo pipefail
+          if uv run --with mutmut mutmut results | tee mutation-results.txt; then
+            echo "Mutation results captured."
+          else
+            status=$?
+            echo "Mutation results command exited with status ${status}; report captured."
+          fi
+
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: mutation-report
+          path: fovux-mcp/mutation-results.txt
+          retention-days: 14

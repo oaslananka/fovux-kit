@@ -1,0 +1,52 @@
+Fovux
+Copyright 2026 Fovux Contributors
+
+This product includes software developed by the Fovux project
+(https://github.com/oaslananka/fovux).
+
+This repository contains two components:
+  - fovux-mcp: Python MCP server (Apache-2.0)
+  - fovux-studio: VS Code extension (Apache-2.0)
+
+---
+
+THIRD-PARTY SOFTWARE NOTICES
+
+Ultralytics YOLO
+  License: AGPL-3.0
+  Source: https://github.com/ultralytics/ultralytics
+  Usage notice: Fovux uses Ultralytics YOLO as a runtime dependency for
+  model training and inference. Per Ultralytics licensing terms, use of
+  the ultralytics package in this tool does not require Fovux itself to
+  be licensed under AGPL-3.0, provided the tool does not redistribute
+  YOLO model weights or modified Ultralytics source code. Commercial
+  users who embed Ultralytics functionality in proprietary products must
+  obtain a separate commercial license from Ultralytics.
+
+ONNX Runtime
+  License: MIT
+  Source: https://github.com/microsoft/onnxruntime
+
+OpenCV
+  License: Apache-2.0
+  Source: https://github.com/opencv/opencv
+
+FastMCP
+  License: MIT
+  Source: https://github.com/jlowin/fastmcp
+
+FastAPI
+  License: MIT
+  Source: https://github.com/tiangolo/fastapi
+
+Pydantic
+  License: MIT
+  Source: https://github.com/pydantic/pydantic
+
+SQLAlchemy
+  License: MIT
+  Source: https://github.com/sqlalchemy/sqlalchemy
+
+React
+  License: MIT
+  Source: https://github.com/facebook/react

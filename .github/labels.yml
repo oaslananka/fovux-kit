@@ -1,0 +1,231 @@
+- name: "type:bug"
+  color: "d73a4a"
+  description: "Something is not working"
+
+- name: "type:feature"
+  color: "0e8a16"
+  description: "New feature or request"
+
+- name: "type:docs"
+  color: "0075ca"
+  description: "Documentation improvements"
+
+- name: "type:refactor"
+  color: "c5def5"
+  description: "Code change that neither fixes a bug nor adds a feature"
+
+- name: "type:perf"
+  color: "fbca04"
+  description: "Performance improvement"
+
+- name: "type:security"
+  color: "b60205"
+  description: "Security-related change"
+
+- name: "type:chore"
+  color: "cccccc"
+  description: "Repository maintenance"
+
+- name: "area:mcp"
+  color: "1d76db"
+  description: "Affects the Python MCP server"
+
+- name: "area:studio"
+  color: "5319e7"
+  description: "Affects the VS Code extension"
+
+- name: "area:docs"
+  color: "0075ca"
+  description: "Affects documentation"
+
+- name: "area:ci"
+  color: "0366d6"
+  description: "Affects CI/CD"
+
+- name: "area:dataset"
+  color: "0e8a16"
+  description: "Affects dataset tooling"
+
+- name: "area:training"
+  color: "fbca04"
+  description: "Affects training workflows"
+
+- name: "area:export"
+  color: "d93f0b"
+  description: "Affects export workflows"
+
+- name: "priority:p0"
+  color: "b60205"
+  description: "Critical priority"
+
+- name: "priority:p1"
+  color: "d93f0b"
+  description: "High priority"
+
+- name: "priority:p2"
+  color: "fbca04"
+  description: "Medium priority"
+
+- name: "priority:p3"
+  color: "c2e0c6"
+  description: "Low priority"
+
+- name: "status:triage"
+  color: "ededed"
+  description: "Needs maintainer triage"
+
+- name: "status:in-progress"
+  color: "1d76db"
+  description: "Work is in progress"
+
+- name: "status:waiting-review"
+  color: "bfd4f2"
+  description: "Waiting for review"
+
+- name: "status:blocked"
+  color: "b60205"
+  description: "Blocked by external input or dependency"
+
+- name: "status:waiting-feedback"
+  color: "bfd4f2"
+  description: "Waiting for feedback"
+
+- name: "effort:xs"
+  color: "c2e0c6"
+  description: "Very small change"
+
+- name: "effort:s"
+  color: "c2e0c6"
+  description: "Small change"
+
+- name: "effort:m"
+  color: "fbca04"
+  description: "Medium change"
+
+- name: "effort:l"
+  color: "d93f0b"
+  description: "Large change"
+
+- name: "effort:xl"
+  color: "b60205"
+  description: "Very large change"
+
+- name: "bug"
+  color: "d73a4a"
+  description: "Something is not working"
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Dependency update"
+
+- name: "python"
+  color: "3572A5"
+  description: "Python or fovux-mcp related"
+
+- name: "typescript"
+  color: "2b7489"
+  description: "TypeScript or fovux-studio related"
+
+- name: "fovux-mcp"
+  color: "4CAF50"
+  description: "Affects the Python MCP server"
+
+- name: "fovux-studio"
+  color: "9C27B0"
+  description: "Affects the VS Code extension"
+
+- name: "ci"
+  color: "e4e669"
+  description: "CI/CD pipeline changes"
+
+- name: "security"
+  color: "ee0701"
+  description: "Security-related issue or fix"
+
+- name: "needs-triage"
+  color: "fbca04"
+  description: "Needs maintainer triage"
+
+- name: "needs-review"
+  color: "0e8a16"
+  description: "PR awaiting reviewer attention"
+
+- name: "auto-merge"
+  color: "bfd4f2"
+  description: "Will be auto-merged when CI passes"
+
+- name: "major-update"
+  color: "b60205"
+  description: "Semver major dependency bump requiring review"
+
+- name: "size/XS"
+  color: "3CBF00"
+  description: "PR changes up to 10 lines"
+
+- name: "size/S"
+  color: "5D9801"
+  description: "PR changes 11-50 lines"
+
+- name: "size/M"
+  color: "7F7203"
+  description: "PR changes 51-250 lines"
+
+- name: "size/L"
+  color: "A14C05"
+  description: "PR changes 251-500 lines"
+
+- name: "size/XL"
+  color: "C32607"
+  description: "PR changes more than 500 lines"
+
+- name: "wip"
+  color: "cccccc"
+  description: "Work in progress"
+
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for first-time contributors"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is welcome"
+
+- name: "breaking"
+  color: "b60205"
+  description: "Breaking change"
+
+- name: "regression"
+  color: "b60205"
+  description: "Regression from previous behavior"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: "invalid"
+  color: "e4e669"
+  description: "This does not seem right"
+
+- name: "question"
+  color: "d876e3"
+  description: "Further information is requested"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "autorelease: pending"
+  color: "ededed"
+  description: "Release pull request is pending"
+
+- name: "autorelease: tagged"
+  color: "ededed"
+  description: "Release pull request has been tagged"

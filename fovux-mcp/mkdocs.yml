@@ -1,0 +1,119 @@
+site_name: Fovux MCP
+site_description: Professional-grade edge-AI computer vision workbench MCP server
+site_url: https://oaslananka.github.io/fovux/
+repo_url: https://github.com/oaslananka/fovux
+repo_name: oaslananka/fovux
+edit_uri: edit/main/fovux-mcp/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep orange
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep orange
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Concepts: concepts.md
+  - Upgrade:
+      - v2.0.0 Upgrade Guide: upgrade/v2.md
+  - Tools:
+      - Dataset:
+          - annotation_quality_check: tools/annotation_quality_check.md
+          - dataset_inspect: tools/dataset_inspect.md
+          - dataset_validate: tools/dataset_validate.md
+          - dataset_find_duplicates: tools/dataset_find_duplicates.md
+          - dataset_split: tools/dataset_split.md
+          - dataset_convert: tools/dataset_convert.md
+          - dataset_augment: tools/dataset_augment.md
+          - active_learning_select: tools/active_learning_select.md
+      - Training:
+          - train_start: tools/train_start.md
+          - train_status: tools/train_status.md
+          - train_stop: tools/train_stop.md
+          - train_resume: tools/train_resume.md
+          - train_adjust: tools/train_adjust.md
+          - distill_model: tools/distill_model.md
+      - Evaluation:
+          - eval_run: tools/eval_run.md
+          - eval_per_class: tools/eval_per_class.md
+          - eval_error_analysis: tools/eval_error_analysis.md
+          - eval_compare: tools/eval_compare.md
+      - Export and Quantization:
+          - export_onnx: tools/export_onnx.md
+          - export_tflite: tools/export_tflite.md
+          - quantize_int8: tools/quantize_int8.md
+          - quantize_report: tools/quantize_report.md
+      - Inference and Benchmarking:
+          - fovux_doctor: tools/fovux_doctor.md
+          - infer_image: tools/infer_image.md
+          - infer_batch: tools/infer_batch.md
+          - infer_rtsp: tools/infer_rtsp.md
+          - infer_ensemble: tools/infer_ensemble.md
+          - benchmark_latency: tools/benchmark_latency.md
+      - Management:
+          - model_list: tools/model_list.md
+          - model_profile: tools/model_profile.md
+          - model_compare_visual: tools/model_compare_visual.md
+          - run_compare: tools/run_compare.md
+          - run_delete: tools/run_delete.md
+          - run_tag: tools/run_tag.md
+          - run_archive: tools/run_archive.md
+          - sync_to_mlflow: tools/sync_to_mlflow.md
+  - Recipes:
+      - Bootstrap Dataset: recipes/01-bootstrap-dataset.md
+      - Diagnose Low mAP: recipes/02-diagnose-low-map.md
+      - Quantize For Edge: recipes/03-quantize-for-edge.md
+      - Compare Architectures: recipes/04-compare-architectures.md
+      - RTSP Production Inference: recipes/05-rtsp-production-inference.md
+  - ADRs:
+      - ADR 0001: adr/0001-fastmcp-over-raw-mcp.md
+      - ADR 0002: adr/0002-sqlite-runs-registry.md
+      - ADR 0003: adr/0003-ultralytics-adapter-boundary.md
+      - ADR 0004: adr/0004-stdio-vs-http-transport.md
+      - ADR 0005: adr/0005-stratified-split-dominant-class.md
+      - ADR 0006: adr/0006-http-auth-model.md
+      - ADR 0007: adr/0007-metrics-jsonl-schema.md
+      - ADR 0008: adr/0008-tool-registry.md
+  - Integrations: integrations.md
+  - Security: security.md
+  - Performance: performance.md
+  - FAQ: faq.md
+  - Errors: errors.md
+  - Changelog: changelog.md
+  - API Reference: api/index.md

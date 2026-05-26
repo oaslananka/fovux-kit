@@ -1,0 +1,46 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "group:monorepos",
+    "group:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separatePatchReleases"
+  ],
+  "timezone": "Europe/Istanbul",
+  "schedule": ["before 9am on monday"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "labels": ["auto-merge"]
+    },
+    {
+      "matchFileNames": ["fovux-mcp/**"],
+      "groupName": "fovux-mcp Python deps",
+      "labels": ["dependencies", "python", "fovux-mcp", "area:mcp"]
+    },
+    {
+      "matchFileNames": ["fovux-studio/**"],
+      "groupName": "fovux-studio npm deps",
+      "labels": ["dependencies", "typescript", "fovux-studio", "area:studio"]
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["major-update", "needs-review"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 8am on the first day of the month"],
+    "automerge": true
+  }
+}

@@ -1,0 +1,50 @@
+name: Sync Labels
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/labels.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  sync:
+    if: github.repository == 'oaslananka-lab/fovux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+
+      - name: Sync labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOS: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          uvx --with pyyaml python scripts/sync_labels.py
+
+      - name: Sync personal repository labels
+        env:
+          GH_TOKEN: ${{ secrets.MIRROR_PAT }}
+          REPOS: oaslananka/fovux
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::notice::Skipping personal label sync because MIRROR_PAT is not configured."
+            exit 0
+          fi
+          uvx --with pyyaml python scripts/sync_labels.py
