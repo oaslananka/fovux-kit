@@ -103,52 +103,80 @@ def _read_uv_lock_version(root: Path) -> str:
     return match.group(1)
 
 
-def check_versions() -> int:
-    """Check all version sources and return 0 if coherent, 1 otherwise."""
-    root = _repo_root()
-
-    sources: dict[str, str] = {
-        "fovux-mcp/pyproject.toml": _read_pyproject_version(root),
-        "fovux-mcp/uv.lock": _read_uv_lock_version(root),
-        "fovux-mcp/src/fovux/__init__.py": _read_init_version(root),
-        "fovux-mcp/server.json": _read_jsonpath_version(
-            root / "fovux-mcp" / "server.json", "version"
-        ),
-        "fovux-mcp/server.json packages[0]": _read_jsonpath_version(
-            root / "fovux-mcp" / "server.json", "packages", 0, "version"
-        ),
-        "fovux-mcp/smithery.yaml": _read_smithery_version(root),
-        "mcp.json": _read_jsonpath_version(root / "mcp.json", "version"),
-        "mcp.json packages[0]": _read_jsonpath_version(
-            root / "mcp.json", "packages", 0, "version"
-        ),
-        "fovux-studio/package.json": _read_package_json_version(root),
-        "fovux-mcp/CHANGELOG.md": _read_changelog_top_version(
-            root / "fovux-mcp" / "CHANGELOG.md"
-        ),
-        "fovux-studio/CHANGELOG.md": _read_changelog_top_version(
-            root / "fovux-studio" / "CHANGELOG.md"
-        ),
+def _version_sources(root: Path) -> dict[str, dict[str, str]]:
+    """Build version source groups by independently versioned artifact."""
+    return {
+        "MCP": {
+            "fovux-mcp/pyproject.toml": _read_pyproject_version(root),
+            "fovux-mcp/uv.lock": _read_uv_lock_version(root),
+            "fovux-mcp/src/fovux/__init__.py": _read_init_version(root),
+            "fovux-mcp/server.json": _read_jsonpath_version(
+                root / "fovux-mcp" / "server.json", "version"
+            ),
+            "fovux-mcp/server.json packages[0]": _read_jsonpath_version(
+                root / "fovux-mcp" / "server.json", "packages", 0, "version"
+            ),
+            "fovux-mcp/smithery.yaml": _read_smithery_version(root),
+            "mcp.json": _read_jsonpath_version(root / "mcp.json", "version"),
+            "mcp.json packages[0]": _read_jsonpath_version(
+                root / "mcp.json", "packages", 0, "version"
+            ),
+            "fovux-mcp/CHANGELOG.md": _read_changelog_top_version(
+                root / "fovux-mcp" / "CHANGELOG.md"
+            ),
+        },
+        "Studio": {
+            "fovux-studio/package.json": _read_package_json_version(root),
+            "fovux-studio/CHANGELOG.md": _read_changelog_top_version(
+                root / "fovux-studio" / "CHANGELOG.md"
+            ),
+        },
     }
 
+
+def _print_group_mismatch(group_name: str, sources: dict[str, str]) -> None:
+    """Print the mismatched versions for one release track."""
     unique_versions = set(sources.values())
-
-    if len(unique_versions) == 1:
-        version = unique_versions.pop()
-        print(f"All version sources are coherent: {version}")
-        return 0
-
-    print("VERSION MISMATCH DETECTED")
-    print()
+    source_versions = list(sources.values())
+    most_common = max(unique_versions, key=source_versions.count)
     max_label = max(len(label) for label in sources)
+
+    print(f"{group_name} version sources:")
     for label, version in sources.items():
-        most_common = max(
-            unique_versions, key=lambda v: list(sources.values()).count(v)
-        )
         marker = "  " if version == most_common else "!!"
         print(f"  {marker} {label:<{max_label}}  {version}")
+    print(
+        f"  Found {len(unique_versions)} distinct versions: {sorted(unique_versions)}"
+    )
+
+
+def _check_group(group_name: str, sources: dict[str, str]) -> bool:
+    """Return true when one release track has exactly one version."""
+    unique_versions = set(sources.values())
+    if len(unique_versions) == 1:
+        print(
+            f"{group_name} version sources are coherent: {next(iter(unique_versions))}"
+        )
+        return True
+
+    _print_group_mismatch(group_name, sources)
+    return False
+
+
+def check_versions() -> int:
+    """Check version source groups and return 0 if all are coherent."""
+    groups = _version_sources(_repo_root())
+    failed_groups = [
+        group_name
+        for group_name, sources in groups.items()
+        if not _check_group(group_name, sources)
+    ]
+
+    if not failed_groups:
+        return 0
+
     print()
-    print(f"Found {len(unique_versions)} distinct versions: {sorted(unique_versions)}")
+    print(f"VERSION MISMATCH DETECTED: {', '.join(failed_groups)}")
     return 1
 
 

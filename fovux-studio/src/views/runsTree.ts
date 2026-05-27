@@ -10,12 +10,7 @@ import * as vscode from "vscode";
 
 import { resolveFovuxHome } from "../fovux/paths";
 
-export type RunStatus =
-  | "running"
-  | "complete"
-  | "failed"
-  | "stopped"
-  | "pending";
+export type RunStatus = "running" | "complete" | "failed" | "stopped" | "pending";
 
 type RunTreeNode = RunGroupItem | RunItem;
 
@@ -48,13 +43,7 @@ export interface RunDecorationSummary {
   status: RunStatus;
 }
 
-const STATUS_ORDER: RunStatus[] = [
-  "running",
-  "pending",
-  "complete",
-  "failed",
-  "stopped",
-];
+const STATUS_ORDER: RunStatus[] = ["running", "pending", "complete", "failed", "stopped"];
 const STATUS_LABELS: Record<RunStatus, string> = {
   running: "Running",
   pending: "Pending",
@@ -66,7 +55,7 @@ const STATUS_LABELS: Record<RunStatus, string> = {
 class RunGroupItem extends vscode.TreeItem {
   constructor(
     public readonly status: RunStatus,
-    public readonly items: RunItem[],
+    public readonly items: RunItem[]
   ) {
     super(STATUS_LABELS[status], vscode.TreeItemCollapsibleState.Expanded);
     this.description = `${items.length}`;
@@ -107,15 +96,9 @@ export class RunItem extends vscode.TreeItem {
       case "running":
         return new vscode.ThemeIcon("sync~spin");
       case "complete":
-        return new vscode.ThemeIcon(
-          "pass",
-          new vscode.ThemeColor("testing.iconPassed"),
-        );
+        return new vscode.ThemeIcon("pass", new vscode.ThemeColor("testing.iconPassed"));
       case "failed":
-        return new vscode.ThemeIcon(
-          "error",
-          new vscode.ThemeColor("testing.iconFailed"),
-        );
+        return new vscode.ThemeIcon("error", new vscode.ThemeColor("testing.iconFailed"));
       case "stopped":
         return new vscode.ThemeIcon("debug-stop");
       case "pending":
@@ -154,12 +137,8 @@ export class RunItem extends vscode.TreeItem {
   }
 }
 
-export class RunsTreeProvider
-  implements vscode.TreeDataProvider<RunTreeNode>, vscode.Disposable
-{
-  private readonly onDidChangeEmitter = new vscode.EventEmitter<
-    RunTreeNode | undefined | null
-  >();
+export class RunsTreeProvider implements vscode.TreeDataProvider<RunTreeNode>, vscode.Disposable {
+  private readonly onDidChangeEmitter = new vscode.EventEmitter<RunTreeNode | undefined | null>();
   readonly onDidChangeTreeData = this.onDidChangeEmitter.event;
 
   private watchers: vscode.FileSystemWatcher[] = [];
@@ -244,9 +223,9 @@ export class RunsTreeProvider
       grouped.get(record.status)?.push(new RunItem(record));
     }
 
-    return STATUS_ORDER.map(
-      (status) => new RunGroupItem(status, grouped.get(status) ?? []),
-    ).filter((group) => group.items.length > 0);
+    return STATUS_ORDER.map((status) => new RunGroupItem(status, grouped.get(status) ?? [])).filter(
+      (group) => group.items.length > 0
+    );
   }
 
   private readRunRecords(): RunRecord[] {
@@ -271,9 +250,7 @@ export class RunsTreeProvider
 
       if (fs.existsSync(statusFile)) {
         try {
-          statusData = JSON.parse(
-            fs.readFileSync(statusFile, "utf8"),
-          ) as StatusJson;
+          statusData = JSON.parse(fs.readFileSync(statusFile, "utf8")) as StatusJson;
           status = normalizeStatus(statusData.status ?? "pending");
           lastUpdatedMs = fs.statSync(statusFile).mtimeMs;
         } catch {
@@ -301,15 +278,9 @@ export class RunsTreeProvider
   private configureWatchers(): void {
     const home = resolveFovuxHome();
     this.watchers = [
-      vscode.workspace.createFileSystemWatcher(
-        path.join(home, "runs", "**", "status.json"),
-      ),
-      vscode.workspace.createFileSystemWatcher(
-        path.join(home, "runs", "**", "metrics.jsonl"),
-      ),
-      vscode.workspace.createFileSystemWatcher(
-        path.join(home, "runs", "**", "results.csv"),
-      ),
+      vscode.workspace.createFileSystemWatcher(path.join(home, "runs", "**", "status.json")),
+      vscode.workspace.createFileSystemWatcher(path.join(home, "runs", "**", "metrics.jsonl")),
+      vscode.workspace.createFileSystemWatcher(path.join(home, "runs", "**", "results.csv")),
     ];
 
     for (const watcher of this.watchers) {
@@ -331,19 +302,14 @@ function normalizeStatus(status: string): RunStatus {
   if (status === "completed") {
     return "complete";
   }
-  if (
-    ["running", "complete", "failed", "stopped", "pending"].includes(status)
-  ) {
+  if (["running", "complete", "failed", "stopped", "pending"].includes(status)) {
     return status as RunStatus;
   }
   return "pending";
 }
 
 function formatRelativeAge(timestampMs: number): string {
-  const diffSeconds = Math.max(
-    0,
-    Math.round((Date.now() - timestampMs) / 1000),
-  );
+  const diffSeconds = Math.max(0, Math.round((Date.now() - timestampMs) / 1000));
   if (diffSeconds < 60) {
     return `${diffSeconds}s ago`;
   }

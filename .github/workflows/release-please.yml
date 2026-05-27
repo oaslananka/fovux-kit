@@ -232,7 +232,9 @@ jobs:
           corepack prepare pnpm@10.33.0 --activate
           pnpm install --frozen-lockfile
           pnpm build
-          pnpm dlx @vscode/vsce@3.9.1 package --out fovux-studio.vsix
+          test "$(node -p "require('./package.json').publisher + '.' + require('./package.json').name")" = "oaslananka.fovuxstudiokit"
+          test "$(node -p "require('./package.json').version")" = "1.0.0"
+          pnpm dlx @vscode/vsce@3.9.1 package --out fovuxstudiokit.vsix
 
       - name: Generate SBOM and checksums
         run: |
@@ -240,7 +242,7 @@ jobs:
           node scripts/build_node_spdx_sbom.mjs \
             --package fovux-studio/package.json \
             --output fovux-studio-sbom.spdx.json
-          sha256sum fovux-studio/fovux-studio.vsix fovux-studio-sbom.spdx.json > fovux-studio.sha256
+          sha256sum fovux-studio/fovuxstudiokit.vsix fovux-studio-sbom.spdx.json > fovux-studio.sha256
 
       - name: Attest Studio release assets
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
@@ -254,7 +256,7 @@ jobs:
         run: |
           set -euo pipefail
           gh release upload "$RELEASE_TAG" \
-            fovux-studio/fovux-studio.vsix \
+            fovux-studio/fovuxstudiokit.vsix \
             fovux-studio-sbom.spdx.json \
             fovux-studio.sha256
 
@@ -269,8 +271,8 @@ jobs:
             echo "::notice::Skipping VS Marketplace/Open VSX publish until VSCE_PAT and OVSX_PAT are configured."
             exit 0
           fi
-          pnpm dlx @vscode/vsce@3.9.1 publish --packagePath fovux-studio.vsix --pat "$VSCE_PAT"
-          pnpm dlx ovsx@0.10.11 publish fovux-studio.vsix --pat "$OVSX_PAT"
+          pnpm dlx @vscode/vsce@3.9.1 publish --packagePath fovuxstudiokit.vsix --pat "$VSCE_PAT"
+          pnpm dlx ovsx@0.10.12 publish fovuxstudiokit.vsix --pat "$OVSX_PAT"
 
       - name: Verify Studio release
         env:

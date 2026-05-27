@@ -53,9 +53,7 @@ interface DoctorCheck {
   fixCommand?: string;
 }
 
-export class DoctorTreeProvider
-  implements vscode.TreeDataProvider<DoctorCheck>, vscode.Disposable
-{
+export class DoctorTreeProvider implements vscode.TreeDataProvider<DoctorCheck>, vscode.Disposable {
   private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
   private readonly refreshTimer: NodeJS.Timeout;
@@ -86,9 +84,7 @@ export class DoctorTreeProvider
 
   async fixCheck(element: DoctorCheck | undefined): Promise<void> {
     if (!element?.fixCommand) {
-      void vscode.window.showInformationMessage(
-        "No automatic fix is available for this check.",
-      );
+      void vscode.window.showInformationMessage("No automatic fix is available for this check.");
       return;
     }
     await vscode.commands.executeCommand(element.fixCommand);
@@ -97,27 +93,16 @@ export class DoctorTreeProvider
   getTreeItem(element: DoctorCheck): vscode.TreeItem {
     const icon =
       element.status === "pass"
-        ? new vscode.ThemeIcon(
-            "check",
-            new vscode.ThemeColor("testing.iconPassed"),
-          )
+        ? new vscode.ThemeIcon("check", new vscode.ThemeColor("testing.iconPassed"))
         : element.status === "warn"
-          ? new vscode.ThemeIcon(
-              "warning",
-              new vscode.ThemeColor("testing.iconQueued"),
-            )
-          : new vscode.ThemeIcon(
-              "error",
-              new vscode.ThemeColor("testing.iconFailed"),
-            );
+          ? new vscode.ThemeIcon("warning", new vscode.ThemeColor("testing.iconQueued"))
+          : new vscode.ThemeIcon("error", new vscode.ThemeColor("testing.iconFailed"));
 
     const item = new vscode.TreeItem(element.name);
     item.description = element.detail;
     item.iconPath = icon;
     item.tooltip = `${element.name}: ${element.status}\n${element.detail}`;
-    item.contextValue = element.fixCommand
-      ? "fovuxDoctorFixable"
-      : "fovuxDoctorCheck";
+    item.contextValue = element.fixCommand ? "fovuxDoctorFixable" : "fovuxDoctorCheck";
     if (element.fixCommand) {
       item.command = {
         command: "fovux.fixDoctorCheck",
@@ -142,17 +127,11 @@ function mapDoctorReport(report: DoctorReport): DoctorCheck[] {
   const checks: DoctorCheck[] = [
     {
       name: "Python",
-      status:
-        report.requirements?.["python_supported"] === false ? "fail" : "pass",
+      status: report.requirements?.["python_supported"] === false ? "fail" : "pass",
       detail: report.python ?? "unknown",
     },
     packageCheck("Ultralytics", report.ultralytics, "fovux.installBackend"),
-    packageCheck(
-      "ONNX Runtime",
-      report.onnxruntime,
-      "fovux.installBackend",
-      "warn",
-    ),
+    packageCheck("ONNX Runtime", report.onnxruntime, "fovux.installBackend", "warn"),
     packageCheck("ONNX", report.onnx, "fovux.installBackend", "warn"),
     packageCheck("FastMCP", report.fastmcp, "fovux.installBackend"),
     gpuCheck(report),
@@ -165,16 +144,14 @@ function mapDoctorReport(report: DoctorReport): DoctorCheck[] {
     {
       name: "FOVUX_HOME",
       status:
-        report.fovux_home?.writable === false ||
-        report.fovux_home?.disk_low === true
+        report.fovux_home?.writable === false || report.fovux_home?.disk_low === true
           ? "fail"
           : "pass",
       detail: report.fovux_home
         ? `${report.fovux_home.path} - ${report.fovux_home.disk_free_gb} GB free`
         : "FOVUX_HOME status unknown",
       fixCommand:
-        report.fovux_home?.writable === false ||
-        report.fovux_home?.disk_low === true
+        report.fovux_home?.writable === false || report.fovux_home?.disk_low === true
           ? "fovux.openFovuxHome"
           : undefined,
     },
@@ -203,7 +180,7 @@ function packageCheck(
   name: string,
   pkg: PackageHealth | undefined,
   fixCommand: string,
-  missingStatus: DoctorStatus = "fail",
+  missingStatus: DoctorStatus = "fail"
 ): DoctorCheck {
   const ok = pkg?.status === "ok";
   return {
@@ -226,8 +203,7 @@ function gpuCheck(report: DoctorReport): DoctorCheck {
     };
   }
   const memory =
-    typeof gpu.memory_free_gb === "number" &&
-    typeof gpu.memory_total_gb === "number"
+    typeof gpu.memory_free_gb === "number" && typeof gpu.memory_total_gb === "number"
       ? ` (${gpu.memory_free_gb}/${gpu.memory_total_gb} GB free)`
       : "";
   const cuda = gpu.cuda_version ? `CUDA ${gpu.cuda_version} - ` : "";

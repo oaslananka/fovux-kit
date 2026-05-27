@@ -3,14 +3,9 @@ import * as vscode from "vscode";
 import { ExtensionFovuxClient, RunSummary } from "../fovux/extensionClient";
 import { startFovuxServer } from "../fovux/serverManager";
 import { createWebviewHtml } from "../webviews/html";
-import {
-  DashboardInitialState,
-  WebviewToExtensionMessage,
-} from "../webviews/shared/types";
+import { DashboardInitialState, WebviewToExtensionMessage } from "../webviews/shared/types";
 
-export async function openDashboard(
-  context: vscode.ExtensionContext,
-): Promise<void> {
+export async function openDashboard(context: vscode.ExtensionContext): Promise<void> {
   const panel = vscode.window.createWebviewPanel(
     "fovux.dashboard",
     "Fovux Dashboard",
@@ -19,15 +14,12 @@ export async function openDashboard(
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [context.extensionUri],
-    },
+    }
   );
 
   panel.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
     if (message.type === "openPath") {
-      void vscode.commands.executeCommand(
-        "revealFileInOS",
-        vscode.Uri.file(message.path),
-      );
+      void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(message.path));
       return;
     }
     if (message.type === "startServer") {
@@ -35,7 +27,7 @@ export async function openDashboard(
         .then(() => renderDashboard(panel, context))
         .catch((error: unknown) => {
           void vscode.window.showErrorMessage(
-            error instanceof Error ? error.message : String(error),
+            error instanceof Error ? error.message : String(error)
           );
         });
     }
@@ -46,7 +38,7 @@ export async function openDashboard(
 
 async function renderDashboard(
   panel: vscode.WebviewPanel,
-  context: vscode.ExtensionContext,
+  context: vscode.ExtensionContext
 ): Promise<void> {
   const config = vscode.workspace.getConfiguration("fovux");
   const client = await ExtensionFovuxClient.create();
@@ -78,6 +70,6 @@ async function renderDashboard(
     panel.webview,
     context.extensionUri,
     "webviews/dashboard/main.js",
-    initialState,
+    initialState
   );
 }

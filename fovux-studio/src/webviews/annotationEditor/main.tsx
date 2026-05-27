@@ -63,21 +63,14 @@ function AnnotationEditorApp(): JSX.Element {
     initialError: "Initial annotation editor state was not provided.",
   });
   const stageRef = useRef<HTMLElement | null>(null);
-  const [classId, setClassId] = useReducer(
-    (_current: number, next: number) => next,
-    0,
-  );
+  const [classId, setClassId] = useReducer((_current: number, next: number) => next, 0);
   const [state, dispatch] = useReducer(
     annotationEditorReducer,
-    createAnnotationEditorState(initial.initialBoxes, initial.initialError),
+    createAnnotationEditorState(initial.initialBoxes, initial.initialError)
   );
 
   return (
-    <main
-      style={pageStyle}
-      tabIndex={0}
-      onKeyDown={(event) => handleKeyDown(event, dispatch)}
-    >
+    <main style={pageStyle} tabIndex={0} onKeyDown={(event) => handleKeyDown(event, dispatch)}>
       <header style={toolbarStyle}>
         <div>
           <p style={eyebrowStyle}>Annotation Editor</p>
@@ -148,71 +141,62 @@ function AnnotationEditorApp(): JSX.Element {
         }}
         onPointerCancel={() => dispatch({ type: "select", index: null })}
       >
-        <img
-          src={initial.imageUri}
-          alt={initial.imagePath}
-          style={imageStyle}
-          draggable={false}
-        />
-        {[...state.boxes, ...(state.draft ? [state.draft] : [])].map(
-          (box, index) => {
-            const isDraft = index >= state.boxes.length;
-            const isSelected = state.selectedIndex === index && !isDraft;
-            return (
-              <span
-                key={`${box.classId}-${box.x}-${box.y}-${index}`}
-                style={{
-                  ...boxStyle,
-                  ...(isSelected ? selectedBoxStyle : null),
-                  left: `${box.x * 100}%`,
-                  top: `${box.y * 100}%`,
-                  width: `${box.width * 100}%`,
-                  height: `${box.height * 100}%`,
-                }}
-                onPointerDown={(event) => {
-                  if (isDraft || !stageRef.current) {
-                    return;
-                  }
-                  event.stopPropagation();
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  dispatch({
-                    type: "beginMove",
-                    index,
-                    point: normalizedPoint(event, stageRef.current),
-                  });
-                }}
-              >
-                <span style={labelStyle}>{box.className}</span>
-                {isSelected
-                  ? (["nw", "ne", "sw", "se"] as const).map((handle) => (
-                      <span
-                        key={handle}
-                        style={{
-                          ...handleStyle,
-                          ...handlePositionStyle(handle),
-                        }}
-                        onPointerDown={(event) => {
-                          if (!stageRef.current) {
-                            return;
-                          }
-                          event.stopPropagation();
-                          event.currentTarget.setPointerCapture(
-                            event.pointerId,
-                          );
-                          dispatch({
-                            type: "beginResize",
-                            handle,
-                            index,
-                            point: normalizedPoint(event, stageRef.current),
-                          });
-                        }}
-                      />
-                    ))
-                  : null}
-              </span>
-            );
-          },
-        )}
+        <img src={initial.imageUri} alt={initial.imagePath} style={imageStyle} draggable={false} />
+        {[...state.boxes, ...(state.draft ? [state.draft] : [])].map((box, index) => {
+          const isDraft = index >= state.boxes.length;
+          const isSelected = state.selectedIndex === index && !isDraft;
+          return (
+            <span
+              key={`${box.classId}-${box.x}-${box.y}-${index}`}
+              style={{
+                ...boxStyle,
+                ...(isSelected ? selectedBoxStyle : null),
+                left: `${box.x * 100}%`,
+                top: `${box.y * 100}%`,
+                width: `${box.width * 100}%`,
+                height: `${box.height * 100}%`,
+              }}
+              onPointerDown={(event) => {
+                if (isDraft || !stageRef.current) {
+                  return;
+                }
+                event.stopPropagation();
+                event.currentTarget.setPointerCapture(event.pointerId);
+                dispatch({
+                  type: "beginMove",
+                  index,
+                  point: normalizedPoint(event, stageRef.current),
+                });
+              }}
+            >
+              <span style={labelStyle}>{box.className}</span>
+              {isSelected
+                ? (["nw", "ne", "sw", "se"] as const).map((handle) => (
+                    <span
+                      key={handle}
+                      style={{
+                        ...handleStyle,
+                        ...handlePositionStyle(handle),
+                      }}
+                      onPointerDown={(event) => {
+                        if (!stageRef.current) {
+                          return;
+                        }
+                        event.stopPropagation();
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        dispatch({
+                          type: "beginResize",
+                          handle,
+                          index,
+                          point: normalizedPoint(event, stageRef.current),
+                        });
+                      }}
+                    />
+                  ))
+                : null}
+            </span>
+          );
+        })}
       </section>
 
       <footer style={footerStyle}>
@@ -234,7 +218,7 @@ function AnnotationEditorApp(): JSX.Element {
 
 export function createAnnotationEditorState(
   boxes: DatasetSampleBox[],
-  status: string | null = null,
+  status: string | null = null
 ): AnnotationEditorState {
   return {
     boxes,
@@ -248,7 +232,7 @@ export function createAnnotationEditorState(
 
 export function annotationEditorReducer(
   state: AnnotationEditorState,
-  action: AnnotationEditorAction,
+  action: AnnotationEditorAction
 ): AnnotationEditorState {
   switch (action.type) {
     case "beginDraw": {
@@ -329,9 +313,7 @@ export function annotationEditorReducer(
       }
       return {
         ...state,
-        boxes: state.boxes.filter(
-          (_box, index) => index !== state.selectedIndex,
-        ),
+        boxes: state.boxes.filter((_box, index) => index !== state.selectedIndex),
         history: pushHistory(state.history, state.boxes),
         interaction: { kind: "idle" },
         selectedIndex: null,
@@ -373,7 +355,7 @@ export function annotationEditorReducer(
 function applyPointer(
   state: AnnotationEditorState,
   point: Point,
-  finish: boolean,
+  finish: boolean
 ): AnnotationEditorState {
   switch (state.interaction.kind) {
     case "draw": {
@@ -394,16 +376,8 @@ function applyPointer(
       };
     }
     case "move": {
-      const nextBox = moveBox(
-        state.interaction.origin,
-        state.interaction.start,
-        point,
-      );
-      const nextBoxes = replaceBox(
-        state.boxes,
-        state.interaction.index,
-        nextBox,
-      );
+      const nextBox = moveBox(state.interaction.origin, state.interaction.start, point);
+      const nextBoxes = replaceBox(state.boxes, state.interaction.index, nextBox);
       if (!finish) {
         return { ...state, boxes: nextBoxes };
       }
@@ -417,16 +391,8 @@ function applyPointer(
       };
     }
     case "resize": {
-      const nextBox = resizeBox(
-        state.interaction.origin,
-        state.interaction.handle,
-        point,
-      );
-      const nextBoxes = replaceBox(
-        state.boxes,
-        state.interaction.index,
-        nextBox,
-      );
+      const nextBox = resizeBox(state.interaction.origin, state.interaction.handle, point);
+      const nextBoxes = replaceBox(state.boxes, state.interaction.index, nextBox);
       if (!finish) {
         return { ...state, boxes: nextBoxes };
       }
@@ -446,7 +412,7 @@ function applyPointer(
 
 function handleKeyDown(
   event: KeyboardEvent<HTMLElement>,
-  dispatch: (action: AnnotationEditorAction) => void,
+  dispatch: (action: AnnotationEditorAction) => void
 ): void {
   if (event.key === "Delete" || event.key === "Backspace") {
     event.preventDefault();
@@ -458,10 +424,7 @@ function handleKeyDown(
   }
 }
 
-function normalizedPoint(
-  event: PointerEvent<HTMLElement>,
-  target: HTMLElement,
-): Point {
+function normalizedPoint(event: PointerEvent<HTMLElement>, target: HTMLElement): Point {
   const rect = target.getBoundingClientRect();
   return {
     x: clamp((event.clientX - rect.left) / rect.width),
@@ -481,11 +444,7 @@ function normalizeBox(start: DatasetSampleBox, point: Point): DatasetSampleBox {
   };
 }
 
-function moveBox(
-  box: DatasetSampleBox,
-  start: Point,
-  point: Point,
-): DatasetSampleBox {
+function moveBox(box: DatasetSampleBox, start: Point, point: Point): DatasetSampleBox {
   const deltaX = point.x - start.x;
   const deltaY = point.y - start.y;
   return {
@@ -495,27 +454,15 @@ function moveBox(
   };
 }
 
-function resizeBox(
-  box: DatasetSampleBox,
-  handle: ResizeHandle,
-  point: Point,
-): DatasetSampleBox {
+function resizeBox(box: DatasetSampleBox, handle: ResizeHandle, point: Point): DatasetSampleBox {
   const left = box.x;
   const top = box.y;
   const right = box.x + box.width;
   const bottom = box.y + box.height;
-  const nextLeft = handle.includes("w")
-    ? clamp(point.x, 0, right - MIN_BOX_SIZE)
-    : left;
-  const nextRight = handle.includes("e")
-    ? clamp(point.x, left + MIN_BOX_SIZE, 1)
-    : right;
-  const nextTop = handle.includes("n")
-    ? clamp(point.y, 0, bottom - MIN_BOX_SIZE)
-    : top;
-  const nextBottom = handle.includes("s")
-    ? clamp(point.y, top + MIN_BOX_SIZE, 1)
-    : bottom;
+  const nextLeft = handle.includes("w") ? clamp(point.x, 0, right - MIN_BOX_SIZE) : left;
+  const nextRight = handle.includes("e") ? clamp(point.x, left + MIN_BOX_SIZE, 1) : right;
+  const nextTop = handle.includes("n") ? clamp(point.y, 0, bottom - MIN_BOX_SIZE) : top;
+  const nextBottom = handle.includes("s") ? clamp(point.y, top + MIN_BOX_SIZE, 1) : bottom;
   return {
     ...box,
     x: nextLeft,
@@ -528,24 +475,19 @@ function resizeBox(
 function replaceBox(
   boxes: DatasetSampleBox[],
   index: number,
-  box: DatasetSampleBox,
+  box: DatasetSampleBox
 ): DatasetSampleBox[] {
-  return boxes.map((current, currentIndex) =>
-    currentIndex === index ? box : current,
-  );
+  return boxes.map((current, currentIndex) => (currentIndex === index ? box : current));
 }
 
 function pushHistory(
   history: DatasetSampleBox[][],
-  boxes: DatasetSampleBox[],
+  boxes: DatasetSampleBox[]
 ): DatasetSampleBox[][] {
   return [...history, boxes].slice(-50);
 }
 
-function boxesEqual(
-  left: DatasetSampleBox[],
-  right: DatasetSampleBox[],
-): boolean {
+function boxesEqual(left: DatasetSampleBox[], right: DatasetSampleBox[]): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
@@ -692,8 +634,7 @@ const pathStyle: CSSProperties = {
   textOverflow: "ellipsis",
 };
 
-const rootNode =
-  typeof document === "undefined" ? null : document.getElementById("root");
+const rootNode = typeof document === "undefined" ? null : document.getElementById("root");
 if (rootNode) {
   createRoot(rootNode).render(<AnnotationEditorApp />);
 }

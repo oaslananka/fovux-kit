@@ -18,14 +18,12 @@ describe("RunFileDecorationProvider", () => {
       { runPath: failedPath, status: "failed" },
     ]);
 
-    expect(
-      provider.provideFileDecoration(vscode.Uri.file(completePath))?.tooltip,
-    ).toBe("Fovux run: completed");
-    expect(
-      provider.provideFileDecoration(vscode.Uri.file(failedPath))?.tooltip,
-    ).toBe("Fovux run: failed");
-    expect(
-      provider.provideFileDecoration(vscode.Uri.file("other")),
-    ).toBeUndefined();
+    expect(provider.provideFileDecoration(vscode.Uri.file(completePath))?.tooltip).toBe(
+      "Fovux run: completed"
+    );
+    expect(provider.provideFileDecoration(vscode.Uri.file(failedPath))?.tooltip).toBe(
+      "Fovux run: failed"
+    );
+    expect(provider.provideFileDecoration(vscode.Uri.file("other"))).toBeUndefined();
   });
 });

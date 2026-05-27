@@ -27,7 +27,9 @@ Fovux uses a protected release model.
 
 ### fovux-studio to VS Marketplace and Open VSX
 
-- Versioned from the same grouped release-please PR as `fovux-mcp`.
+- Published as `oaslananka.fovuxstudiokit`; the extension keeps the `Fovux Studio` display name and
+  stable `fovux.*` contribution identifiers.
+- Versioned independently from `fovux-mcp` through its own release-please package entry.
 - The release workflow packages the extension with the VS Code extension CLI.
 - Marketplace publishing runs only when `VSCE_PAT` and `OVSX_PAT` are configured
   in the `vsce-production` environment or org repo secrets.
@@ -55,6 +57,6 @@ gh pr create --base main --title "fix(mcp): critical bug description"
 
 ## Version Strategy
 
-Both packages use linked semantic versioning. The release-please `linked-versions`
-plugin keeps `fovux-mcp`, `fovux-studio`, `mcp.json`, `fovux-mcp/server.json`,
-and `fovux-mcp/smithery.yaml` on the same release version.
+`fovux-mcp` and `fovux-studio` use independent semantic-version tracks. The MCP package remains
+the source for `mcp.json`, `fovux-mcp/server.json`, and `fovux-mcp/smithery.yaml`. Studio starts its
+public Marketplace/Open VSX package track at `1.0.0` under `oaslananka.fovuxstudiokit`.

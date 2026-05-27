@@ -26,6 +26,12 @@ const studioPackage = JSON.parse(await readText("fovux-studio/package.json"));
 const workflowsDir = new URL(".github/workflows/", root);
 const workflowsPath = fileURLToPath(workflowsDir);
 const workflowNames = await readdir(workflowsDir);
+const STUDIO_PACKAGE_NAME = "fovuxstudiokit";
+const STUDIO_IDENTIFIER = "oaslananka.fovuxstudiokit";
+const STUDIO_VSIX = "fovuxstudiokit.vsix";
+const OVSX_VERSION = "0.10.12";
+const studioIdentifier = `${studioPackage.publisher}.${studioPackage.name}`;
+const studioPackageVersion = studioPackage.version;
 
 const expectedPackages = {
   "fovux-mcp": {
@@ -38,11 +44,27 @@ const expectedPackages = {
   "fovux-studio": {
     releaseType: "node",
     component: "fovux-studio",
-    packageName: studioPackage.name,
-    version: studioPackage.version,
+    packageName: STUDIO_PACKAGE_NAME,
+    version: studioPackageVersion,
     changelog: "CHANGELOG.md",
   },
 };
+
+if (studioPackage.displayName !== "Fovux Studio") {
+  fail("Fovux Studio displayName must stay stable");
+}
+if (studioPackage.name !== STUDIO_PACKAGE_NAME) {
+  fail(`Fovux Studio package name must be ${STUDIO_PACKAGE_NAME}`);
+}
+if (
+  typeof studioPackageVersion !== "string" ||
+  studioPackageVersion.length === 0
+) {
+  fail("Fovux Studio package version must be defined");
+}
+if (studioIdentifier !== STUDIO_IDENTIFIER) {
+  fail(`Fovux Studio extension identifier must be ${STUDIO_IDENTIFIER}`);
+}
 
 for (const [path, expected] of Object.entries(expectedPackages)) {
   const actual = config.packages?.[path];
@@ -83,18 +105,12 @@ if (
   );
 }
 
-const linkedVersions = config.plugins?.find(
-  (plugin) => plugin.type === "linked-versions",
-);
-if (!linkedVersions) {
-  fail("release-please linked-versions plugin is required");
-} else {
-  const expectedComponents = Object.keys(expectedPackages).sort();
-  const actualComponents = [...(linkedVersions.components ?? [])].sort();
-  if (JSON.stringify(actualComponents) !== JSON.stringify(expectedComponents)) {
-    fail(
-      "release-please linked-versions components must match configured packages",
-    );
+for (const plugin of config.plugins ?? []) {
+  if (
+    plugin.type === "linked-versions" &&
+    (plugin.components ?? []).includes("fovux-studio")
+  ) {
+    fail("fovux-studio must not be part of release-please linked-versions");
   }
 }
 
@@ -127,6 +143,38 @@ if (!workflowNames.includes("release-please.yml")) {
   if (!releaseWorkflow.includes("fovux-mcp/uv.lock")) {
     fail("release pull request metadata sync must update uv.lock");
   }
+  for (const required of [
+    STUDIO_IDENTIFIER,
+    STUDIO_VSIX,
+    `ovsx@${OVSX_VERSION}`,
+  ]) {
+    if (!releaseWorkflow.includes(required)) {
+      fail(`release workflow must reference ${required}`);
+    }
+  }
+  for (const forbidden of ["fovux-studio.vsix", "ovsx@0.10.11"]) {
+    if (releaseWorkflow.includes(forbidden)) {
+      fail(`release workflow must not reference ${forbidden}`);
+    }
+  }
+}
+
+if (!workflowNames.includes("publish-production.yml")) {
+  fail("production publish workflow is required");
+} else {
+  const publishWorkflow = await readFile(
+    join(workflowsPath, "publish-production.yml"),
+    "utf8",
+  );
+  for (const required of [
+    STUDIO_IDENTIFIER,
+    "extension_identifier",
+    `OVSX_VERSION: "${OVSX_VERSION}"`,
+  ]) {
+    if (!publishWorkflow.includes(required)) {
+      fail(`production publish workflow must reference ${required}`);
+    }
+  }
 }
 
 const forbiddenReleaseInputs = [
@@ -155,5 +203,5 @@ if (process.exitCode) {
 }
 
 console.log(
-  "Release automation config is manifest-driven and version-input free.",
+  `Release automation config is manifest-driven, version-input free, and targets ${STUDIO_IDENTIFIER}.`,
 );

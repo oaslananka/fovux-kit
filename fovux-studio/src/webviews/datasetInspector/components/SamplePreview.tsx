@@ -41,9 +41,7 @@ export function SamplePreview(props: SamplePreviewProps): JSX.Element {
 }
 
 function boxKey(box: DatasetSampleBox): string {
-  return [box.classId, box.className, box.x, box.y, box.width, box.height].join(
-    ":",
-  );
+  return [box.classId, box.className, box.x, box.y, box.width, box.height].join(":");
 }
 
 function boxStyle(box: DatasetSampleBox): CSSProperties {

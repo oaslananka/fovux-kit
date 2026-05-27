@@ -4,11 +4,7 @@ import { createRoot } from "react-dom/client";
 
 import type { HttpClientConfig, RunSummary } from "../shared/api";
 import { invokeTool, listRuns } from "../shared/api";
-import {
-  CompareRunsInitialState,
-  postToExtension,
-  readInitialState,
-} from "../shared/types";
+import { CompareRunsInitialState, postToExtension, readInitialState } from "../shared/types";
 
 interface ComparedRun {
   run_id: string;
@@ -37,7 +33,7 @@ function CompareRunsApp(): JSX.Element {
   });
   const clientConfig = useMemo<HttpClientConfig>(
     () => ({ baseUrl: initial.baseUrl, authToken: initial.authToken }),
-    [initial.authToken, initial.baseUrl],
+    [initial.authToken, initial.baseUrl]
   );
   const [runs, setRuns] = useState<RunSummary[]>(initial.initialRuns);
   const [selectedRunIds, setSelectedRunIds] = useState<string[]>([]);
@@ -53,13 +49,9 @@ function CompareRunsApp(): JSX.Element {
       try {
         const nextRuns = await listRuns(clientConfig);
         setRuns(nextRuns);
-        setSelectedRunIds(
-          nextRuns.slice(0, Math.min(2, nextRuns.length)).map((run) => run.id),
-        );
+        setSelectedRunIds(nextRuns.slice(0, Math.min(2, nextRuns.length)).map((run) => run.id));
       } catch (nextError) {
-        setError(
-          nextError instanceof Error ? nextError.message : String(nextError),
-        );
+        setError(nextError instanceof Error ? nextError.message : String(nextError));
       }
     };
 
@@ -73,11 +65,7 @@ function CompareRunsApp(): JSX.Element {
           <p style={eyebrowStyle}>Run Comparison</p>
           <h1 style={titleStyle}>Decide which run deserves the next export</h1>
         </div>
-        <button
-          type="button"
-          style={buttonStyle}
-          onClick={() => void compare()}
-        >
+        <button type="button" style={buttonStyle} onClick={() => void compare()}>
           Compare selected runs
         </button>
       </header>
@@ -129,9 +117,7 @@ function CompareRunsApp(): JSX.Element {
           <div style={resultHeaderStyle}>
             <div>
               <strong>Best run</strong>
-              <p style={{ margin: "4px 0 0 0" }}>
-                {result.best_run_id ?? "n/a"}
-              </p>
+              <p style={{ margin: "4px 0 0 0" }}>{result.best_run_id ?? "n/a"}</p>
             </div>
             <div style={buttonRowStyle}>
               <button
@@ -149,9 +135,7 @@ function CompareRunsApp(): JSX.Element {
               <button
                 type="button"
                 style={secondaryButtonStyle}
-                onClick={() =>
-                  postToExtension({ type: "openPath", path: result.chart_path })
-                }
+                onClick={() => postToExtension({ type: "openPath", path: result.chart_path })}
               >
                 Reveal chart
               </button>
@@ -162,15 +146,11 @@ function CompareRunsApp(): JSX.Element {
               <article key={run.run_id} style={cardStyle}>
                 <strong>{run.run_id}</strong>
                 <span style={mutedStyle}>{run.model}</span>
-                <span style={metricStyle}>
-                  mAP50 {formatMetric(run.best_map50)}
-                </span>
+                <span style={metricStyle}>mAP50 {formatMetric(run.best_map50)}</span>
                 <button
                   type="button"
                   style={secondaryButtonStyle}
-                  onClick={() =>
-                    postToExtension({ type: "openPath", path: run.run_path })
-                  }
+                  onClick={() => postToExtension({ type: "openPath", path: run.run_path })}
                 >
                   Reveal run
                 </button>
@@ -184,9 +164,7 @@ function CompareRunsApp(): JSX.Element {
 
   function toggleRun(runId: string): void {
     setSelectedRunIds((current) =>
-      current.includes(runId)
-        ? current.filter((item) => item !== runId)
-        : [...current, runId],
+      current.includes(runId) ? current.filter((item) => item !== runId) : [...current, runId]
     );
   }
 
@@ -197,19 +175,13 @@ function CompareRunsApp(): JSX.Element {
     }
 
     try {
-      const nextResult = await invokeTool<CompareResult>(
-        clientConfig,
-        "run_compare",
-        {
-          run_ids: selectedRunIds,
-        },
-      );
+      const nextResult = await invokeTool<CompareResult>(clientConfig, "run_compare", {
+        run_ids: selectedRunIds,
+      });
       setResult(nextResult);
       setError(null);
     } catch (nextError) {
-      setError(
-        nextError instanceof Error ? nextError.message : String(nextError),
-      );
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
     }
   }
 }

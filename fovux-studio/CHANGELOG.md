@@ -1,8 +1,17 @@
 # Changelog
 
-All notable changes to `fovux-studio` are documented here.
+All notable changes to Fovux Studio (`fovuxstudiokit`) are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [1.0.0] - 2026-05-27
+
+### Changed
+
+- Renamed the published extension package to `fovuxstudiokit`, making the Marketplace and Open VSX
+  identifier `oaslananka.fovuxstudiokit`.
+- Reset the public Studio package version to `1.0.0` while preserving the existing `Fovux Studio`
+  display name and stable `fovux.*` contribution identifiers.
 
 ## [4.1.8](https://github.com/oaslananka-lab/fovux/compare/fovux-studio-v4.1.7...fovux-studio-v4.1.8) (2026-05-10)
 

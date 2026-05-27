@@ -22,8 +22,7 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
       properties: {
         dataset_path: {
           type: "string",
-          description:
-            "Path to the YOLO dataset directory containing data.yaml.",
+          description: "Path to the YOLO dataset directory containing data.yaml.",
         },
       },
       required: ["dataset_path"],

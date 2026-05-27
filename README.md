@@ -6,7 +6,7 @@
 
 [![Org CI/CD](https://github.com/oaslananka-lab/fovux/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka-lab/fovux/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/fovux-mcp)](https://pypi.org/project/fovux-mcp/)
-[![Marketplace](https://img.shields.io/visual-studio-marketplace/v/oaslananka.fovux-studio)](https://marketplace.visualstudio.com/items?itemName=oaslananka.fovux-studio)
+[![Marketplace](https://img.shields.io/visual-studio-marketplace/v/oaslananka.fovuxstudiokit)](https://marketplace.visualstudio.com/items?itemName=oaslananka.fovuxstudiokit)
 [![Python 3.11-3.13](https://img.shields.io/badge/Python-3.11_|_3.12_|_3.13-blue)](https://pypi.org/project/fovux-mcp/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -57,7 +57,7 @@ uv tool install fovux-mcp
 Search for **Fovux Studio** in the VS Code Marketplace or Open VSX, or install via the CLI:
 
 ```bash
-code --install-extension oaslananka.fovux-studio
+code --install-extension oaslananka.fovuxstudiokit
 ```
 
 ## MCP client configuration

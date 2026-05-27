@@ -20,11 +20,8 @@ let sessionActiveProfile: string | null = null;
 
 export function resolveFovuxHome(): string {
   const config = vscode.workspace.getConfiguration("fovux");
-  const activeProfile =
-    sessionActiveProfile ?? config.get<string>("activeProfile");
-  const profile = resolveFovuxProfiles().find(
-    (candidate) => candidate.name === activeProfile,
-  );
+  const activeProfile = sessionActiveProfile ?? config.get<string>("activeProfile");
+  const profile = resolveFovuxProfiles().find((candidate) => candidate.name === activeProfile);
   if (profile) {
     return expandHome(profile.home);
   }

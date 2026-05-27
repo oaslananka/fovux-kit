@@ -16,18 +16,13 @@ export const FOVUX_COMPAT = {
 } as const;
 
 /** Possible compatibility classifications. */
-export type CompatState =
-  | "connected:recommended"
-  | "connected:supported"
-  | "incompatible";
+export type CompatState = "connected:recommended" | "connected:supported" | "incompatible";
 
 /**
  * Parse a semver version string into major.minor.patch components.
  * Returns null for invalid version strings.
  */
-function parseSemver(
-  version: string,
-): { major: number; minor: number; patch: number } | null {
+function parseSemver(version: string): { major: number; minor: number; patch: number } | null {
   const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version.trim());
   if (!match) {
     return null;
@@ -90,9 +85,7 @@ function satisfiesRange(version: string, range: string): boolean {
  * @param serverVersion - The version string returned by the server's /health endpoint.
  *                        If null or undefined, the server is classified as incompatible.
  */
-export function classifyCompat(
-  serverVersion: string | null | undefined,
-): CompatState {
+export function classifyCompat(serverVersion: string | null | undefined): CompatState {
   if (!serverVersion) {
     return "incompatible";
   }

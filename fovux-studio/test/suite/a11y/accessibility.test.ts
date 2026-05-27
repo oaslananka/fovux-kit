@@ -22,9 +22,7 @@ describe("Webview accessibility", () => {
   it("form controls and icon-free buttons have accessible names", () => {
     for (const entrypoint of WEBVIEW_ENTRYPOINTS) {
       const source = readWebviewSource(entrypoint);
-      for (const tag of source.matchAll(
-        /<(button|input|select|textarea)\b([^>]*)>/g,
-      )) {
+      for (const tag of source.matchAll(/<(button|input|select|textarea)\b([^>]*)>/g)) {
         const [, element, attributes] = tag;
         if (!element || !attributes) {
           continue;
@@ -35,15 +33,10 @@ describe("Webview accessibility", () => {
         if (element === "input" && /\btype="checkbox"/.test(attributes)) {
           continue;
         }
-        if (
-          element === "button" &&
-          hasVisibleButtonText(source, tag.index ?? 0)
-        ) {
+        if (element === "button" && hasVisibleButtonText(source, tag.index ?? 0)) {
           continue;
         }
-        expect.fail(
-          `${entrypoint} has an unnamed <${element}> control: ${tag[0]}`,
-        );
+        expect.fail(`${entrypoint} has an unnamed <${element}> control: ${tag[0]}`);
       }
     }
   });
@@ -52,7 +45,7 @@ describe("Webview accessibility", () => {
 function readWebviewSource(entrypoint: string): string {
   return fs.readFileSync(
     path.join(process.cwd(), "src", "webviews", ...entrypoint.split("/")),
-    "utf8",
+    "utf8"
   );
 }
 

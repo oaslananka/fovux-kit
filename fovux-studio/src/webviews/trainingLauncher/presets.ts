@@ -16,8 +16,7 @@ export const TRAINING_PRESETS: TrainingPreset[] = [
   {
     id: "fast_prototype",
     label: "Fast Prototype",
-    description:
-      "30 epochs, compact model, optimized for a quick sanity-check.",
+    description: "30 epochs, compact model, optimized for a quick sanity-check.",
     config: {
       model: "yolov8n.pt",
       epochs: 30,
@@ -30,8 +29,7 @@ export const TRAINING_PRESETS: TrainingPreset[] = [
   {
     id: "production",
     label: "Production",
-    description:
-      "Balanced accuracy and throughput for a durable local baseline.",
+    description: "Balanced accuracy and throughput for a durable local baseline.",
     config: {
       model: "yolov8m.pt",
       epochs: 150,
@@ -57,8 +55,7 @@ export const TRAINING_PRESETS: TrainingPreset[] = [
   {
     id: "accuracy_max",
     label: "Accuracy Max",
-    description:
-      "Longer run for the highest local mAP that still fits common workstations.",
+    description: "Longer run for the highest local mAP that still fits common workstations.",
     config: {
       model: "yolov8x.pt",
       epochs: 300,
@@ -70,11 +67,7 @@ export const TRAINING_PRESETS: TrainingPreset[] = [
   },
 ];
 
-export function estimateTrainingMinutes(
-  epochs: number,
-  batch: number,
-  imgsz: number,
-): number {
+export function estimateTrainingMinutes(epochs: number, batch: number, imgsz: number): number {
   const workload = epochs * Math.max(imgsz / 320, 1);
   const throughputFactor = Math.max(batch, 1) / 8;
   return Math.max(5, Math.round((workload / throughputFactor) * 0.75));

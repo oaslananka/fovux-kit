@@ -26,10 +26,7 @@ export interface ExportsSummary {
 
 export class ExportItem extends vscode.TreeItem {
   constructor(private readonly record: ExportRecord) {
-    super(
-      path.basename(record.artifactPath),
-      vscode.TreeItemCollapsibleState.None,
-    );
+    super(path.basename(record.artifactPath), vscode.TreeItemCollapsibleState.None);
     this.tooltip = `${record.artifactPath}\nSource: ${record.sourceCheckpoint}`;
     this.description = buildDescription(record);
     this.iconPath = new vscode.ThemeIcon("archive");
@@ -42,12 +39,8 @@ export class ExportItem extends vscode.TreeItem {
   }
 }
 
-export class ExportsTreeProvider
-  implements vscode.TreeDataProvider<ExportItem>, vscode.Disposable
-{
-  private readonly onDidChangeEmitter = new vscode.EventEmitter<
-    ExportItem | undefined | null
-  >();
+export class ExportsTreeProvider implements vscode.TreeDataProvider<ExportItem>, vscode.Disposable {
+  private readonly onDidChangeEmitter = new vscode.EventEmitter<ExportItem | undefined | null>();
   readonly onDidChangeTreeData = this.onDidChangeEmitter.event;
 
   private watchers: vscode.FileSystemWatcher[] = [];
@@ -101,17 +94,11 @@ export class ExportsTreeProvider
         const raw = JSON.parse(line) as Record<string, unknown>;
         records.push({
           id: String(raw["id"] ?? ""),
-          artifactPath: String(
-            raw["artifact_path"] ?? raw["output_path"] ?? "",
-          ),
+          artifactPath: String(raw["artifact_path"] ?? raw["output_path"] ?? ""),
           sourceCheckpoint: String(raw["source_checkpoint"] ?? ""),
           format: String(raw["format"] ?? "artifact"),
-          durationSeconds:
-            typeof raw["duration_s"] === "number"
-              ? Number(raw["duration_s"])
-              : null,
-          createdAt:
-            typeof raw["created_at"] === "string" ? raw["created_at"] : null,
+          durationSeconds: typeof raw["duration_s"] === "number" ? Number(raw["duration_s"]) : null,
+          createdAt: typeof raw["created_at"] === "string" ? raw["created_at"] : null,
         });
       } catch {
         // Ignore partial lines from an in-progress append.
@@ -120,20 +107,14 @@ export class ExportsTreeProvider
 
     return records
       .filter((record) => record.artifactPath.length > 0)
-      .sort((left, right) =>
-        (right.createdAt ?? "").localeCompare(left.createdAt ?? ""),
-      );
+      .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""));
   }
 
   private configureWatchers(): void {
     const home = resolveFovuxHome();
     this.watchers = [
-      vscode.workspace.createFileSystemWatcher(
-        path.join(home, "exports.jsonl"),
-      ),
-      vscode.workspace.createFileSystemWatcher(
-        path.join(home, "exports", "**", "*"),
-      ),
+      vscode.workspace.createFileSystemWatcher(path.join(home, "exports.jsonl")),
+      vscode.workspace.createFileSystemWatcher(path.join(home, "exports", "**", "*")),
     ];
 
     for (const watcher of this.watchers) {

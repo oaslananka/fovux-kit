@@ -25,7 +25,7 @@ describe("shared webview api", () => {
 
   it("parses multiline SSE data fields", () => {
     const payload = parseMetricEvent(
-      'event: metric\ndata: {"runId":"run1",\ndata: "epoch":2,"metrics":{"mAP":0.7}}\n',
+      'event: metric\ndata: {"runId":"run1",\ndata: "epoch":2,"metrics":{"mAP":0.7}}\n'
     );
 
     expect(payload).toEqual({ runId: "run1", epoch: 2, metrics: { mAP: 0.7 } });
@@ -33,7 +33,7 @@ describe("shared webview api", () => {
 
   it("accepts plural metrics SSE events from compatible servers", () => {
     const payload = parseMetricEvent(
-      'event: metrics\ndata: {"runId":"run1","epoch":2,"metrics":{"map50":0.7}}\n',
+      'event: metrics\ndata: {"runId":"run1","epoch":2,"metrics":{"map50":0.7}}\n'
     );
 
     expect(payload).toEqual({
@@ -59,7 +59,7 @@ describe("shared webview api", () => {
             'event: metric\ndata: {"runId":"run1","epoch":3,"metrics":{"mAP":0.8}}\n\n',
           ]),
         };
-      }),
+      })
     );
 
     const received: unknown[] = [];
@@ -68,7 +68,7 @@ describe("shared webview api", () => {
       config,
       "run1",
       (payload) => received.push(payload),
-      (error) => errors.push(error),
+      (error) => errors.push(error)
     );
 
     await vi.advanceTimersByTimeAsync(1_100);
@@ -112,7 +112,7 @@ describe("shared webview api", () => {
       "run1",
       (payload) => received.push(payload),
       (error) => errors.push(error),
-      done,
+      done
     );
 
     await vi.waitFor(() => {

@@ -212,6 +212,7 @@ jobs:
     outputs:
       package_name: ${{ steps.meta.outputs.name }}
       package_version: ${{ steps.meta.outputs.version }}
+      extension_identifier: ${{ steps.meta.outputs.identifier }}
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 20
     permissions:
@@ -273,8 +274,11 @@ jobs:
           for (const key of ["publisher", "name", "version"]) {
             if (!p[key]) throw new Error(`EXTENSION_MANIFEST_INVALID ${key}`);
           }
+          const identifier = `${p.publisher}.${p.name}`;
+          if (identifier !== "oaslananka.fovuxstudiokit") throw new Error(`EXTENSION_IDENTIFIER_INVALID ${identifier}`);
+          if (p.version !== "1.0.0") throw new Error(`EXTENSION_VERSION_INVALID ${p.version}`);
           if (!p.engines?.vscode) throw new Error("EXTENSION_MANIFEST_INVALID engines.vscode");
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `name=${p.name}\nversion=${p.version}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `name=${p.name}\nversion=${p.version}\nidentifier=${identifier}\n`);
           NODE
       - name: Package VSIX
         run: |
@@ -316,6 +320,7 @@ jobs:
           set -euo pipefail
           package_name="${{ needs.package-extension.outputs.package_name }}"
           package_version="${{ needs.package-extension.outputs.package_version }}"
+          extension_identifier="${{ needs.package-extension.outputs.extension_identifier }}"
           write_report() {
             local state="$1"
             local result="$2"
@@ -326,6 +331,7 @@ jobs:
             REPORT_BLOCKER="${blocker}" \
             REPORT_PACKAGE="${package_name}" \
             REPORT_VERSION="${package_version}" \
+            REPORT_IDENTIFIER="${extension_identifier}" \
             REPORT_PATH="out/publish-report-vscode-marketplace.json" \
             node <<'NODE'
           const fs = require("fs");
@@ -336,6 +342,7 @@ jobs:
             blocker: process.env.REPORT_BLOCKER,
             package: process.env.REPORT_PACKAGE,
             version: process.env.REPORT_VERSION,
+            identifier: process.env.REPORT_IDENTIFIER,
             run_url: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             evidence: [],
           };
@@ -392,6 +399,7 @@ jobs:
           set -euo pipefail
           package_name="${{ needs.package-extension.outputs.package_name }}"
           package_version="${{ needs.package-extension.outputs.package_version }}"
+          extension_identifier="${{ needs.package-extension.outputs.extension_identifier }}"
           write_report() {
             local state="$1"
             local result="$2"
@@ -402,6 +410,7 @@ jobs:
             REPORT_BLOCKER="${blocker}" \
             REPORT_PACKAGE="${package_name}" \
             REPORT_VERSION="${package_version}" \
+            REPORT_IDENTIFIER="${extension_identifier}" \
             REPORT_PATH="out/publish-report-open-vsx.json" \
             node <<'NODE'
           const fs = require("fs");
@@ -412,6 +421,7 @@ jobs:
             blocker: process.env.REPORT_BLOCKER,
             package: process.env.REPORT_PACKAGE,
             version: process.env.REPORT_VERSION,
+            identifier: process.env.REPORT_IDENTIFIER,
             run_url: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             evidence: [],
           };

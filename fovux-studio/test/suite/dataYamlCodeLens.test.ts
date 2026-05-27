@@ -30,7 +30,7 @@ describe("DataYamlCodeLensProvider", () => {
       provider.provideCodeLenses({
         fileName: path.join("workspace", "dataset", "classes.yaml"),
         uri: { fsPath: path.join("workspace", "dataset", "classes.yaml") },
-      } as never),
+      } as never)
     ).toEqual([]);
   });
 });

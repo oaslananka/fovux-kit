@@ -17,13 +17,11 @@ export function getUserPresets(context: vscode.ExtensionContext): UserPreset[] {
 
 export async function saveUserPreset(
   context: vscode.ExtensionContext,
-  preset: UserPreset,
+  preset: UserPreset
 ): Promise<UserPreset[]> {
   const presets = [
     preset,
-    ...getUserPresets(context).filter(
-      (candidate) => candidate.name !== preset.name,
-    ),
+    ...getUserPresets(context).filter((candidate) => candidate.name !== preset.name),
   ].slice(0, 20);
   await context.globalState?.update(USER_PRESETS_KEY, presets);
   return presets;
@@ -31,11 +29,9 @@ export async function saveUserPreset(
 
 export async function deleteUserPreset(
   context: vscode.ExtensionContext,
-  name: string,
+  name: string
 ): Promise<UserPreset[]> {
-  const presets = getUserPresets(context).filter(
-    (preset) => preset.name !== name,
-  );
+  const presets = getUserPresets(context).filter((preset) => preset.name !== name);
   await context.globalState?.update(USER_PRESETS_KEY, presets);
   return presets;
 }
