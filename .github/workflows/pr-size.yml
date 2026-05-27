@@ -44,6 +44,20 @@ jobs:
           elif [ "$changed" -le 500 ]; then label="size/L";
           else label="size/XL"; fi
 
+          while IFS='|' read -r name color description; do
+            gh label create "$name" \
+              --repo "$GITHUB_REPOSITORY" \
+              --color "$color" \
+              --description "$description" \
+              --force
+          done <<'LABELS'
+          size/XS|0e8a16|Pull request changes 10 lines or fewer
+          size/S|c2e0c6|Pull request changes 11-50 lines
+          size/M|fbca04|Pull request changes 51-250 lines
+          size/L|d93f0b|Pull request changes 251-500 lines
+          size/XL|b60205|Pull request changes more than 500 lines
+          LABELS
+
           current_labels="$(
             gh pr view "$PR_NUMBER" \
               --repo "$GITHUB_REPOSITORY" \

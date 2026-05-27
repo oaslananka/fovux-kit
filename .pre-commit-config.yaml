@@ -44,7 +44,7 @@ repos:
         args: [--fix, --disable, MD013, MD033, MD041]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.0
+    rev: v0.15.13
     hooks:
       - id: ruff
         args: [--fix]

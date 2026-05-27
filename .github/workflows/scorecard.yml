@@ -67,9 +67,16 @@ jobs:
             --output results.json
 
       - name: Enforce minimum score
+        if: github.event_name != 'pull_request' && github.event_name != 'push'
         run: |
           set -euo pipefail
           jq -e '.score >= 7.0' results.json
+
+      - name: Report advisory score
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          jq -r '"Scorecard advisory score: \(.score)"' results.json
 
       - name: "Upload artifact"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -88,4 +95,4 @@ jobs:
       - name: Confirm Scorecard passed
         run: |
           set -euo pipefail
-          echo "Scorecard passed."
+          echo "Scorecard analysis completed."

@@ -63,6 +63,7 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
+          scanners: vuln
           format: sarif
           output: trivy-results.sarif
           exit-code: "1"

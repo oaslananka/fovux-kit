@@ -20,6 +20,6 @@ def test_check_tool_docs_exits_zero() -> None:
         text=True,
         cwd=str(REPO_ROOT),
     )
-    assert (
-        result.returncode == 0
-    ), f"check_tool_docs.py found missing docs:\n{result.stdout}\n{result.stderr}"
+    assert result.returncode == 0, (
+        f"check_tool_docs.py found missing docs:\n{result.stdout}\n{result.stderr}"
+    )

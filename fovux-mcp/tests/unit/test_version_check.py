@@ -20,9 +20,9 @@ def test_check_versions_exits_zero() -> None:
         text=True,
         cwd=str(REPO_ROOT),
     )
-    assert (
-        result.returncode == 0
-    ), f"check_versions.py unexpectedly failed:\n{result.stdout}\n{result.stderr}"
+    assert result.returncode == 0, (
+        f"check_versions.py unexpectedly failed:\n{result.stdout}\n{result.stderr}"
+    )
     assert "coherent" in result.stdout.lower() or "4.1.0" in result.stdout
 
 
@@ -67,7 +67,7 @@ def test_check_versions_detects_mismatch(tmp_path: Path) -> None:
         text=True,
         cwd=str(tmp_path),
     )
-    assert (
-        result.returncode == 1
-    ), f"check_versions.py should have detected mismatch:\n{result.stdout}\n{result.stderr}"
+    assert result.returncode == 1, (
+        f"check_versions.py should have detected mismatch:\n{result.stdout}\n{result.stderr}"
+    )
     assert "MISMATCH" in result.stdout.upper()
