@@ -26,15 +26,15 @@ tasks:
   format:
     desc: Auto-format the codebase
     cmds:
-      - cmd: cd fovux-mcp && uvx ruff check --fix .
-      - cmd: cd fovux-mcp && uvx ruff format .
+      - cmd: cd fovux-mcp && uv run ruff check --fix .
+      - cmd: cd fovux-mcp && uv run ruff format .
       - cmd: cd fovux-studio && pnpm prettier --write .
 
   lint:
     desc: Run all linters (read-only)
     cmds:
-      - cmd: cd fovux-mcp && uvx ruff check .
-      - cmd: cd fovux-mcp && uvx ruff format --check .
+      - cmd: cd fovux-mcp && uv run ruff check .
+      - cmd: cd fovux-mcp && uv run ruff format --check .
       - cmd: cd fovux-studio && pnpm run lint
       - cmd: actionlint
 

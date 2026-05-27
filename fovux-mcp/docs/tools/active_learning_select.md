@@ -8,28 +8,29 @@ Rank unlabeled images by model uncertainty for annotation prioritization.
 
 ## Input Schema
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `checkpoint` | `string` | Yes | — | Model checkpoint name or path. |
-| `unlabeled_pool` | `string` | Yes | — | Path to the directory of unlabeled images. |
-| `strategy` | `string` | No | `"entropy"` | Scoring strategy: `entropy`, `least_confident`, `margin`. |
-| `budget` | `integer` | No | `100` | Maximum number of images to select. |
-| `imgsz` | `integer` | No | `640` | Inference input image size. |
-| `conf` | `float` | No | `0.25` | Minimum confidence threshold. |
-| `device` | `string` | No | `"auto"` | Inference device. |
+| Parameter        | Type      | Required | Default     | Description                                               |
+| ---------------- | --------- | -------- | ----------- | --------------------------------------------------------- |
+| `checkpoint`     | `string`  | Yes      | —           | Model checkpoint name or path.                            |
+| `unlabeled_pool` | `string`  | Yes      | —           | Path to the directory of unlabeled images.                |
+| `strategy`       | `string`  | No       | `"entropy"` | Scoring strategy: `entropy`, `least_confident`, `margin`. |
+| `budget`         | `integer` | No       | `100`       | Maximum number of images to select.                       |
+| `imgsz`          | `integer` | No       | `640`       | Inference input image size.                               |
+| `conf`           | `float`   | No       | `0.25`      | Minimum confidence threshold.                             |
+| `device`         | `string`  | No       | `"auto"`    | Inference device.                                         |
 
 ## Output Schema
 
-| Field | Type | Description |
-|---|---|---|
-| `checkpoint` | `string` | Checkpoint used for scoring. |
-| `strategy` | `string` | Uncertainty strategy applied. |
-| `budget` | `integer` | Requested budget. |
-| `selected` | `list[object]` | Ranked list of `{image_path, score, strategy}` entries. |
+| Field        | Type           | Description                                             |
+| ------------ | -------------- | ------------------------------------------------------- |
+| `checkpoint` | `string`       | Checkpoint used for scoring.                            |
+| `strategy`   | `string`       | Uncertainty strategy applied.                           |
+| `budget`     | `integer`      | Requested budget.                                       |
+| `selected`   | `list[object]` | Ranked list of `{image_path, score, strategy}` entries. |
 
 ## Examples
 
 ### CLI
+
 ```bash
 curl -X POST http://127.0.0.1:7823/tools/active_learning_select \
   -H "Authorization: Bearer $(cat ~/.fovux/auth.token)" \
@@ -38,6 +39,7 @@ curl -X POST http://127.0.0.1:7823/tools/active_learning_select \
 ```
 
 ### Python
+
 ```python
 from fovux.tools.active_learning_select import active_learning_select
 result = active_learning_select("yolov8n.pt", "/data/unlabeled", strategy="entropy", budget=50)

@@ -311,7 +311,7 @@ def _prediction_bbox(prediction: dict[str, Any]) -> tuple[float, float, float, f
     if not isinstance(bbox, list) or len(bbox) < 4:
         return None
     x, y, width, height = bbox[:4]
-    if not all(isinstance(value, (int, float)) for value in (x, y, width, height)):
+    if not all(isinstance(value, int | float) for value in (x, y, width, height)):
         return None
     left = float(x)
     top = float(y)

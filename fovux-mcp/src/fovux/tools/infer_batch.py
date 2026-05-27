@@ -173,7 +173,7 @@ def _write_manifest(
                     confidence = detection.get("confidence")
                     if not isinstance(bbox, list) or len(bbox) < 4:
                         continue
-                    if not isinstance(class_id, int) or not isinstance(confidence, (int, float)):
+                    if not isinstance(class_id, int) or not isinstance(confidence, int | float):
                         continue
                     lines.append(
                         " ".join(

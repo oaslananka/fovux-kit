@@ -14,14 +14,14 @@ uv sync --frozen --extra dev
 
 ```json
 {
-  "mcpServers": {
-    "fovux": {
-      "command": "fovux-mcp",
-      "env": {
-        "FOVUX_HOME": "~/.fovux"
-      }
+    "mcpServers": {
+        "fovux": {
+            "command": "fovux-mcp",
+            "env": {
+                "FOVUX_HOME": "~/.fovux"
+            }
+        }
     }
-  }
 }
 ```
 

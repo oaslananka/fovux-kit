@@ -8,25 +8,26 @@ Sync a training run to a local or remote MLflow tracking server.
 
 ## Input Schema
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `run_id` | `string` | Yes | — | Fovux run ID to sync. |
-| `tracking_uri` | `string` | No | `"http://localhost:5000"` | MLflow tracking server URI. |
-| `experiment_name` | `string` | No | `"fovux"` | MLflow experiment name. |
+| Parameter         | Type     | Required | Default                   | Description                 |
+| ----------------- | -------- | -------- | ------------------------- | --------------------------- |
+| `run_id`          | `string` | Yes      | —                         | Fovux run ID to sync.       |
+| `tracking_uri`    | `string` | No       | `"http://localhost:5000"` | MLflow tracking server URI. |
+| `experiment_name` | `string` | No       | `"fovux"`                 | MLflow experiment name.     |
 
 ## Output Schema
 
-| Field | Type | Description |
-|---|---|---|
-| `run_id` | `string` | Fovux run ID. |
-| `mlflow_run_id` | `string` | Created MLflow run ID. |
-| `tracking_uri` | `string` | MLflow server URI used. |
-| `experiment_name` | `string` | MLflow experiment name. |
-| `synced_metrics` | `integer` | Number of metric entries synced. |
+| Field             | Type      | Description                      |
+| ----------------- | --------- | -------------------------------- |
+| `run_id`          | `string`  | Fovux run ID.                    |
+| `mlflow_run_id`   | `string`  | Created MLflow run ID.           |
+| `tracking_uri`    | `string`  | MLflow server URI used.          |
+| `experiment_name` | `string`  | MLflow experiment name.          |
+| `synced_metrics`  | `integer` | Number of metric entries synced. |
 
 ## Examples
 
 ### CLI
+
 ```bash
 curl -X POST http://127.0.0.1:7823/tools/sync_to_mlflow \
   -H "Authorization: Bearer $(cat ~/.fovux/auth.token)" \
@@ -35,6 +36,7 @@ curl -X POST http://127.0.0.1:7823/tools/sync_to_mlflow \
 ```
 
 ### Python
+
 ```python
 from fovux.tools.sync_to_mlflow import sync_to_mlflow
 result = sync_to_mlflow("abc123", tracking_uri="http://localhost:5000")

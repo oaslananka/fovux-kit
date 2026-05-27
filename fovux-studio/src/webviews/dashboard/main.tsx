@@ -4,9 +4,17 @@ import { createRoot } from "react-dom/client";
 
 import { MetricChart, type ChartSeries } from "./components/MetricChart";
 import { RunList } from "./components/RunList";
-import type { HttpClientConfig, MetricPayload, RunSummary } from "../shared/api";
+import type {
+  HttpClientConfig,
+  MetricPayload,
+  RunSummary,
+} from "../shared/api";
 import { listRuns, subscribeToMetrics } from "../shared/api";
-import { DashboardInitialState, postToExtension, readInitialState } from "../shared/types";
+import {
+  DashboardInitialState,
+  postToExtension,
+  readInitialState,
+} from "../shared/types";
 
 const COLORS = [
   "var(--vscode-charts-blue)",
@@ -15,7 +23,13 @@ const COLORS = [
   "var(--vscode-charts-green)",
   "var(--vscode-charts-red)",
 ];
-const MAP50_KEYS = ["metrics/mAP50(B)", "map50", "mAP50", "metrics/map50", "metrics/mAP50"];
+const MAP50_KEYS = [
+  "metrics/mAP50(B)",
+  "map50",
+  "mAP50",
+  "metrics/map50",
+  "metrics/mAP50",
+];
 const BOX_LOSS_KEYS = ["train/box_loss", "loss/box", "box_loss", "box"];
 
 function DashboardApp(): JSX.Element {
@@ -32,11 +46,13 @@ function DashboardApp(): JSX.Element {
       baseUrl: initial.baseUrl,
       authToken: initial.authToken,
     }),
-    [initial.authToken, initial.baseUrl]
+    [initial.authToken, initial.baseUrl],
   );
   const [runs, setRuns] = useState<RunSummary[]>(initial.initialRuns);
   const [selectedRunIds, setSelectedRunIds] = useState<string[]>([]);
-  const [seriesByRun, setSeriesByRun] = useState<Record<string, MetricPayload[]>>({});
+  const [seriesByRun, setSeriesByRun] = useState<
+    Record<string, MetricPayload[]>
+  >({});
   const [error, setError] = useState<string | null>(initial.initialError);
 
   useEffect(() => {
@@ -50,7 +66,9 @@ function DashboardApp(): JSX.Element {
         }
       } catch (nextError) {
         if (!disposed) {
-          setError(nextError instanceof Error ? nextError.message : String(nextError));
+          setError(
+            nextError instanceof Error ? nextError.message : String(nextError),
+          );
         }
       }
     };
@@ -74,13 +92,19 @@ function DashboardApp(): JSX.Element {
     if (!runs.length || selectedRunIds.length) {
       return;
     }
-    setSelectedRunIds(runs.slice(0, Math.min(3, runs.length)).map((run) => run.id));
+    setSelectedRunIds(
+      runs.slice(0, Math.min(3, runs.length)).map((run) => run.id),
+    );
   }, [runs, selectedRunIds.length]);
 
   useEffect(() => {
     const activeRunIds = selectedRunIds.slice(0, 5);
     setSeriesByRun((current) =>
-      Object.fromEntries(Object.entries(current).filter(([runId]) => activeRunIds.includes(runId)))
+      Object.fromEntries(
+        Object.entries(current).filter(([runId]) =>
+          activeRunIds.includes(runId),
+        ),
+      ),
     );
 
     const unsubscribers = activeRunIds.map((runId) =>
@@ -93,8 +117,8 @@ function DashboardApp(): JSX.Element {
             [runId]: upsertPayload(current[runId] ?? [], payload),
           }));
         },
-        (streamError) => setError(streamError)
-      )
+        (streamError) => setError(streamError),
+      ),
     );
 
     return () => {
@@ -105,17 +129,21 @@ function DashboardApp(): JSX.Element {
   const mapSeries = useMemo(
     () =>
       selectedRunIds
-        .map((runId, index) => toChartSeries(runId, seriesByRun[runId] ?? [], MAP50_KEYS, index))
+        .map((runId, index) =>
+          toChartSeries(runId, seriesByRun[runId] ?? [], MAP50_KEYS, index),
+        )
         .filter((series): series is ChartSeries => series !== null),
-    [selectedRunIds, seriesByRun]
+    [selectedRunIds, seriesByRun],
   );
 
   const lossSeries = useMemo(
     () =>
       selectedRunIds
-        .map((runId, index) => toChartSeries(runId, seriesByRun[runId] ?? [], BOX_LOSS_KEYS, index))
+        .map((runId, index) =>
+          toChartSeries(runId, seriesByRun[runId] ?? [], BOX_LOSS_KEYS, index),
+        )
         .filter((series): series is ChartSeries => series !== null),
-    [selectedRunIds, seriesByRun]
+    [selectedRunIds, seriesByRun],
   );
 
   const latestRows = selectedRunIds
@@ -129,8 +157,8 @@ function DashboardApp(): JSX.Element {
           <p style={eyebrowStyle}>Fovux Dashboard</p>
           <h1 style={titleStyle}>Live focus on your local YOLO runs</h1>
           <p style={subtitleStyle}>
-            Overlay up to five runs, track mAP as epochs land, and inspect the latest loss curve
-            without leaving VS Code.
+            Overlay up to five runs, track mAP as epochs land, and inspect the
+            latest loss curve without leaving VS Code.
           </p>
         </div>
         <div style={badgeStyle}>{runs.length} tracked runs</div>
@@ -140,8 +168,8 @@ function DashboardApp(): JSX.Element {
         <section style={onboardingStyle}>
           <strong>HTTP server offline</strong>
           <p style={mutedParagraphStyle}>
-            Start the local Fovux server from VS Code to stream run metrics. No separate terminal is
-            required.
+            Start the local Fovux server from VS Code to stream run metrics. No
+            separate terminal is required.
           </p>
           <button
             type="button"
@@ -156,7 +184,11 @@ function DashboardApp(): JSX.Element {
       {error ? <p style={errorStyle}>{error}</p> : null}
 
       <div style={layoutStyle}>
-        <RunList runs={runs} selectedRunIds={selectedRunIds} onToggle={toggleRun} />
+        <RunList
+          runs={runs}
+          selectedRunIds={selectedRunIds}
+          onToggle={toggleRun}
+        />
         <section style={statsGridStyle}>
           {latestRows.map((payload) => (
             <article key={payload.runId} style={statCardStyle}>
@@ -203,7 +235,10 @@ function DashboardApp(): JSX.Element {
   }
 }
 
-function upsertPayload(series: MetricPayload[], payload: MetricPayload): MetricPayload[] {
+function upsertPayload(
+  series: MetricPayload[],
+  payload: MetricPayload,
+): MetricPayload[] {
   const nextSeries = series.filter((item) => item.epoch !== payload.epoch);
   nextSeries.push(payload);
   nextSeries.sort((left, right) => left.epoch - right.epoch);
@@ -214,11 +249,13 @@ function toChartSeries(
   runId: string,
   series: MetricPayload[],
   metricKeys: string[],
-  colorIndex: number
+  colorIndex: number,
 ): ChartSeries | null {
   const points = series
     .map((item) => ({ x: item.epoch, y: readMetric(item.metrics, metricKeys) }))
-    .filter((point): point is { x: number; y: number } => typeof point.y === "number");
+    .filter(
+      (point): point is { x: number; y: number } => typeof point.y === "number",
+    );
   if (!points.length) {
     return null;
   }
@@ -229,7 +266,10 @@ function toChartSeries(
   };
 }
 
-function readMetric(metrics: Record<string, number>, keys: string[]): number | undefined {
+function readMetric(
+  metrics: Record<string, number>,
+  keys: string[],
+): number | undefined {
   for (const key of keys) {
     const value = metrics[key];
     if (typeof value === "number") {

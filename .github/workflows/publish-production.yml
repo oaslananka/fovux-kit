@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   build-python:
-    if: ${{ github.repository == 'oaslananka/fovux' }}
+    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
     outputs:
       publish_ref: ${{ steps.ref.outputs.value }}
     runs-on: [self-hosted, Linux, X64]
@@ -87,7 +87,7 @@ jobs:
           if-no-files-found: error
 
   pypi-publish:
-    if: ${{ github.repository == 'oaslananka/fovux' }}
+    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 10
     needs: build-python
@@ -104,7 +104,7 @@ jobs:
       - name: Publish to PyPI
         id: publish
         continue-on-error: true
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
       - name: Write PyPI publish report
         if: always()
         env:
@@ -135,7 +135,7 @@ jobs:
           if-no-files-found: ignore
 
   mcp-registry-publish:
-    if: ${{ github.repository == 'oaslananka/fovux' }}
+    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 15
     environment: production
@@ -208,7 +208,7 @@ jobs:
           if-no-files-found: ignore
 
   package-extension:
-    if: ${{ github.repository == 'oaslananka/fovux' }}
+    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
     outputs:
       package_name: ${{ steps.meta.outputs.name }}
       package_version: ${{ steps.meta.outputs.version }}
@@ -292,7 +292,7 @@ jobs:
           if-no-files-found: error
 
   vscode-marketplace:
-    if: ${{ github.repository == 'oaslananka/fovux' }}
+    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 10
     needs: package-extension
@@ -368,7 +368,7 @@ jobs:
           if-no-files-found: ignore
 
   open-vsx:
-    if: ${{ github.repository == 'oaslananka/fovux' }}
+    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 10
     needs: package-extension

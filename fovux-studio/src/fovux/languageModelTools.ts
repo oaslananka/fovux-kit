@@ -12,7 +12,9 @@ interface GranularToolInput {
   [key: string]: unknown;
 }
 
-export function registerFovuxLanguageModelTool(context: vscode.ExtensionContext): void {
+export function registerFovuxLanguageModelTool(
+  context: vscode.ExtensionContext,
+): void {
   if (!vscode.lm?.registerTool) {
     return;
   }
@@ -31,7 +33,7 @@ export function registerFovuxLanguageModelTool(context: vscode.ExtensionContext)
     async invoke(_options) {
       const result = await new EmbeddedMcpClient().callTool<unknown>(
         _options.input.tool,
-        _options.input.args ?? {}
+        _options.input.args ?? {},
       );
       return new vscode.LanguageModelToolResult([
         new vscode.LanguageModelTextPart(JSON.stringify(result, null, 2)),
@@ -39,7 +41,9 @@ export function registerFovuxLanguageModelTool(context: vscode.ExtensionContext)
     },
   };
 
-  context.subscriptions.push(vscode.lm.registerTool("fovux_callTool", genericTool));
+  context.subscriptions.push(
+    vscode.lm.registerTool("fovux_callTool", genericTool),
+  );
 
   // Register granular tools
   for (const definition of GRANULAR_TOOLS) {
@@ -56,13 +60,18 @@ export function registerFovuxLanguageModelTool(context: vscode.ExtensionContext)
       async invoke(options) {
         // Check server compatibility before proceeding
         const client = new EmbeddedMcpClient();
-        const result = await client.callTool<unknown>(definition.mcpToolName, options.input);
+        const result = await client.callTool<unknown>(
+          definition.mcpToolName,
+          options.input,
+        );
         return new vscode.LanguageModelToolResult([
           new vscode.LanguageModelTextPart(JSON.stringify(result, null, 2)),
         ]);
       },
     };
 
-    context.subscriptions.push(vscode.lm.registerTool(definition.name, granularTool));
+    context.subscriptions.push(
+      vscode.lm.registerTool(definition.name, granularTool),
+    );
   }
 }

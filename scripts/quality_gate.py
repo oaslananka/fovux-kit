@@ -88,15 +88,38 @@ def run_pre_commit(file_args: list[str]) -> None:
         for path in paths
         if path.suffix == ".py" and MCP_DIR in path.parents
     ]
-    prettier_files = [str(path) for path in paths if path.suffix.lower() in PRETTIER_EXTENSIONS]
+    prettier_files = [
+        str(path) for path in paths if path.suffix.lower() in PRETTIER_EXTENSIONS
+    ]
     eslint_files = _studio_absolute(paths, ESLINT_EXTENSIONS)
 
     if python_files:
-        _run(["uv", "run", "--project", "fovux-mcp", "ruff", "check", "--fix", *python_files])
+        _run(
+            [
+                "uv",
+                "run",
+                "--project",
+                "fovux-mcp",
+                "ruff",
+                "check",
+                "--fix",
+                *python_files,
+            ]
+        )
         _run(["uv", "run", "--project", "fovux-mcp", "ruff", "format", *python_files])
 
     if prettier_files:
-        _run([PNPM, "--dir", str(STUDIO_DIR), "exec", "prettier", "--write", *prettier_files])
+        _run(
+            [
+                PNPM,
+                "--dir",
+                str(STUDIO_DIR),
+                "exec",
+                "prettier",
+                "--write",
+                *prettier_files,
+            ]
+        )
 
     if eslint_files:
         _run(
@@ -131,7 +154,10 @@ def mcp_lint() -> None:
     _run(["uv", "lock", "--check"], cwd=MCP_DIR)
     _run(["uv", "run", "ruff", "check", "src", "tests"], cwd=MCP_DIR)
     _run(["uv", "run", "ruff", "format", "--check", "src", "tests"], cwd=MCP_DIR)
-    _run(["uv", "run", "mypy", "--strict", "--warn-unused-ignores", "src/fovux"], cwd=MCP_DIR)
+    _run(
+        ["uv", "run", "mypy", "--strict", "--warn-unused-ignores", "src/fovux"],
+        cwd=MCP_DIR,
+    )
 
 
 def mcp_security() -> None:
@@ -200,7 +226,9 @@ def repo_verify() -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     """Create the CLI parser for local quality gate modes."""
-    parser = argparse.ArgumentParser(description="Local quality gates for the Fovux monorepo.")
+    parser = argparse.ArgumentParser(
+        description="Local quality gates for the Fovux monorepo."
+    )
     parser.add_argument(
         "mode",
         choices=[

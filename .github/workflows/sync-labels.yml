@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   sync:
-    if: github.repository == 'oaslananka-lab/fovux'
+    if: github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -35,16 +35,4 @@ jobs:
           REPOS: ${{ github.repository }}
         run: |
           set -euo pipefail
-          uvx --with pyyaml python scripts/sync_labels.py
-
-      - name: Sync personal repository labels
-        env:
-          GH_TOKEN: ${{ secrets.MIRROR_PAT }}
-          REPOS: oaslananka/fovux
-        run: |
-          set -euo pipefail
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::notice::Skipping personal label sync because MIRROR_PAT is not configured."
-            exit 0
-          fi
           uvx --with pyyaml python scripts/sync_labels.py

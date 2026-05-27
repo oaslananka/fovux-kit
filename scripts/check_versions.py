@@ -119,9 +119,13 @@ def check_versions() -> int:
         ),
         "fovux-mcp/smithery.yaml": _read_smithery_version(root),
         "mcp.json": _read_jsonpath_version(root / "mcp.json", "version"),
-        "mcp.json packages[0]": _read_jsonpath_version(root / "mcp.json", "packages", 0, "version"),
+        "mcp.json packages[0]": _read_jsonpath_version(
+            root / "mcp.json", "packages", 0, "version"
+        ),
         "fovux-studio/package.json": _read_package_json_version(root),
-        "fovux-mcp/CHANGELOG.md": _read_changelog_top_version(root / "fovux-mcp" / "CHANGELOG.md"),
+        "fovux-mcp/CHANGELOG.md": _read_changelog_top_version(
+            root / "fovux-mcp" / "CHANGELOG.md"
+        ),
         "fovux-studio/CHANGELOG.md": _read_changelog_top_version(
             root / "fovux-studio" / "CHANGELOG.md"
         ),
@@ -138,7 +142,9 @@ def check_versions() -> int:
     print()
     max_label = max(len(label) for label in sources)
     for label, version in sources.items():
-        most_common = max(unique_versions, key=lambda v: list(sources.values()).count(v))
+        most_common = max(
+            unique_versions, key=lambda v: list(sources.values()).count(v)
+        )
         marker = "  " if version == most_common else "!!"
         print(f"  {marker} {label:<{max_label}}  {version}")
     print()

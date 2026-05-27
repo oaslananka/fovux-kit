@@ -12,7 +12,7 @@ export class FovuxStudioError extends Error {
 export class FovuxHttpError extends FovuxStudioError {
   constructor(
     public readonly status: number,
-    message: string
+    message: string,
   ) {
     super(`HTTP ${status}: ${message}`);
     this.name = "FovuxHttpError";

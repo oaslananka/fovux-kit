@@ -124,7 +124,7 @@ def load_metrics_jsonl(run_dir: Path) -> list[dict[str, Any]]:
                 "metrics": {
                     str(key): float(value)
                     for key, value in metrics.items()
-                    if isinstance(value, (int, float))
+                    if isinstance(value, int | float)
                 },
                 "wall_time_s": float(raw.get("wall_time_s", 0.0) or 0.0),
                 "eta_s": float(raw.get("eta_s", 0.0) or 0.0),

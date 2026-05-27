@@ -26,7 +26,7 @@ defaults:
 jobs:
   analyze:
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       (
         github.event_name != 'pull_request' ||
         github.event.pull_request.draft == false
@@ -117,7 +117,7 @@ jobs:
   codeql-required:
     name: codeql-required
     needs: analyze
-    if: github.repository == 'oaslananka-lab/fovux'
+    if: github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

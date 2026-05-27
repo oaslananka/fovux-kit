@@ -3,6 +3,7 @@
 ## Dual-owner repository model
 
 This repository uses a dual-owner model:
+
 - `oaslananka/fovux` is the canonical public repository. It consumes **zero** GitHub Actions minutes.
 - `oaslananka-lab/fovux` is the protected CI/CD and release repository.
 
@@ -30,6 +31,7 @@ gh api -X PUT /repos/oaslananka/fovux/actions/permissions \
 ## Branch hygiene
 
 The canonical repo should have "Automatically delete head branches" enabled:
+
 ```bash
 gh api -X PATCH /repos/oaslananka/fovux -f delete_branch_on_merge=true
 ```

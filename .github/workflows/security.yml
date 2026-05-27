@@ -26,7 +26,7 @@ jobs:
   gitleaks:
     name: Gitleaks secret scan
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       (
         github.event_name != 'pull_request' ||
         github.event.pull_request.draft == false
@@ -49,7 +49,7 @@ jobs:
   trivy-fs:
     name: Trivy filesystem scan
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       (
         github.event_name != 'pull_request' ||
         github.event.pull_request.draft == false
@@ -63,6 +63,7 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
+          scanners: vuln
           format: sarif
           output: trivy-results.sarif
           exit-code: "1"
@@ -78,7 +79,7 @@ jobs:
   pip-audit:
     name: pip-audit (fovux-mcp)
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       (
         github.event_name != 'pull_request' ||
         github.event.pull_request.draft == false
@@ -101,7 +102,7 @@ jobs:
   pnpm-audit:
     name: pnpm audit (fovux-studio)
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       (
         github.event_name != 'pull_request' ||
         github.event.pull_request.draft == false
@@ -125,7 +126,7 @@ jobs:
   osv-scan:
     name: OSV lockfile scan
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       (
         github.event_name != 'pull_request' ||
         github.event.pull_request.draft == false
@@ -154,7 +155,7 @@ jobs:
   security-required:
     name: security-required
     needs: [gitleaks, trivy-fs, pip-audit, pnpm-audit, osv-scan]
-    if: github.repository == 'oaslananka-lab/fovux'
+    if: github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

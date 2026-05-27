@@ -8,29 +8,30 @@ Run inference with multiple checkpoints and fuse the detections.
 
 ## Input Schema
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `checkpoints` | `list[string]` | Yes | — | List of checkpoint paths or names. |
-| `image_path` | `string` | Yes | — | Path to the input image. |
-| `fusion_method` | `string` | No | `"wbf"` | Detection fusion method: `wbf` (weighted box fusion). |
-| `weights` | `list[float]` | No | `null` | Per-checkpoint weights for fusion. |
-| `imgsz` | `integer` | No | `640` | Inference image size. |
-| `conf` | `float` | No | `0.25` | Confidence threshold. |
-| `device` | `string` | No | `"auto"` | Inference device. |
+| Parameter       | Type           | Required | Default  | Description                                           |
+| --------------- | -------------- | -------- | -------- | ----------------------------------------------------- |
+| `checkpoints`   | `list[string]` | Yes      | —        | List of checkpoint paths or names.                    |
+| `image_path`    | `string`       | Yes      | —        | Path to the input image.                              |
+| `fusion_method` | `string`       | No       | `"wbf"`  | Detection fusion method: `wbf` (weighted box fusion). |
+| `weights`       | `list[float]`  | No       | `null`   | Per-checkpoint weights for fusion.                    |
+| `imgsz`         | `integer`      | No       | `640`    | Inference image size.                                 |
+| `conf`          | `float`        | No       | `0.25`   | Confidence threshold.                                 |
+| `device`        | `string`       | No       | `"auto"` | Inference device.                                     |
 
 ## Output Schema
 
-| Field | Type | Description |
-|---|---|---|
-| `checkpoints` | `list[string]` | Checkpoints used. |
-| `image_path` | `string` | Input image path. |
-| `fusion_method` | `string` | Fusion method applied. |
-| `detections` | `list[object]` | Fused detection list. |
-| `detection_count` | `integer` | Number of fused detections. |
+| Field             | Type           | Description                 |
+| ----------------- | -------------- | --------------------------- |
+| `checkpoints`     | `list[string]` | Checkpoints used.           |
+| `image_path`      | `string`       | Input image path.           |
+| `fusion_method`   | `string`       | Fusion method applied.      |
+| `detections`      | `list[object]` | Fused detection list.       |
+| `detection_count` | `integer`      | Number of fused detections. |
 
 ## Examples
 
 ### CLI
+
 ```bash
 curl -X POST http://127.0.0.1:7823/tools/infer_ensemble \
   -H "Authorization: Bearer $(cat ~/.fovux/auth.token)" \
@@ -39,6 +40,7 @@ curl -X POST http://127.0.0.1:7823/tools/infer_ensemble \
 ```
 
 ### Python
+
 ```python
 from fovux.tools.infer_ensemble import infer_ensemble
 result = infer_ensemble(["yolov8n.pt", "yolov8s.pt"], "/data/test.jpg", fusion_method="wbf")

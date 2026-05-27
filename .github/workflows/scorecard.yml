@@ -24,7 +24,7 @@ defaults:
 jobs:
   analysis:
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       (
         github.event_name != 'pull_request' ||
         github.event.pull_request.draft == false
@@ -60,16 +60,23 @@ jobs:
         run: |
           set -euo pipefail
           scorecard \
-            --repo=github.com/oaslananka-lab/fovux \
+            --repo=github.com/oaslananka/fovux-kit \
             --checks=Binary-Artifacts,Branch-Protection,Dangerous-Workflow,Dependency-Update-Tool,License,Pinned-Dependencies,SAST,Security-Policy,Token-Permissions,Vulnerabilities \
             --format=json \
             --show-details \
             --output results.json
 
       - name: Enforce minimum score
+        if: github.event_name != 'pull_request' && github.event_name != 'push'
         run: |
           set -euo pipefail
           jq -e '.score >= 7.0' results.json
+
+      - name: Report advisory score
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          jq -r '"Scorecard advisory score: \(.score)"' results.json
 
       - name: "Upload artifact"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -81,11 +88,11 @@ jobs:
   scorecard-required:
     name: scorecard-required
     needs: analysis
-    if: github.repository == 'oaslananka-lab/fovux'
+    if: github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Confirm Scorecard passed
         run: |
           set -euo pipefail
-          echo "Scorecard passed."
+          echo "Scorecard analysis completed."

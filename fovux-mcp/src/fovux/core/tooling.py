@@ -26,9 +26,9 @@ class _BindableLogger(Protocol):
 
 def _safe_value(value: object) -> object:
     """Convert rich objects into stable, serializable log values."""
-    if value is None or isinstance(value, (bool, int, float, str)):
+    if value is None or isinstance(value, bool | int | float | str):
         return value
-    if isinstance(value, (list, tuple, set)):
+    if isinstance(value, list | tuple | set):
         return [_safe_value(item) for item in value]
     if isinstance(value, dict):
         return {str(key): _safe_value(item) for key, item in value.items()}
