@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: dessant/lock-threads@7266a7ce5c1df01b1c6db85bf8cd86c737dadbe7
+      - uses: dessant/lock-threads@89ae32b08ed1a541efecbab17912962a5e38981c
         with:
           issue-inactive-days: 30
           pr-inactive-days: 30
