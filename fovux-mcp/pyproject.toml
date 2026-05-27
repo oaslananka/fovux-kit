@@ -46,7 +46,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-yolo = ["ultralytics>=8.4.41"]
+yolo = ["ultralytics>=8.4.56"]
 gpu = ["onnxruntime-gpu>=1.24.4"]
 tensorrt = ["tensorrt>=10.7"]
 coreml = ["coremltools>=8.1 ; sys_platform == 'darwin'"]

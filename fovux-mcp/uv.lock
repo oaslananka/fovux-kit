@@ -1026,7 +1026,7 @@ requires-dist = [
     { name = "tomli-w", specifier = ">=1.2" },
     { name = "typer", specifier = ">=0.24" },
     { name = "types-pillow", marker = "extra == 'dev'" },
-    { name = "ultralytics", marker = "extra == 'yolo'", specifier = ">=8.4.41" },
+    { name = "ultralytics", marker = "extra == 'yolo'", specifier = ">=8.4.56" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.45" },
     { name = "watchfiles", specifier = ">=1.1" },
 ]
@@ -3765,7 +3765,7 @@ wheels = [
 
 [[package]]
 name = "ultralytics"
-version = "8.4.50"
+version = "8.4.56"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
@@ -3781,9 +3781,9 @@ dependencies = [
     { name = "torchvision" },
     { name = "ultralytics-thop" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d3/8c/bce090789751d69ecf8b35fbbeca80eddf8f6e9d37287d4b2023eedd6701/ultralytics-8.4.50.tar.gz", hash = "sha256:ab0014d356878dcc0e649255300e23d003a34fdfe5477ee27184b2a8a33409de", size = 1041904, upload-time = "2026-05-13T11:38:08.13Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/73/440a7aa53aafaed46b106f1633385f390bebd300951cf15daf02a73b2c81/ultralytics-8.4.56.tar.gz", hash = "sha256:403f301cd4556b81fd13f5ca6dfcf2d3d6f31cf13cec0db79e655a086214318f", size = 1065497, upload-time = "2026-05-27T03:56:40.189Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/76/ce757434f535b06181794b41c27fde1e68450dd4ff88341d056bf080c9b2/ultralytics-8.4.50-py3-none-any.whl", hash = "sha256:6a611bb9c7d771ceb583971b91360648e810a07c8aa2ba93f61cea275dc78df8", size = 1234897, upload-time = "2026-05-13T11:38:03.92Z" },
+    { url = "https://files.pythonhosted.org/packages/55/3f/7c86e841462a5f394c5f446943b5776b298aed418a6fd12386da70672660/ultralytics-8.4.56-py3-none-any.whl", hash = "sha256:84185b7c8ad91a8974bb4c5a42a14aeebb87a8c051cc64a5191758ed7d91fb95", size = 1266431, upload-time = "2026-05-27T03:56:35.698Z" },
 ]
 
 [[package]]
