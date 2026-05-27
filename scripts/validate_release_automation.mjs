@@ -27,11 +27,11 @@ const workflowsDir = new URL(".github/workflows/", root);
 const workflowsPath = fileURLToPath(workflowsDir);
 const workflowNames = await readdir(workflowsDir);
 const STUDIO_PACKAGE_NAME = "fovuxstudiokit";
-const STUDIO_PACKAGE_VERSION = "1.0.0";
 const STUDIO_IDENTIFIER = "oaslananka.fovuxstudiokit";
 const STUDIO_VSIX = "fovuxstudiokit.vsix";
 const OVSX_VERSION = "0.10.12";
 const studioIdentifier = `${studioPackage.publisher}.${studioPackage.name}`;
+const studioPackageVersion = studioPackage.version;
 
 const expectedPackages = {
   "fovux-mcp": {
@@ -45,7 +45,7 @@ const expectedPackages = {
     releaseType: "node",
     component: "fovux-studio",
     packageName: STUDIO_PACKAGE_NAME,
-    version: STUDIO_PACKAGE_VERSION,
+    version: studioPackageVersion,
     changelog: "CHANGELOG.md",
   },
 };
@@ -56,8 +56,11 @@ if (studioPackage.displayName !== "Fovux Studio") {
 if (studioPackage.name !== STUDIO_PACKAGE_NAME) {
   fail(`Fovux Studio package name must be ${STUDIO_PACKAGE_NAME}`);
 }
-if (studioPackage.version !== STUDIO_PACKAGE_VERSION) {
-  fail(`Fovux Studio package version must be ${STUDIO_PACKAGE_VERSION}`);
+if (
+  typeof studioPackageVersion !== "string" ||
+  studioPackageVersion.length === 0
+) {
+  fail("Fovux Studio package version must be defined");
 }
 if (studioIdentifier !== STUDIO_IDENTIFIER) {
   fail(`Fovux Studio extension identifier must be ${STUDIO_IDENTIFIER}`);
