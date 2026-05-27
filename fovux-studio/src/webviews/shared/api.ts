@@ -35,19 +35,14 @@ const POLL_FALLBACK_INTERVAL_MS = 2000;
 
 class StreamUnavailableError extends Error {}
 
-export async function listRuns(
-  config: HttpClientConfig,
-): Promise<RunSummary[]> {
+export async function listRuns(config: HttpClientConfig): Promise<RunSummary[]> {
   const response = await fetch(`${config.baseUrl}/runs`, {
     headers: authHeaders(config.authToken),
   });
   return handleResponse<RunSummary[]>(response);
 }
 
-export async function getRun(
-  config: HttpClientConfig,
-  runId: string,
-): Promise<RunDetail> {
+export async function getRun(config: HttpClientConfig, runId: string): Promise<RunDetail> {
   const response = await fetch(`${config.baseUrl}/runs/${runId}`, {
     headers: authHeaders(config.authToken),
   });
@@ -57,7 +52,7 @@ export async function getRun(
 export async function invokeTool<T>(
   config: HttpClientConfig,
   name: string,
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown>
 ): Promise<T> {
   const response = await fetch(`${config.baseUrl}/tools/${name}`, {
     method: "POST",
@@ -72,18 +67,11 @@ export function subscribeToMetrics(
   runId: string,
   onMetric: (payload: MetricPayload) => void,
   onError?: (error: string) => void,
-  onDone?: () => void,
+  onDone?: () => void
 ): () => void {
   const controller = new AbortController();
 
-  void streamEvents(
-    config,
-    runId,
-    controller.signal,
-    onMetric,
-    onError,
-    onDone,
-  );
+  void streamEvents(config, runId, controller.signal, onMetric, onError, onDone);
 
   return () => {
     controller.abort();
@@ -96,7 +84,7 @@ async function streamEvents(
   signal: AbortSignal,
   onMetric: (payload: MetricPayload) => void,
   onError?: (error: string) => void,
-  onDone?: () => void,
+  onDone?: () => void
 ): Promise<void> {
   let attempt = 0;
   while (!signal.aborted) {
@@ -114,9 +102,7 @@ async function streamEvents(
         break;
       }
       if (error instanceof StreamUnavailableError) {
-        onError?.(
-          `Metric stream unavailable for ${runId}; falling back to polling.`,
-        );
+        onError?.(`Metric stream unavailable for ${runId}; falling back to polling.`);
         await pollRunMetrics(config, runId, signal, onMetric, onError, onDone);
         break;
       }
@@ -125,7 +111,7 @@ async function streamEvents(
       onError?.(
         `Reconnecting in ${delayMs}ms (attempt ${attempt}): ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
       await sleep(delayMs, signal);
     }
@@ -137,37 +123,23 @@ async function connectAndStream(
   config: HttpClientConfig,
   runId: string,
   signal: AbortSignal,
-  onMetric: (payload: MetricPayload) => void,
+  onMetric: (payload: MetricPayload) => void
 ): Promise<boolean> {
-  let response = await fetch(
-    `${config.baseUrl}/runs/${encodeURIComponent(runId)}/stream`,
-    {
+  let response = await fetch(`${config.baseUrl}/runs/${encodeURIComponent(runId)}/stream`, {
+    headers: authHeaders(config.authToken),
+    signal,
+  });
+  if (response.status === 404) {
+    response = await fetch(`${config.baseUrl}/runs/${encodeURIComponent(runId)}/metrics`, {
       headers: authHeaders(config.authToken),
       signal,
-    },
-  );
-  if (response.status === 404) {
-    response = await fetch(
-      `${config.baseUrl}/runs/${encodeURIComponent(runId)}/metrics`,
-      {
-        headers: authHeaders(config.authToken),
-        signal,
-      },
-    );
+    });
   }
   if (!response.ok || response.body === null) {
-    if (
-      response.status === 404 ||
-      response.status === 405 ||
-      response.status === 501
-    ) {
-      throw new StreamUnavailableError(
-        `Metric stream is unavailable for ${runId}.`,
-      );
+    if (response.status === 404 || response.status === 405 || response.status === 501) {
+      throw new StreamUnavailableError(`Metric stream is unavailable for ${runId}.`);
     }
-    throw new Error(
-      `Metric stream failed for ${runId} (HTTP ${response.status}).`,
-    );
+    throw new Error(`Metric stream failed for ${runId} (HTTP ${response.status}).`);
   }
 
   const reader = response.body.getReader();
@@ -222,21 +194,17 @@ async function pollRunMetrics(
   signal: AbortSignal,
   onMetric: (payload: MetricPayload) => void,
   onError?: (error: string) => void,
-  onDone?: () => void,
+  onDone?: () => void
 ): Promise<void> {
   let lastEpoch: number | null = null;
   while (!signal.aborted) {
     try {
-      const response = await fetch(
-        `${config.baseUrl}/runs/${encodeURIComponent(runId)}`,
-        {
-          headers: authHeaders(config.authToken),
-          signal,
-        },
-      );
+      const response = await fetch(`${config.baseUrl}/runs/${encodeURIComponent(runId)}`, {
+        headers: authHeaders(config.authToken),
+        signal,
+      });
       const run = await handleResponse<RunDetail>(response);
-      const epoch =
-        typeof run.current_epoch === "number" ? run.current_epoch : 0;
+      const epoch = typeof run.current_epoch === "number" ? run.current_epoch : 0;
       if (epoch !== lastEpoch && typeof run.best_map50 === "number") {
         onMetric({
           runId,
@@ -264,11 +232,7 @@ async function pollRunMetrics(
 function isDoneEvent(chunk: string): boolean {
   return chunk
     .split("\n")
-    .some(
-      (line) =>
-        line.startsWith("event:") &&
-        line.slice("event:".length).trim() === "done",
-    );
+    .some((line) => line.startsWith("event:") && line.slice("event:".length).trim() === "done");
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -280,7 +244,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
         clearTimeout(timer);
         resolve();
       },
-      { once: true },
+      { once: true }
     );
   });
 }
@@ -323,10 +287,7 @@ function extractErrorMessage(detail: unknown, response: Response): string {
     }
     if (nested && typeof nested === "object") {
       const nestedRecord = nested as Record<string, unknown>;
-      const code =
-        typeof nestedRecord["code"] === "string"
-          ? `${nestedRecord["code"]}: `
-          : "";
+      const code = typeof nestedRecord["code"] === "string" ? `${nestedRecord["code"]}: ` : "";
       if (typeof nestedRecord["message"] === "string") {
         return `${code}${nestedRecord["message"]}`;
       }

@@ -76,8 +76,7 @@ export const EXPORT_TARGETS: ExportTargetProfile[] = [
   {
     id: "jetson_nano",
     label: "Jetson Nano",
-    description:
-      "Prepare an ONNX artifact that can feed a later TensorRT step.",
+    description: "Prepare an ONNX artifact that can feed a later TensorRT step.",
     format: "onnx",
     quantize: true,
     verifyParity: false,
@@ -101,31 +100,24 @@ export function suggestExportPath(
   checkpointPath: string,
   fovuxHome: string,
   format: "onnx" | "tflite",
-  quantize: boolean,
+  quantize: boolean
 ): string {
   const checkpointName = checkpointPath.split(/[\\/]/).pop() ?? "model.pt";
   const stem = checkpointName.replace(/\.[^.]+$/, "");
   const suffix = format === "onnx" ? ".onnx" : ".tflite";
   const filename = quantize ? `${stem}-int8${suffix}` : `${stem}${suffix}`;
-  const separator =
-    fovuxHome.endsWith("\\") || fovuxHome.endsWith("/") ? "" : "\\";
+  const separator = fovuxHome.endsWith("\\") || fovuxHome.endsWith("/") ? "" : "\\";
   return `${fovuxHome}${separator}exports\\${filename}`;
 }
 
-export function recommendExportTarget(
-  summary: BenchmarkSummary,
-): ExportRecommendation {
-  const p95 =
-    summary.latency_p95_ms ??
-    summary.latency_p50_ms ??
-    Number.POSITIVE_INFINITY;
+export function recommendExportTarget(summary: BenchmarkSummary): ExportRecommendation {
+  const p95 = summary.latency_p95_ms ?? summary.latency_p50_ms ?? Number.POSITIVE_INFINITY;
   const sizeMb = summary.model_size_mb ?? 0;
   if (p95 <= 35 && sizeMb <= 80) {
     return {
       targetId: "raspberry_pi_5",
       label: "Raspberry Pi 5 ready",
-      message:
-        "Latency and size look suitable for compact ARM edge deployment.",
+      message: "Latency and size look suitable for compact ARM edge deployment.",
     };
   }
   if (p95 <= 90 && sizeMb <= 220) {
@@ -139,14 +131,12 @@ export function recommendExportTarget(
     return {
       targetId: "desktop_cpu",
       label: "Desktop CPU recommended",
-      message:
-        "Usable locally, but likely too heavy for small single-board devices.",
+      message: "Usable locally, but likely too heavy for small single-board devices.",
     };
   }
   return {
     targetId: "desktop_gpu",
     label: "GPU target recommended",
-    message:
-      "Latency is high enough that GPU acceleration or a smaller model is advisable.",
+    message: "Latency is high enough that GPU acceleration or a smaller model is advisable.",
   };
 }

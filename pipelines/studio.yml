@@ -60,8 +60,8 @@ stages:
               Set-Location fovux-studio
               pnpm install --frozen-lockfile
               pnpm build
-              pnpm dlx @vscode/vsce@3.9.1 package --out fovux-studio.vsix --no-dependencies
+              pnpm dlx @vscode/vsce@3.9.1 package --out fovuxstudiokit.vsix --no-dependencies
             displayName: Build VSIX
-          - publish: fovux-studio/fovux-studio.vsix
+          - publish: fovux-studio/fovuxstudiokit.vsix
             artifact: fovux-studio-vsix
             displayName: Publish VSIX

@@ -14,13 +14,7 @@ import { openDatasetInspector } from "./commands/openDatasetInspector";
 import { openExportWizard } from "./commands/openExportWizard";
 import { openTimeline } from "./commands/openTimeline";
 import { openTrainingLauncher } from "./commands/openTrainingLauncher";
-import {
-  copyRunId,
-  deleteRun,
-  resumeRun,
-  stopRun,
-  tagRun,
-} from "./commands/runActions";
+import { copyRunId, deleteRun, resumeRun, stopRun, tagRun } from "./commands/runActions";
 import { registerWalkthroughCommands } from "./commands/walkthroughActions";
 import { RunFileDecorationProvider } from "./decorations/runFileDecorator";
 import { ExtensionFovuxClient } from "./fovux/extensionClient";
@@ -102,99 +96,56 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerFileDecorationProvider(runDecorations),
     vscode.languages.registerCodeLensProvider(
       { pattern: "**/data.yaml", scheme: "file" },
-      new DataYamlCodeLensProvider(),
-    ),
+      new DataYamlCodeLensProvider()
+    )
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("fovux.startServer", () =>
-      startFovuxServer(),
-    ),
-    vscode.commands.registerCommand("fovux.stopServer", () =>
-      stopFovuxServer(),
-    ),
-    vscode.commands.registerCommand(
-      "fovux.startTraining",
-      (datasetPath?: string) => {
-        if (!vscode.workspace.isTrusted) {
-          void vscode.window.showErrorMessage(
-            "Fovux training cannot start in an untrusted workspace. Trust this workspace first.",
-          );
-          return;
-        }
-        return openTrainingLauncher(
-          context,
-          typeof datasetPath === "string" ? datasetPath : "",
+    vscode.commands.registerCommand("fovux.startServer", () => startFovuxServer()),
+    vscode.commands.registerCommand("fovux.stopServer", () => stopFovuxServer()),
+    vscode.commands.registerCommand("fovux.startTraining", (datasetPath?: string) => {
+      if (!vscode.workspace.isTrusted) {
+        void vscode.window.showErrorMessage(
+          "Fovux training cannot start in an untrusted workspace. Trust this workspace first."
         );
-      },
-    ),
-    vscode.commands.registerCommand("fovux.openDashboard", () =>
-      openDashboard(context),
-    ),
-    vscode.commands.registerCommand(
-      "fovux.openDatasetInspector",
-      (datasetPath?: string) =>
-        openDatasetInspector(
-          context,
-          typeof datasetPath === "string" ? datasetPath : undefined,
-        ),
+        return;
+      }
+      return openTrainingLauncher(context, typeof datasetPath === "string" ? datasetPath : "");
+    }),
+    vscode.commands.registerCommand("fovux.openDashboard", () => openDashboard(context)),
+    vscode.commands.registerCommand("fovux.openDatasetInspector", (datasetPath?: string) =>
+      openDatasetInspector(context, typeof datasetPath === "string" ? datasetPath : undefined)
     ),
     vscode.commands.registerCommand("fovux.openAnnotationEditor", () =>
-      openAnnotationEditor(context),
+      openAnnotationEditor(context)
     ),
-    vscode.commands.registerCommand("fovux.openExportWizard", () =>
-      openExportWizard(context),
-    ),
-    vscode.commands.registerCommand("fovux.openTimeline", () =>
-      openTimeline(context),
-    ),
-    vscode.commands.registerCommand("fovux.compareRuns", () =>
-      openCompareRuns(context),
-    ),
+    vscode.commands.registerCommand("fovux.openExportWizard", () => openExportWizard(context)),
+    vscode.commands.registerCommand("fovux.openTimeline", () => openTimeline(context)),
+    vscode.commands.registerCommand("fovux.compareRuns", () => openCompareRuns(context)),
     vscode.commands.registerCommand(
       "fovux.openRunInExplorer",
       (target: string | { runPath?: string }) => {
         const runPath = typeof target === "string" ? target : target?.runPath;
         if (runPath) {
-          void vscode.commands.executeCommand(
-            "revealFileInOS",
-            vscode.Uri.file(runPath),
-          );
+          void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(runPath));
         }
-      },
+      }
     ),
     vscode.commands.registerCommand("fovux.stopRun", (item) => stopRun(item)),
-    vscode.commands.registerCommand("fovux.resumeRun", (item) =>
-      resumeRun(item),
-    ),
-    vscode.commands.registerCommand("fovux.copyRunId", (item) =>
-      copyRunId(item),
-    ),
-    vscode.commands.registerCommand("fovux.deleteRun", (item) =>
-      deleteRun(item),
-    ),
+    vscode.commands.registerCommand("fovux.resumeRun", (item) => resumeRun(item)),
+    vscode.commands.registerCommand("fovux.copyRunId", (item) => copyRunId(item)),
+    vscode.commands.registerCommand("fovux.deleteRun", (item) => deleteRun(item)),
     vscode.commands.registerCommand("fovux.tagRun", (item) => tagRun(item)),
-    vscode.commands.registerCommand(
-      "fovux.revealPath",
-      (targetPath: string) => {
-        void vscode.commands.executeCommand(
-          "revealFileInOS",
-          vscode.Uri.file(targetPath),
-        );
-      },
-    ),
+    vscode.commands.registerCommand("fovux.revealPath", (targetPath: string) => {
+      void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(targetPath));
+    }),
     vscode.commands.registerCommand("fovux.openFovuxHome", () => {
-      void vscode.commands.executeCommand(
-        "revealFileInOS",
-        vscode.Uri.file(resolveFovuxHome()),
-      );
+      void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(resolveFovuxHome()));
     }),
     vscode.commands.registerCommand("fovux.selectProfile", async () => {
       const profiles = resolveFovuxProfiles();
       if (!profiles.length) {
-        void vscode.window.showInformationMessage(
-          "No Fovux profiles are configured.",
-        );
+        void vscode.window.showInformationMessage("No Fovux profiles are configured.");
         return;
       }
       const picked = await vscode.window.showQuickPick(
@@ -202,7 +153,7 @@ export function activate(context: vscode.ExtensionContext): void {
           label: profile.name,
           description: profile.home,
         })),
-        { placeHolder: "Select FOVUX_HOME profile" },
+        { placeHolder: "Select FOVUX_HOME profile" }
       );
       if (!picked) {
         return;
@@ -214,38 +165,27 @@ export function activate(context: vscode.ExtensionContext): void {
       exportsProvider.reconfigure();
       syncViews();
     }),
-    vscode.commands.registerCommand(
-      "fovux.validateDataset",
-      async (datasetPath?: string) => {
-        const target =
-          typeof datasetPath === "string" ? datasetPath : undefined;
-        if (!target) {
-          void openDatasetInspector(context);
-          return;
-        }
-        try {
-          const client = await ExtensionFovuxClient.create();
-          const result = await client.invokeTool<{ summary?: string }>(
-            "dataset_validate",
-            {
-              dataset_path: target,
-            },
-          );
-          void vscode.window.showInformationMessage(
-            result.summary ?? "Dataset validation completed.",
-          );
-        } catch (error) {
-          void vscode.window.showErrorMessage(
-            error instanceof Error ? error.message : String(error),
-          );
-        }
-      },
-    ),
-    vscode.commands.registerCommand("fovux.refreshDoctor", () =>
-      doctorProvider.refresh(),
-    ),
+    vscode.commands.registerCommand("fovux.validateDataset", async (datasetPath?: string) => {
+      const target = typeof datasetPath === "string" ? datasetPath : undefined;
+      if (!target) {
+        void openDatasetInspector(context);
+        return;
+      }
+      try {
+        const client = await ExtensionFovuxClient.create();
+        const result = await client.invokeTool<{ summary?: string }>("dataset_validate", {
+          dataset_path: target,
+        });
+        void vscode.window.showInformationMessage(
+          result.summary ?? "Dataset validation completed."
+        );
+      } catch (error) {
+        void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+      }
+    }),
+    vscode.commands.registerCommand("fovux.refreshDoctor", () => doctorProvider.refresh()),
     vscode.commands.registerCommand("fovux.fixDoctorCheck", (item) =>
-      doctorProvider.fixCheck(item),
+      doctorProvider.fixCheck(item)
     ),
     vscode.commands.registerCommand("fovux.refreshViews", () => {
       runsProvider.refresh();
@@ -253,7 +193,7 @@ export function activate(context: vscode.ExtensionContext): void {
       exportsProvider.refresh();
       void doctorProvider.refresh();
       syncViews();
-    }),
+    })
   );
 
   context.subscriptions.push(
@@ -265,7 +205,7 @@ export function activate(context: vscode.ExtensionContext): void {
       modelsProvider.reconfigure();
       exportsProvider.reconfigure();
       syncViews();
-    }),
+    })
   );
 
   logger.info("Fovux Studio activated.");
@@ -278,14 +218,9 @@ export function deactivate(): void {
   logger.info("Fovux Studio deactivated.");
 }
 
-function syncRunsView(
-  view: vscode.TreeView<unknown>,
-  summary: RunsSummary,
-): void {
+function syncRunsView(view: vscode.TreeView<unknown>, summary: RunsSummary): void {
   view.badge =
-    summary.totalRuns > 0
-      ? { value: summary.totalRuns, tooltip: "Tracked runs" }
-      : undefined;
+    summary.totalRuns > 0 ? { value: summary.totalRuns, tooltip: "Tracked runs" } : undefined;
 
   if (summary.totalRuns === 0) {
     view.message = `Watching ${summary.home}. No runs detected yet.`;
@@ -303,10 +238,7 @@ function syncRunsView(
   updateActiveRunsBadge(summary.activeRuns, summary.latestMap50);
 }
 
-function syncModelsView(
-  view: vscode.TreeView<unknown>,
-  summary: ModelsSummary,
-): void {
+function syncModelsView(view: vscode.TreeView<unknown>, summary: ModelsSummary): void {
   view.badge =
     summary.totalModels > 0
       ? { value: summary.totalModels, tooltip: "Indexed model artifacts" }
@@ -318,9 +250,7 @@ function syncModelsView(
   }
 
   const parts = [
-    summary.counts.checkpoints
-      ? `${summary.counts.checkpoints} checkpoints`
-      : "",
+    summary.counts.checkpoints ? `${summary.counts.checkpoints} checkpoints` : "",
     summary.counts.exports ? `${summary.counts.exports} exports` : "",
     summary.counts.library ? `${summary.counts.library} library` : "",
   ].filter((part) => part !== "");
@@ -328,10 +258,7 @@ function syncModelsView(
   view.message = `${parts.join(" · ")} · ${summary.home}`;
 }
 
-function syncExportsView(
-  view: vscode.TreeView<unknown>,
-  summary: ExportsSummary,
-): void {
+function syncExportsView(view: vscode.TreeView<unknown>, summary: ExportsSummary): void {
   view.badge =
     summary.totalExports > 0
       ? { value: summary.totalExports, tooltip: "Recorded exports" }

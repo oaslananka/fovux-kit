@@ -10,9 +10,7 @@ import type {
   WebviewToExtensionMessage,
 } from "../webviews/shared/types";
 
-export async function openAnnotationEditor(
-  context: vscode.ExtensionContext,
-): Promise<void> {
+export async function openAnnotationEditor(context: vscode.ExtensionContext): Promise<void> {
   const selection = await vscode.window.showOpenDialog({
     canSelectFiles: true,
     canSelectFolders: false,
@@ -34,22 +32,17 @@ export async function openAnnotationEditor(
     {
       enableScripts: true,
       retainContextWhenHidden: true,
-      localResourceRoots: [
-        context.extensionUri,
-        vscode.Uri.file(path.dirname(imagePath)),
-      ],
-    },
+      localResourceRoots: [context.extensionUri, vscode.Uri.file(path.dirname(imagePath))],
+    }
   );
 
   panel.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
     if (message.type === "saveAnnotation") {
       void saveAnnotation(datasetPath, message.imagePath, message.boxes)
-        .then((labelPath) =>
-          vscode.window.showInformationMessage(`Saved ${labelPath}`),
-        )
+        .then((labelPath) => vscode.window.showInformationMessage(`Saved ${labelPath}`))
         .then(undefined, (error: unknown) => {
           void vscode.window.showErrorMessage(
-            error instanceof Error ? error.message : String(error),
+            error instanceof Error ? error.message : String(error)
           );
         });
     }
@@ -67,40 +60,34 @@ export async function openAnnotationEditor(
     panel.webview,
     context.extensionUri,
     "webviews/annotationEditor/main.js",
-    initialState,
+    initialState
   );
 }
 
 async function saveAnnotation(
   datasetPath: string,
   imagePath: string,
-  boxes: DatasetSampleBox[],
+  boxes: DatasetSampleBox[]
 ): Promise<string> {
   const labelPath = resolveLabelPath(datasetPath, imagePath);
   if (labelPath === null) {
-    throw new Error(
-      "Image must live under a YOLO images/ directory to save labels.",
-    );
+    throw new Error("Image must live under a YOLO images/ directory to save labels.");
   }
   const lines = boxes.map((box) => {
     const centerX = box.x + box.width / 2;
     const centerY = box.y + box.height / 2;
     return `${box.classId} ${centerX.toFixed(6)} ${centerY.toFixed(6)} ${box.width.toFixed(
-      6,
+      6
     )} ${box.height.toFixed(6)}`;
   });
   await fs.mkdir(path.dirname(labelPath), { recursive: true });
-  await fs.writeFile(
-    labelPath,
-    `${lines.join("\n")}${lines.length ? "\n" : ""}`,
-    "utf-8",
-  );
+  await fs.writeFile(labelPath, `${lines.join("\n")}${lines.length ? "\n" : ""}`, "utf-8");
   return labelPath;
 }
 
 async function loadAnnotationBoxes(
   datasetPath: string,
-  imagePath: string,
+  imagePath: string
 ): Promise<DatasetSampleBox[]> {
   const labelPath = resolveLabelPath(datasetPath, imagePath);
   if (labelPath === null) {

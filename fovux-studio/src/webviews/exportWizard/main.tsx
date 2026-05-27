@@ -29,14 +29,11 @@ function ExportWizardApp(): JSX.Element {
   });
   const clientConfig = useMemo<HttpClientConfig>(
     () => ({ baseUrl: initial.baseUrl, authToken: initial.authToken }),
-    [initial.authToken, initial.baseUrl],
+    [initial.authToken, initial.baseUrl]
   );
-  const [models, setModels] = useState<ExportWizardModelArtifact[]>(
-    initial.initialModels,
-  );
+  const [models, setModels] = useState<ExportWizardModelArtifact[]>(initial.initialModels);
   const [checkpoint, setCheckpoint] = useState("");
-  const [targetDevice, setTargetDevice] =
-    useState<ExportTargetDevice>("desktop_cpu");
+  const [targetDevice, setTargetDevice] = useState<ExportTargetDevice>("desktop_cpu");
   const [format, setFormat] = useState<"onnx" | "tflite">("onnx");
   const [quantize, setQuantize] = useState(false);
   const [verifyParity, setVerifyParity] = useState(false);
@@ -44,8 +41,7 @@ function ExportWizardApp(): JSX.Element {
   const [outputPath, setOutputPath] = useState("");
   const [calibrationDataset, setCalibrationDataset] = useState("");
   const [resultPath, setResultPath] = useState<string | null>(null);
-  const [recommendation, setRecommendation] =
-    useState<ExportRecommendation | null>(null);
+  const [recommendation, setRecommendation] = useState<ExportRecommendation | null>(null);
   const [benchmarkError, setBenchmarkError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(initial.initialError);
   const [status, setStatus] = useState<string | null>(null);
@@ -54,13 +50,11 @@ function ExportWizardApp(): JSX.Element {
   const [hasCuda, setHasCuda] = useState<boolean | null>(null);
   const exportableModels = useMemo(
     () => models.filter((model) => model.format.toLowerCase() === "pt"),
-    [models],
+    [models]
   );
   const targetProfile = useMemo(
-    () =>
-      EXPORT_TARGETS.find((target) => target.id === targetDevice) ??
-      EXPORT_TARGETS[0],
-    [targetDevice],
+    () => EXPORT_TARGETS.find((target) => target.id === targetDevice) ?? EXPORT_TARGETS[0],
+    [targetDevice]
   );
 
   useEffect(() => {
@@ -75,15 +69,13 @@ function ExportWizardApp(): JSX.Element {
         }>(clientConfig, "model_list", {});
         setModels(response.models);
         const nextExportableModels = response.models.filter(
-          (model) => model.format.toLowerCase() === "pt",
+          (model) => model.format.toLowerCase() === "pt"
         );
         if (!checkpoint && nextExportableModels.length) {
           setCheckpoint(nextExportableModels[0].path);
         }
       } catch (nextError) {
-        setError(
-          nextError instanceof Error ? nextError.message : String(nextError),
-        );
+        setError(nextError instanceof Error ? nextError.message : String(nextError));
       }
     };
 
@@ -99,9 +91,7 @@ function ExportWizardApp(): JSX.Element {
         const report = await invokeTool<{
           gpu?: { accelerator?: string; available?: boolean };
         }>(clientConfig, "fovux_doctor", {});
-        setHasCuda(
-          report.gpu?.available === true && report.gpu?.accelerator === "cuda",
-        );
+        setHasCuda(report.gpu?.available === true && report.gpu?.accelerator === "cuda");
       } catch {
         setHasCuda(false);
       }
@@ -128,9 +118,7 @@ function ExportWizardApp(): JSX.Element {
     if (!checkpoint || outputPath.trim()) {
       return;
     }
-    setOutputPath(
-      suggestExportPath(checkpoint, initial.fovuxHome, format, quantize),
-    );
+    setOutputPath(suggestExportPath(checkpoint, initial.fovuxHome, format, quantize));
   }, [checkpoint, format, initial.fovuxHome, outputPath, quantize]);
 
   return (
@@ -138,21 +126,16 @@ function ExportWizardApp(): JSX.Element {
       <header style={headerStyle}>
         <div>
           <p style={eyebrowStyle}>Export Wizard</p>
-          <h1 style={titleStyle}>
-            Ship the right artifact for edge deployment
-          </h1>
+          <h1 style={titleStyle}>Ship the right artifact for edge deployment</h1>
         </div>
-        <span style={badgeStyle}>
-          {exportableModels.length} exportable checkpoints
-        </span>
+        <span style={badgeStyle}>{exportableModels.length} exportable checkpoints</span>
       </header>
 
       {!initial.isServerReachable ? (
         <section style={helperCardStyle}>
           <strong>HTTP server offline</strong>
           <p style={helperTextStyle}>
-            Start the local Fovux server from VS Code to browse checkpoints and
-            exports.
+            Start the local Fovux server from VS Code to browse checkpoints and exports.
           </p>
           <button
             type="button"
@@ -175,27 +158,19 @@ function ExportWizardApp(): JSX.Element {
             aria-label="Target device"
             style={inputStyle}
             value={targetDevice}
-            onChange={(event) =>
-              setTargetDevice(event.target.value as ExportTargetDevice)
-            }
+            onChange={(event) => setTargetDevice(event.target.value as ExportTargetDevice)}
           >
             {["cpu", "gpu", "edge", "mobile"].map((group) => (
               <optgroup key={group} label={targetGroupLabel(group)}>
-                {EXPORT_TARGETS.filter((target) => target.group === group).map(
-                  (target) => {
-                    const disabled = target.requiresCuda && hasCuda === false;
-                    return (
-                      <option
-                        key={target.id}
-                        value={target.id}
-                        disabled={disabled}
-                      >
-                        {target.label}
-                        {disabled ? " (CUDA unavailable)" : ""}
-                      </option>
-                    );
-                  },
-                )}
+                {EXPORT_TARGETS.filter((target) => target.group === group).map((target) => {
+                  const disabled = target.requiresCuda && hasCuda === false;
+                  return (
+                    <option key={target.id} value={target.id} disabled={disabled}>
+                      {target.label}
+                      {disabled ? " (CUDA unavailable)" : ""}
+                    </option>
+                  );
+                })}
               </optgroup>
             ))}
           </select>
@@ -233,9 +208,7 @@ function ExportWizardApp(): JSX.Element {
             aria-label="Target format"
             style={inputStyle}
             value={format}
-            onChange={(event) =>
-              setFormat(event.target.value as "onnx" | "tflite")
-            }
+            onChange={(event) => setFormat(event.target.value as "onnx" | "tflite")}
           >
             <option value="onnx">ONNX</option>
             <option value="tflite">TFLite</option>
@@ -266,9 +239,7 @@ function ExportWizardApp(): JSX.Element {
           <input
             type="checkbox"
             checked={runBenchmarkAfterExport}
-            onChange={(event) =>
-              setRunBenchmarkAfterExport(event.target.checked)
-            }
+            onChange={(event) => setRunBenchmarkAfterExport(event.target.checked)}
           />
           <span>Run latency benchmark after export</span>
         </label>
@@ -312,10 +283,9 @@ function ExportWizardApp(): JSX.Element {
         <section style={helperCardStyle}>
           <strong>Nothing to export yet</strong>
           <p style={helperTextStyle}>
-            Finish a training run or add a .pt checkpoint under FOVUX_HOME
-            before exporting. Existing ONNX/TFLite artifacts are shown in the
-            Models and Exports views, but they are not valid source checkpoints
-            for a new export.
+            Finish a training run or add a .pt checkpoint under FOVUX_HOME before exporting.
+            Existing ONNX/TFLite artifacts are shown in the Models and Exports views, but they are
+            not valid source checkpoints for a new export.
           </p>
         </section>
       ) : null}
@@ -327,9 +297,7 @@ function ExportWizardApp(): JSX.Element {
           <button
             type="button"
             style={secondaryButtonStyle}
-            onClick={() =>
-              postToExtension({ type: "openPath", path: resultPath })
-            }
+            onClick={() => postToExtension({ type: "openPath", path: resultPath })}
           >
             Reveal in Explorer
           </button>
@@ -356,9 +324,7 @@ function ExportWizardApp(): JSX.Element {
     }
 
     if (quantize && !calibrationDataset) {
-      setError(
-        "Provide a calibration dataset when INT8 quantization is enabled.",
-      );
+      setError("Provide a calibration dataset when INT8 quantization is enabled.");
       return;
     }
 
@@ -382,7 +348,7 @@ function ExportWizardApp(): JSX.Element {
         if (!artifactPath) {
           benchmarkSucceeded = false;
           setBenchmarkError(
-            "Latency benchmark could not run because export did not return an artifact path.",
+            "Latency benchmark could not run because export did not return an artifact path."
           );
         } else {
           benchmarkSucceeded = await benchmarkRecommendation(artifactPath);
@@ -391,12 +357,10 @@ function ExportWizardApp(): JSX.Element {
       setStatus(
         benchmarkSucceeded
           ? "Export completed successfully."
-          : "Export completed successfully, but the latency benchmark failed.",
+          : "Export completed successfully, but the latency benchmark failed."
       );
     } catch (nextError) {
-      setError(
-        nextError instanceof Error ? nextError.message : String(nextError),
-      );
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
       setStatus(null);
     } finally {
       exportRunningRef.current = false;
@@ -406,16 +370,12 @@ function ExportWizardApp(): JSX.Element {
 
   async function selectTool(): Promise<Record<string, unknown>> {
     if (format === "onnx" && quantize) {
-      return invokeTool<Record<string, unknown>>(
-        clientConfig,
-        "quantize_int8",
-        {
-          checkpoint,
-          calibration_dataset: calibrationDataset,
-          output_path: outputPath || undefined,
-          confirm: true,
-        },
-      );
+      return invokeTool<Record<string, unknown>>(clientConfig, "quantize_int8", {
+        checkpoint,
+        calibration_dataset: calibrationDataset,
+        output_path: outputPath || undefined,
+        confirm: true,
+      });
     }
 
     if (format === "onnx") {
@@ -435,29 +395,20 @@ function ExportWizardApp(): JSX.Element {
     });
   }
 
-  async function benchmarkRecommendation(
-    artifactPath: string,
-  ): Promise<boolean> {
+  async function benchmarkRecommendation(artifactPath: string): Promise<boolean> {
     try {
-      const benchmark = await invokeTool<BenchmarkSummary>(
-        clientConfig,
-        "benchmark_latency",
-        {
-          model_path: artifactPath,
-          backend:
-            targetProfile.benchmarkBackend ??
-            (format === "tflite" ? "tflite" : "onnxruntime"),
-          num_warmup: 2,
-          num_iterations: 5,
-          confirm: true,
-        },
-      );
+      const benchmark = await invokeTool<BenchmarkSummary>(clientConfig, "benchmark_latency", {
+        model_path: artifactPath,
+        backend: targetProfile.benchmarkBackend ?? (format === "tflite" ? "tflite" : "onnxruntime"),
+        num_warmup: 2,
+        num_iterations: 5,
+        confirm: true,
+      });
       setRecommendation(recommendExportTarget(benchmark));
       return true;
     } catch (nextError) {
       setRecommendation(null);
-      const message =
-        nextError instanceof Error ? nextError.message : String(nextError);
+      const message = nextError instanceof Error ? nextError.message : String(nextError);
       setBenchmarkError(`Latency benchmark failed: ${message}`);
       return false;
     }

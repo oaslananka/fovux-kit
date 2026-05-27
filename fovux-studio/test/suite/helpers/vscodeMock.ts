@@ -1,10 +1,7 @@
 import { vi } from "vitest";
 
 export const registeredCommands: string[] = [];
-export const registeredCommandHandlers = new Map<
-  string,
-  (...args: unknown[]) => unknown
->();
+export const registeredCommandHandlers = new Map<string, (...args: unknown[]) => unknown>();
 export const createdPanels: Array<{
   id: string;
   title: string;
@@ -59,9 +56,7 @@ export function setWorkspaceTrust(isTrusted: boolean): void {
 export const mockGlobalState = {
   storage: new Map<string, unknown>(),
   get: vi.fn((key: string, defaultValue?: unknown) =>
-    mockGlobalState.storage.has(key)
-      ? mockGlobalState.storage.get(key)
-      : defaultValue,
+    mockGlobalState.storage.has(key) ? mockGlobalState.storage.get(key) : defaultValue
   ),
   update: vi.fn((key: string, value: unknown) => {
     mockGlobalState.storage.set(key, value);
@@ -94,7 +89,7 @@ vi.mock("vscode", () => {
   class ThemeIcon {
     constructor(
       readonly id: string,
-      readonly color?: unknown,
+      readonly color?: unknown
     ) {}
   }
 
@@ -107,14 +102,14 @@ vi.mock("vscode", () => {
       readonly startLine: number,
       readonly startCharacter: number,
       readonly endLine: number,
-      readonly endCharacter: number,
+      readonly endCharacter: number
     ) {}
   }
 
   class CodeLens {
     constructor(
       readonly range: Range,
-      readonly command?: unknown,
+      readonly command?: unknown
     ) {}
   }
 
@@ -122,17 +117,12 @@ vi.mock("vscode", () => {
     constructor(
       readonly badge?: string,
       readonly tooltip?: string,
-      readonly color?: unknown,
+      readonly color?: unknown
     ) {}
   }
 
   const createWebviewPanel = vi.fn(
-    (
-      id: string,
-      title: string,
-      _column: number,
-      options: Record<string, unknown>,
-    ) => {
+    (id: string, title: string, _column: number, options: Record<string, unknown>) => {
       const webview: MockWebview = {
         html: "",
         cspSource: "vscode-webview-resource",
@@ -145,20 +135,18 @@ vi.mock("vscode", () => {
       const panel = { webview };
       createdPanels.push({ id, title, options, panel });
       return panel;
-    },
+    }
   );
 
-  const createTreeView = vi.fn(
-    (id: string, options: Record<string, unknown>) => {
-      const view: MockTreeView = {
-        badge: undefined,
-        message: undefined,
-        dispose: vi.fn(),
-      };
-      createdTreeViews.push({ id, options, view });
-      return view;
-    },
-  );
+  const createTreeView = vi.fn((id: string, options: Record<string, unknown>) => {
+    const view: MockTreeView = {
+      badge: undefined,
+      message: undefined,
+      dispose: vi.fn(),
+    };
+    createdTreeViews.push({ id, options, view });
+    return view;
+  });
 
   const configuration = {
     get: vi.fn((key: string) => {
@@ -200,20 +188,16 @@ vi.mock("vscode", () => {
       showQuickPick: vi.fn(),
     },
     commands: {
-      registerCommand: vi.fn(
-        (commandId: string, handler: (...args: unknown[]) => unknown) => {
-          registeredCommands.push(commandId);
-          registeredCommandHandlers.set(commandId, handler);
-          return { dispose: vi.fn() };
-        },
-      ),
+      registerCommand: vi.fn((commandId: string, handler: (...args: unknown[]) => unknown) => {
+        registeredCommands.push(commandId);
+        registeredCommandHandlers.set(commandId, handler);
+        return { dispose: vi.fn() };
+      }),
       executeCommand: vi.fn(),
     },
     workspace: {
       getConfiguration: vi.fn(() => configuration),
-      workspaceFolders: [
-        { uri: { fsPath: process.cwd(), path: process.cwd() } },
-      ],
+      workspaceFolders: [{ uri: { fsPath: process.cwd(), path: process.cwd() } }],
       get isTrusted() {
         return workspaceTrusted;
       },
@@ -226,12 +210,10 @@ vi.mock("vscode", () => {
       onDidChangeConfiguration: vi.fn(() => ({ dispose: vi.fn() })),
     },
     languages: {
-      registerCodeLensProvider: vi.fn(
-        (selector: unknown, provider: unknown) => {
-          registeredCodeLensProviders.push({ selector, provider });
-          return { dispose: vi.fn() };
-        },
-      ),
+      registerCodeLensProvider: vi.fn((selector: unknown, provider: unknown) => {
+        registeredCodeLensProviders.push({ selector, provider });
+        return { dispose: vi.fn() };
+      }),
     },
     ViewColumn: { One: 1 },
     ConfigurationTarget: { Workspace: 2 },
@@ -246,10 +228,7 @@ vi.mock("vscode", () => {
     EventEmitter,
     Uri: {
       file: (fsPath: string) => ({ fsPath, path: fsPath }),
-      joinPath: (
-        base: { path?: string; fsPath?: string },
-        ...parts: string[]
-      ) => ({
+      joinPath: (base: { path?: string; fsPath?: string }, ...parts: string[]) => ({
         path: [base.path ?? base.fsPath ?? "", ...parts].join("/"),
       }),
     },

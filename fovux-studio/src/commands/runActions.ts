@@ -17,13 +17,11 @@ export async function stopRun(target: RunItem | undefined): Promise<void> {
       force: false,
       confirm: true,
     });
-    void vscode.window.showInformationMessage(
-      result.message ?? `Stopped ${run.runId}.`,
-    );
+    void vscode.window.showInformationMessage(result.message ?? `Stopped ${run.runId}.`);
     void vscode.commands.executeCommand("fovux.refreshViews");
   } catch (error) {
     void vscode.window.showErrorMessage(
-      `Could not stop ${run.runId}: ${error instanceof Error ? error.message : String(error)}`,
+      `Could not stop ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
@@ -45,7 +43,7 @@ export async function resumeRun(target: RunItem | undefined): Promise<void> {
     void vscode.commands.executeCommand("fovux.refreshViews");
   } catch (error) {
     void vscode.window.showErrorMessage(
-      `Could not resume ${run.runId}: ${error instanceof Error ? error.message : String(error)}`,
+      `Could not resume ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
@@ -53,9 +51,7 @@ export async function resumeRun(target: RunItem | undefined): Promise<void> {
 export async function copyRunId(target: RunItem | undefined): Promise<void> {
   const run = target;
   if (!run) {
-    void vscode.window.showWarningMessage(
-      "Select a run before copying its ID.",
-    );
+    void vscode.window.showWarningMessage("Select a run before copying its ID.");
     return;
   }
 
@@ -64,7 +60,7 @@ export async function copyRunId(target: RunItem | undefined): Promise<void> {
     void vscode.window.showInformationMessage(`Copied run ID ${run.runId}.`);
   } catch (error) {
     void vscode.window.showErrorMessage(
-      `Could not copy ${run.runId}: ${error instanceof Error ? error.message : String(error)}`,
+      `Could not copy ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
@@ -79,7 +75,7 @@ export async function deleteRun(target: RunItem | undefined): Promise<void> {
   const confirm = await vscode.window.showWarningMessage(
     `Delete ${run.runId} from Fovux? This removes the run directory and registry entry.`,
     { modal: true },
-    "Delete",
+    "Delete"
   );
   if (confirm !== "Delete") {
     return;
@@ -97,7 +93,7 @@ export async function deleteRun(target: RunItem | undefined): Promise<void> {
     void vscode.commands.executeCommand("fovux.refreshViews");
   } catch (error) {
     void vscode.window.showErrorMessage(
-      `Could not delete ${run.runId}: ${error instanceof Error ? error.message : String(error)}`,
+      `Could not delete ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
@@ -133,7 +129,7 @@ export async function tagRun(target: RunItem | undefined): Promise<void> {
     void vscode.commands.executeCommand("fovux.refreshViews");
   } catch (error) {
     void vscode.window.showErrorMessage(
-      `Could not tag ${run.runId}: ${error instanceof Error ? error.message : String(error)}`,
+      `Could not tag ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }

@@ -1,8 +1,4 @@
-import {
-  execFile,
-  spawn,
-  type ChildProcessWithoutNullStreams,
-} from "node:child_process";
+import { execFile, spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import * as path from "node:path";
 import * as vscode from "vscode";
 
@@ -16,26 +12,24 @@ let outputChannel: vscode.OutputChannel | null = null;
 export async function startFovuxServer(): Promise<void> {
   if (!vscode.workspace.isTrusted) {
     throw new Error(
-      "Fovux Server cannot start in an untrusted workspace. Trust this workspace first.",
+      "Fovux Server cannot start in an untrusted workspace. Trust this workspace first."
     );
   }
 
   if (await isFovuxServerReady()) {
-    void vscode.window.showInformationMessage(
-      "Fovux server is already running.",
-    );
+    void vscode.window.showInformationMessage("Fovux server is already running.");
     return;
   }
 
   const readiness = await getFovuxServerReadiness();
   if (readiness === "missing-token") {
     throw new Error(
-      "A Fovux HTTP server is listening, but this workspace has no auth.token file. Check fovux.home/FOVUX_HOME or restart the server so it can create the token.",
+      "A Fovux HTTP server is listening, but this workspace has no auth.token file. Check fovux.home/FOVUX_HOME or restart the server so it can create the token."
     );
   }
   if (readiness === "token-mismatch") {
     throw new Error(
-      "A Fovux HTTP server is listening, but it rejected this workspace auth token. Stop the old server, rotate the token, or point Fovux Studio at the same FOVUX_HOME.",
+      "A Fovux HTTP server is listening, but it rejected this workspace auth token. Stop the old server, rotate the token, or point Fovux Studio at the same FOVUX_HOME."
     );
   }
 
@@ -51,9 +45,7 @@ export async function startFovuxServer(): Promise<void> {
 
 export async function stopFovuxServer(): Promise<void> {
   if (!managedProcess) {
-    void vscode.window.showInformationMessage(
-      "No Fovux server started by this VS Code window.",
-    );
+    void vscode.window.showInformationMessage("No Fovux server started by this VS Code window.");
     return;
   }
 
@@ -74,19 +66,10 @@ export function disposeFovuxServerManager(): void {
 
 async function startServerProcess(): Promise<void> {
   const config = vscode.workspace.getConfiguration("fovux");
-  const command =
-    (config.get<string>("serverCommand") ?? "fovux-mcp").trim() || "fovux-mcp";
+  const command = (config.get<string>("serverCommand") ?? "fovux-mcp").trim() || "fovux-mcp";
   const port = config.get<number>("httpPort") ?? 7823;
   const fovuxHome = resolveFovuxHome();
-  const args = [
-    "serve",
-    "--http",
-    "--tcp",
-    "--host",
-    "127.0.0.1",
-    "--port",
-    String(port),
-  ];
+  const args = ["serve", "--http", "--tcp", "--host", "127.0.0.1", "--port", String(port)];
   const channel = getOutputChannel();
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   const cwd = workspaceFolder ?? path.dirname(fovuxHome);
@@ -104,9 +87,7 @@ async function startServerProcess(): Promise<void> {
   proc.stdout.on("data", (chunk: Buffer) => appendChunk("stdout", chunk));
   proc.stderr.on("data", (chunk: Buffer) => appendChunk("stderr", chunk));
   proc.once("exit", (code, signal) => {
-    channel.appendLine(
-      `fovux-mcp server exited code=${code ?? "null"} signal=${signal ?? "null"}`,
-    );
+    channel.appendLine(`fovux-mcp server exited code=${code ?? "null"} signal=${signal ?? "null"}`);
     if (managedProcess === proc) {
       managedProcess = null;
     }
@@ -125,15 +106,13 @@ async function startServerProcess(): Promise<void> {
   void vscode.window.showInformationMessage("Fovux server started.");
 }
 
-async function waitForServerHealthy(
-  getSpawnError: () => Error | null,
-): Promise<void> {
+async function waitForServerHealthy(getSpawnError: () => Error | null): Promise<void> {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
     const spawnError = getSpawnError();
     if (spawnError) {
       throw new Error(
-        `Could not start fovux-mcp. Check that fovux-mcp is installed and on PATH. ${spawnError.message}`,
+        `Could not start fovux-mcp. Check that fovux-mcp is installed and on PATH. ${spawnError.message}`
       );
     }
     if (await isFovuxServerReady()) {
@@ -144,12 +123,10 @@ async function waitForServerHealthy(
   const finalSpawnError = getSpawnError();
   if (finalSpawnError) {
     throw new Error(
-      `Could not start fovux-mcp. Check that fovux-mcp is installed and on PATH. ${finalSpawnError.message}`,
+      `Could not start fovux-mcp. Check that fovux-mcp is installed and on PATH. ${finalSpawnError.message}`
     );
   }
-  throw new Error(
-    "fovux-mcp HTTP server did not become healthy within 15 seconds.",
-  );
+  throw new Error("fovux-mcp HTTP server did not become healthy within 15 seconds.");
 }
 
 async function isFovuxServerListening(): Promise<boolean> {

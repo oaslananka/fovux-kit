@@ -5,11 +5,7 @@ import { createRoot } from "react-dom/client";
 import { ClassDistribution } from "./components/ClassDistribution";
 import { SamplePreview } from "./components/SamplePreview";
 import { invokeTool, type HttpClientConfig } from "../shared/api";
-import {
-  DatasetInspectorInitialState,
-  postToExtension,
-  readInitialState,
-} from "../shared/types";
+import { DatasetInspectorInitialState, postToExtension, readInitialState } from "../shared/types";
 
 function DatasetInspectorApp(): JSX.Element {
   const initial = readInitialState<DatasetInspectorInitialState>({
@@ -24,15 +20,12 @@ function DatasetInspectorApp(): JSX.Element {
     baseUrl: initial.baseUrl,
     authToken: initial.authToken,
   };
-  const [inspectResult, setInspectResult] = useState<Record<
-    string,
-    unknown
-  > | null>(initial.initialResult);
+  const [inspectResult, setInspectResult] = useState<Record<string, unknown> | null>(
+    initial.initialResult
+  );
   const [error, setError] = useState<string | null>(initial.initialError);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [splitOutputPath, setSplitOutputPath] = useState(
-    `${initial.datasetPath}_split`,
-  );
+  const [splitOutputPath, setSplitOutputPath] = useState(`${initial.datasetPath}_split`);
 
   const classes = useMemo(() => {
     const rawClasses = inspectResult?.["classes"];
@@ -42,26 +35,20 @@ function DatasetInspectorApp(): JSX.Element {
             typeof item === "object" &&
             item !== null &&
             typeof (item as { name?: unknown }).name === "string" &&
-            typeof (item as { count?: unknown }).count === "number",
+            typeof (item as { count?: unknown }).count === "number"
         )
       : [];
   }, [inspectResult]);
 
   const warnings = Array.isArray(inspectResult?.["warnings"])
-    ? inspectResult?.["warnings"].filter(
-        (item): item is string => typeof item === "string",
-      )
+    ? inspectResult?.["warnings"].filter((item): item is string => typeof item === "string")
     : [];
-  const missingLabelImages = Array.isArray(
-    inspectResult?.["missing_label_images"],
-  )
+  const missingLabelImages = Array.isArray(inspectResult?.["missing_label_images"])
     ? inspectResult?.["missing_label_images"].filter(
-        (item): item is string => typeof item === "string",
+        (item): item is string => typeof item === "string"
       )
     : [];
-  const bboxSizeBuckets = parseNumberRecord(
-    inspectResult?.["bbox_size_buckets"],
-  );
+  const bboxSizeBuckets = parseNumberRecord(inspectResult?.["bbox_size_buckets"]);
   const confusionMatrix = Array.isArray(inspectResult?.["confusion_matrix"])
     ? inspectResult?.["confusion_matrix"].filter(isConfusionEntry)
     : [];
@@ -73,27 +60,17 @@ function DatasetInspectorApp(): JSX.Element {
           <p style={eyebrowStyle}>Dataset Inspector</p>
           <h1 style={titleStyle}>{initial.datasetPath}</h1>
         </div>
-        <div style={statBadgeStyle}>
-          {String(inspectResult?.["total_images"] ?? 0)} images
-        </div>
+        <div style={statBadgeStyle}>{String(inspectResult?.["total_images"] ?? 0)} images</div>
       </header>
 
       {error ? <p style={errorStyle}>{error}</p> : null}
       {statusMessage ? <p style={successStyle}>{statusMessage}</p> : null}
 
       <section style={actionPanelStyle}>
-        <button
-          type="button"
-          style={buttonStyle}
-          onClick={() => void runValidation()}
-        >
+        <button type="button" style={buttonStyle} onClick={() => void runValidation()}>
           Validate dataset
         </button>
-        <button
-          type="button"
-          style={buttonStyle}
-          onClick={() => void findDuplicates()}
-        >
+        <button type="button" style={buttonStyle} onClick={() => void findDuplicates()}>
           Find duplicates
         </button>
         <div style={splitRowStyle}>
@@ -103,11 +80,7 @@ function DatasetInspectorApp(): JSX.Element {
             value={splitOutputPath}
             onChange={(event) => setSplitOutputPath(event.target.value)}
           />
-          <button
-            type="button"
-            style={buttonStyle}
-            onClick={() => void splitDataset()}
-          >
+          <button type="button" style={buttonStyle} onClick={() => void splitDataset()}>
             Split dataset
           </button>
         </div>
@@ -120,27 +93,19 @@ function DatasetInspectorApp(): JSX.Element {
           <dl style={definitionListStyle}>
             <div>
               <dt style={termStyle}>Format</dt>
-              <dd style={definitionStyle}>
-                {String(inspectResult?.["format_detected"] ?? "n/a")}
-              </dd>
+              <dd style={definitionStyle}>{String(inspectResult?.["format_detected"] ?? "n/a")}</dd>
             </div>
             <div>
               <dt style={termStyle}>Annotations</dt>
-              <dd style={definitionStyle}>
-                {String(inspectResult?.["total_annotations"] ?? 0)}
-              </dd>
+              <dd style={definitionStyle}>{String(inspectResult?.["total_annotations"] ?? 0)}</dd>
             </div>
             <div>
               <dt style={termStyle}>Classes</dt>
-              <dd style={definitionStyle}>
-                {String(inspectResult?.["num_classes"] ?? 0)}
-              </dd>
+              <dd style={definitionStyle}>{String(inspectResult?.["num_classes"] ?? 0)}</dd>
             </div>
             <div>
               <dt style={termStyle}>Orphan images</dt>
-              <dd style={definitionStyle}>
-                {String(inspectResult?.["orphan_images"] ?? 0)}
-              </dd>
+              <dd style={definitionStyle}>{String(inspectResult?.["orphan_images"] ?? 0)}</dd>
             </div>
           </dl>
           <div style={{ display: "grid", gap: "6px" }}>
@@ -163,9 +128,7 @@ function DatasetInspectorApp(): JSX.Element {
               <button
                 type="button"
                 style={secondaryButtonStyle}
-                onClick={() =>
-                  postToExtension({ type: "openPath", path: imagePath })
-                }
+                onClick={() => postToExtension({ type: "openPath", path: imagePath })}
               >
                 Jump to File
               </button>
@@ -192,10 +155,7 @@ function DatasetInspectorApp(): JSX.Element {
         <section style={statsPanelStyle}>
           <h3 style={{ margin: 0 }}>Confusion matrix</h3>
           {confusionMatrix.map((entry) => (
-            <div
-              key={`${entry.true_class}-${entry.predicted_class}`}
-              style={issueRowStyle}
-            >
+            <div key={`${entry.true_class}-${entry.predicted_class}`} style={issueRowStyle}>
               <span>
                 {entry.true_class} {"->"} {entry.predicted_class}
               </span>
@@ -211,19 +171,13 @@ function DatasetInspectorApp(): JSX.Element {
 
   async function runValidation(): Promise<void> {
     try {
-      const result = await invokeTool<{ summary: string }>(
-        clientConfig,
-        "dataset_validate",
-        {
-          dataset_path: initial.datasetPath,
-        },
-      );
+      const result = await invokeTool<{ summary: string }>(clientConfig, "dataset_validate", {
+        dataset_path: initial.datasetPath,
+      });
       setStatusMessage(result.summary);
       setError(null);
     } catch (nextError) {
-      setError(
-        nextError instanceof Error ? nextError.message : String(nextError),
-      );
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
     }
   }
 
@@ -234,36 +188,28 @@ function DatasetInspectorApp(): JSX.Element {
         "dataset_find_duplicates",
         {
           dataset_path: initial.datasetPath,
-        },
+        }
       );
       setStatusMessage(`Detected ${result.total_duplicates} duplicate images.`);
       setError(null);
     } catch (nextError) {
-      setError(
-        nextError instanceof Error ? nextError.message : String(nextError),
-      );
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
     }
   }
 
   async function splitDataset(): Promise<void> {
     try {
-      const result = await invokeTool<{ output_path: string }>(
-        clientConfig,
-        "dataset_split",
-        {
-          dataset_path: initial.datasetPath,
-          output_path: splitOutputPath,
-          overwrite: true,
-          confirm: true,
-        },
-      );
+      const result = await invokeTool<{ output_path: string }>(clientConfig, "dataset_split", {
+        dataset_path: initial.datasetPath,
+        output_path: splitOutputPath,
+        overwrite: true,
+        confirm: true,
+      });
       setStatusMessage(`Split dataset written to ${result.output_path}.`);
       setError(null);
       setInspectResult((current) => current);
     } catch (nextError) {
-      setError(
-        nextError instanceof Error ? nextError.message : String(nextError),
-      );
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
     }
   }
 }
@@ -273,7 +219,7 @@ function parseNumberRecord(value: unknown): Record<string, number> | null {
     return null;
   }
   const entries = Object.entries(value as Record<string, unknown>).filter(
-    (entry): entry is [string, number] => typeof entry[1] === "number",
+    (entry): entry is [string, number] => typeof entry[1] === "number"
   );
   return entries.length ? Object.fromEntries(entries) : null;
 }

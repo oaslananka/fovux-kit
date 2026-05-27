@@ -11,21 +11,17 @@ interface BuildDatasetSamplesOptions {
 }
 
 export async function buildDatasetSamples(
-  options: BuildDatasetSamplesOptions,
+  options: BuildDatasetSamplesOptions
 ): Promise<DatasetSample[]> {
   const samples = await Promise.all(
     options.samplePaths.slice(0, 8).map(async (samplePath) => {
-      const boxes = await loadSampleBoxes(
-        options.datasetPath,
-        samplePath,
-        options.classNames,
-      );
+      const boxes = await loadSampleBoxes(options.datasetPath, samplePath, options.classNames);
       return {
         path: samplePath,
         uri: options.toWebviewUri(samplePath),
         boxes,
       } satisfies DatasetSample;
-    }),
+    })
   );
   return samples;
 }
@@ -33,7 +29,7 @@ export async function buildDatasetSamples(
 async function loadSampleBoxes(
   datasetPath: string,
   samplePath: string,
-  classNames: string[],
+  classNames: string[]
 ): Promise<DatasetSampleBox[]> {
   const labelPath = resolveLabelPath(datasetPath, samplePath);
   if (labelPath === null) {
@@ -56,11 +52,7 @@ async function loadSampleBoxes(
         const centerY = Number(parts[2]);
         const width = Number(parts[3]);
         const height = Number(parts[4]);
-        if (
-          [classId, centerX, centerY, width, height].some((value) =>
-            Number.isNaN(value),
-          )
-        ) {
+        if ([classId, centerX, centerY, width, height].some((value) => Number.isNaN(value))) {
           return [];
         }
         return [
@@ -79,14 +71,8 @@ async function loadSampleBoxes(
   }
 }
 
-export function resolveLabelPath(
-  datasetPath: string,
-  samplePath: string,
-): string | null {
-  const pathApi =
-    usesWindowsPath(datasetPath) || usesWindowsPath(samplePath)
-      ? path.win32
-      : path;
+export function resolveLabelPath(datasetPath: string, samplePath: string): string | null {
+  const pathApi = usesWindowsPath(datasetPath) || usesWindowsPath(samplePath) ? path.win32 : path;
   const imagesRoot = pathApi.join(datasetPath, "images");
   if (!samplePath.startsWith(imagesRoot)) {
     return null;

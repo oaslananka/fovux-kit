@@ -22,8 +22,6 @@ export const logger = {
   },
   error: (msg: string, err?: unknown): void => {
     const detail = err instanceof Error ? ` — ${err.message}` : "";
-    getChannel().appendLine(
-      `[ERROR] ${new Date().toISOString()} ${msg}${detail}`,
-    );
+    getChannel().appendLine(`[ERROR] ${new Date().toISOString()} ${msg}${detail}`);
   },
 };

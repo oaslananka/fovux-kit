@@ -38,14 +38,20 @@ from source when developing the extension.
 ## Install
 
 ```bash
+code --install-extension oaslananka.fovuxstudiokit
+```
+
+When developing from source:
+
+```bash
 git clone https://github.com/oaslananka/fovux
 cd fovux/fovux-studio
 corepack enable
 corepack prepare pnpm@10.33.0 --activate
 pnpm install --frozen-lockfile
 pnpm verify
-pnpm dlx @vscode/vsce@3.9.1 package --out fovux-studio.vsix --no-dependencies
-code --install-extension fovux-studio.vsix
+pnpm dlx @vscode/vsce@3.9.1 package --out fovuxstudiokit.vsix --no-dependencies
+code --install-extension fovuxstudiokit.vsix
 ```
 
 ## Usage

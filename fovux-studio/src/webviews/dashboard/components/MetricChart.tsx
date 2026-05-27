@@ -50,25 +50,13 @@ export function MetricChart(props: MetricChartProps): JSX.Element {
   );
 }
 
-function ChartSvg(props: {
-  title: string;
-  series: ChartSeries[];
-}): JSX.Element {
+function ChartSvg(props: { title: string; series: ChartSeries[] }): JSX.Element {
   const { title, series } = props;
   const domain = getDomain(series);
 
   return (
-    <svg
-      viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-      role="img"
-      aria-label={title}
-    >
-      <rect
-        width={CHART_WIDTH}
-        height={CHART_HEIGHT}
-        rx="10"
-        style={plotBackgroundStyle}
-      />
+    <svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} role="img" aria-label={title}>
+      <rect width={CHART_WIDTH} height={CHART_HEIGHT} rx="10" style={plotBackgroundStyle} />
       {buildGridLines(domain.minY, domain.maxY).map((line) => (
         <g key={line.value}>
           <line
@@ -78,12 +66,7 @@ function ChartSvg(props: {
             y2={line.y}
             style={gridLineStyle}
           />
-          <text
-            x={CHART_PADDING - 8}
-            y={line.y + 4}
-            textAnchor="end"
-            style={axisTextStyle}
-          >
+          <text x={CHART_PADDING - 8} y={line.y + 4} textAnchor="end" style={axisTextStyle}>
             {formatAxisValue(line.value)}
           </text>
         </g>
@@ -136,10 +119,7 @@ function getDomain(series: ChartSeries[]): {
   };
 }
 
-function buildGridLines(
-  minY: number,
-  maxY: number,
-): { value: number; y: number }[] {
+function buildGridLines(minY: number, maxY: number): { value: number; y: number }[] {
   return Array.from({ length: GRID_LINE_COUNT + 1 }, (_item, index) => {
     const ratio = index / GRID_LINE_COUNT;
     const value = maxY - (maxY - minY) * ratio;
@@ -152,12 +132,12 @@ function buildGridLines(
 
 function toPolylinePoints(
   points: ChartPoint[],
-  domain: { maxX: number; maxY: number; minX: number; minY: number },
+  domain: { maxX: number; maxY: number; minX: number; minY: number }
 ): string {
   return points
     .map(
       (point) =>
-        `${scaleX(point.x, domain.minX, domain.maxX)},${scaleY(point.y, domain.minY, domain.maxY)}`,
+        `${scaleX(point.x, domain.minX, domain.maxX)},${scaleY(point.y, domain.minY, domain.maxY)}`
     )
     .join(" ");
 }

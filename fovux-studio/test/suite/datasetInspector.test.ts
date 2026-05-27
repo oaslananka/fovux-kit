@@ -12,17 +12,12 @@ import {
 describe("dataset inspector sample data", () => {
   it("resolves label paths next to YOLO image splits", () => {
     expect(
-      resolveLabelPath(
-        "C:\\datasets\\demo",
-        "C:\\datasets\\demo\\images\\val\\sample.jpg",
-      ),
+      resolveLabelPath("C:\\datasets\\demo", "C:\\datasets\\demo\\images\\val\\sample.jpg")
     ).toContain("labels");
   });
 
   it("loads normalized boxes for sample previews", async () => {
-    const datasetRoot = fs.mkdtempSync(
-      path.join(os.tmpdir(), "fovux-dataset-preview-"),
-    );
+    const datasetRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fovux-dataset-preview-"));
     const imageDir = path.join(datasetRoot, "images", "val");
     const labelDir = path.join(datasetRoot, "labels", "val");
     fs.mkdirSync(imageDir, { recursive: true });

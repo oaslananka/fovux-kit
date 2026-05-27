@@ -13,34 +13,22 @@ describe("webview component imports", () => {
     for (const entrypoint of ENTRYPOINTS) {
       const source = readWebviewSource(entrypoint);
       for (const importPath of extractRelativeImports(source)) {
-        expect(
-          resolveImport(entrypoint, importPath),
-          `${entrypoint}:${importPath}`,
-        ).not.toBeNull();
+        expect(resolveImport(entrypoint, importPath), `${entrypoint}:${importPath}`).not.toBeNull();
       }
     }
   });
 });
 
 function readWebviewSource(entrypoint: string): string {
-  return fs.readFileSync(
-    path.join(WEBVIEW_ROOT, ...entrypoint.split("/")),
-    "utf8",
-  );
+  return fs.readFileSync(path.join(WEBVIEW_ROOT, ...entrypoint.split("/")), "utf8");
 }
 
 function extractRelativeImports(source: string): string[] {
-  return [...source.matchAll(IMPORT_PATTERN)]
-    .map((match) => match[1])
-    .filter(isString);
+  return [...source.matchAll(IMPORT_PATTERN)].map((match) => match[1]).filter(isString);
 }
 
 function resolveImport(entrypoint: string, importPath: string): string | null {
-  const basePath = path.join(
-    WEBVIEW_ROOT,
-    path.dirname(entrypoint),
-    importPath,
-  );
+  const basePath = path.join(WEBVIEW_ROOT, path.dirname(entrypoint), importPath);
   for (const candidate of expandImportCandidates(basePath)) {
     if (fs.existsSync(candidate)) {
       return candidate;
@@ -53,11 +41,9 @@ function expandImportCandidates(basePath: string): string[] {
   if (path.extname(basePath)) {
     return [basePath];
   }
-  const files = RESOLUTION_EXTENSIONS.map(
-    (extension) => `${basePath}${extension}`,
-  );
+  const files = RESOLUTION_EXTENSIONS.map((extension) => `${basePath}${extension}`);
   const indexes = RESOLUTION_EXTENSIONS.map((extension) =>
-    path.join(basePath, `index${extension}`),
+    path.join(basePath, `index${extension}`)
   );
   return [...files, ...indexes];
 }

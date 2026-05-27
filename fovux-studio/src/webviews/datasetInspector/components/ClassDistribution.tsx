@@ -16,10 +16,7 @@ export interface ClassDistributionProps {
 
 /** Render class counts and proportional bars for a dataset inspection result. */
 export function ClassDistribution(props: ClassDistributionProps): JSX.Element {
-  const totalAnnotations = props.classes.reduce(
-    (total, item) => total + item.count,
-    0,
-  );
+  const totalAnnotations = props.classes.reduce((total, item) => total + item.count, 0);
 
   return (
     <section style={panelStyle}>
@@ -53,10 +50,7 @@ export function ClassDistribution(props: ClassDistributionProps): JSX.Element {
   );
 }
 
-function resolvePercent(
-  item: DatasetClassSummary,
-  totalAnnotations: number,
-): number {
+function resolvePercent(item: DatasetClassSummary, totalAnnotations: number): number {
   if (typeof item.pct === "number") {
     return clampPercent(item.pct);
   }

@@ -7,9 +7,7 @@ import * as vscode from "vscode";
 /**
  * Register commands used by walkthrough steps.
  */
-export function registerWalkthroughCommands(
-  context: vscode.ExtensionContext,
-): void {
+export function registerWalkthroughCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("fovux.installBackend", async () => {
       const terminal = vscode.window.createTerminal({
@@ -22,11 +20,7 @@ export function registerWalkthroughCommands(
         terminal.sendText("uv tool install fovux-mcp");
       }
       terminal.show();
-      void vscode.commands.executeCommand(
-        "setContext",
-        "fovux.walkthrough.backendInstalled",
-        true,
-      );
+      void vscode.commands.executeCommand("setContext", "fovux.walkthrough.backendInstalled", true);
     }),
 
     vscode.commands.registerCommand("fovux.runDoctor", async () => {
@@ -36,17 +30,11 @@ export function registerWalkthroughCommands(
       });
       terminal.sendText("fovux-mcp doctor");
       terminal.show();
-      void vscode.commands.executeCommand(
-        "setContext",
-        "fovux.walkthrough.doctorRan",
-        true,
-      );
+      void vscode.commands.executeCommand("setContext", "fovux.walkthrough.doctorRan", true);
     }),
 
     vscode.commands.registerCommand("fovux.openUpgradeGuide", async () => {
-      const uri = vscode.Uri.parse(
-        "https://oaslananka.github.io/fovux/upgrade/",
-      );
+      const uri = vscode.Uri.parse("https://oaslananka.github.io/fovux/upgrade/");
       await vscode.env.openExternal(uri);
     }),
 
@@ -57,11 +45,9 @@ export function registerWalkthroughCommands(
         await vscode.window.showTextDocument(files[0]);
       } else {
         await vscode.env.openExternal(
-          vscode.Uri.parse(
-            "https://github.com/oaslananka/fovux/blob/main/SECURITY.md",
-          ),
+          vscode.Uri.parse("https://github.com/oaslananka/fovux/blob/main/SECURITY.md")
         );
       }
-    }),
+    })
   );
 }

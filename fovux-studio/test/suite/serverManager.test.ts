@@ -34,7 +34,7 @@ describe("startFovuxServer", () => {
     await startFovuxServer();
 
     expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-      "Fovux server is already running.",
+      "Fovux server is already running."
     );
     vi.unstubAllGlobals();
   });

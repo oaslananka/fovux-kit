@@ -6,17 +6,14 @@ export function createWebviewHtml(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   entryPath: string,
-  initialState: unknown,
+  initialState: unknown
 ): string {
   const bundleUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, "out", ...entryPath.split("/")),
+    vscode.Uri.joinPath(extensionUri, "out", ...entryPath.split("/"))
   );
   const nonce = getNonce();
   const serializedState = JSON.stringify(initialState).replace(/</g, "\\u003c");
-  const escapedBundleUri = bundleUri
-    .toString()
-    .replace(/\\/g, "\\\\")
-    .replace(/'/g, "\\'");
+  const escapedBundleUri = bundleUri.toString().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   const csp = [
     "default-src 'none'",
     `img-src ${webview.cspSource} data: blob:`,

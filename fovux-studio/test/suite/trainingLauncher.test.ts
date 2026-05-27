@@ -4,10 +4,7 @@ import {
   estimateTrainingMinutes,
   TRAINING_PRESETS,
 } from "../../src/webviews/trainingLauncher/presets";
-import {
-  mergePresets,
-  parseImportedPresets,
-} from "../../src/webviews/trainingLauncher/main";
+import { mergePresets, parseImportedPresets } from "../../src/webviews/trainingLauncher/main";
 import { getUserPresets, saveUserPreset } from "../../src/fovux/userPresets";
 import { mockGlobalState, resetVscodeMockState } from "./helpers/vscodeMock";
 import "./helpers/vscodeMock";
@@ -19,12 +16,7 @@ describe("training launcher presets", () => {
 
   it("includes the release presets", () => {
     expect(TRAINING_PRESETS.map((preset) => preset.id)).toEqual(
-      expect.arrayContaining([
-        "fast_prototype",
-        "production",
-        "mobile_edge",
-        "accuracy_max",
-      ]),
+      expect.arrayContaining(["fast_prototype", "production", "mobile_edge", "accuracy_max"])
     );
   });
 
@@ -50,10 +42,7 @@ describe("training launcher presets", () => {
     });
 
     expect(getUserPresets(context as never)).toHaveLength(1);
-    expect(mockGlobalState.update).toHaveBeenCalledWith(
-      "fovux.userPresets",
-      expect.any(Array),
-    );
+    expect(mockGlobalState.update).toHaveBeenCalledWith("fovux.userPresets", expect.any(Array));
   });
 
   it("replaces duplicate user preset names instead of storing stale copies", async () => {
@@ -114,7 +103,7 @@ describe("training launcher presets", () => {
           },
           { name: "invalid", config: {} },
         ],
-      }),
+      })
     );
 
     const merged = mergePresets(imported, [

@@ -49,7 +49,7 @@ pnpm verify
 
 ## Release Validation
 
-- `python scripts/check_versions.py` confirms all version sources are coherent.
+- `python scripts/check_versions.py` confirms the MCP and Studio version tracks are each coherent.
 - `python scripts/quality_gate.py repo-verify` runs the full local validation.
 - Backend coverage gate: 92%. Studio coverage gate: 90%.
 - `mkdocs build --strict` confirms all 37 tool pages are present and valid.
