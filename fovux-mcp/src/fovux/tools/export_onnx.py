@@ -138,7 +138,7 @@ def _check_parity(
         ) from exc
     except Exception as exc:
         if "invalid_graph_error" in locals() and isinstance(
-            exc, (invalid_graph_error, missing_file_error)
+            exc, invalid_graph_error | missing_file_error
         ):
             raise FovuxExportParityError(
                 f"ONNX parity check could not be executed: {exc}",
@@ -208,7 +208,7 @@ def _load_torch() -> object:
 def _flatten_outputs(outputs: object) -> list[Any]:
     if hasattr(outputs, "detach"):
         return [outputs.detach().cpu().numpy()]
-    if isinstance(outputs, (list, tuple)):
+    if isinstance(outputs, list | tuple):
         flattened: list[Any] = []
         for item in outputs:
             flattened.extend(_flatten_outputs(item))

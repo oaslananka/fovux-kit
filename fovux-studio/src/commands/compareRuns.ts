@@ -3,9 +3,14 @@ import * as vscode from "vscode";
 import { ExtensionFovuxClient, RunSummary } from "../fovux/extensionClient";
 import { startFovuxServer } from "../fovux/serverManager";
 import { createWebviewHtml } from "../webviews/html";
-import { CompareRunsInitialState, WebviewToExtensionMessage } from "../webviews/shared/types";
+import {
+  CompareRunsInitialState,
+  WebviewToExtensionMessage,
+} from "../webviews/shared/types";
 
-export async function openCompareRuns(context: vscode.ExtensionContext): Promise<void> {
+export async function openCompareRuns(
+  context: vscode.ExtensionContext,
+): Promise<void> {
   const panel = vscode.window.createWebviewPanel(
     "fovux.compareRuns",
     "Fovux Run Comparison",
@@ -14,12 +19,15 @@ export async function openCompareRuns(context: vscode.ExtensionContext): Promise
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [context.extensionUri],
-    }
+    },
   );
 
   panel.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
     if (message.type === "openPath") {
-      void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(message.path));
+      void vscode.commands.executeCommand(
+        "revealFileInOS",
+        vscode.Uri.file(message.path),
+      );
       return;
     }
     if (message.type === "startServer") {
@@ -27,7 +35,7 @@ export async function openCompareRuns(context: vscode.ExtensionContext): Promise
         .then(() => renderCompareRuns(panel, context))
         .catch((error: unknown) => {
           void vscode.window.showErrorMessage(
-            error instanceof Error ? error.message : String(error)
+            error instanceof Error ? error.message : String(error),
           );
         });
     }
@@ -38,7 +46,7 @@ export async function openCompareRuns(context: vscode.ExtensionContext): Promise
 
 async function renderCompareRuns(
   panel: vscode.WebviewPanel,
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
 ): Promise<void> {
   const client = await ExtensionFovuxClient.create();
   const isServerReachable = await client.health();
@@ -68,6 +76,6 @@ async function renderCompareRuns(
     panel.webview,
     context.extensionUri,
     "webviews/compareRuns/main.js",
-    initialState
+    initialState,
   );
 }

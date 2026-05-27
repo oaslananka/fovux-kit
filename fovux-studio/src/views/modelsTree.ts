@@ -36,11 +36,13 @@ const GROUP_LABELS: Record<ModelGroupKey, string> = {
 class ModelGroupItem extends vscode.TreeItem {
   constructor(
     public readonly group: ModelGroupKey,
-    public readonly items: ModelItem[]
+    public readonly items: ModelItem[],
   ) {
     super(GROUP_LABELS[group], vscode.TreeItemCollapsibleState.Expanded);
     this.description = `${items.length}`;
-    this.iconPath = new vscode.ThemeIcon(group === "exports" ? "archive" : "package");
+    this.iconPath = new vscode.ThemeIcon(
+      group === "exports" ? "archive" : "package",
+    );
     this.contextValue = "fovuxModelGroup";
   }
 }
@@ -50,7 +52,9 @@ export class ModelItem extends vscode.TreeItem {
     super(record.label, vscode.TreeItemCollapsibleState.None);
     this.tooltip = record.filePath;
     this.description = `${record.sizeMb.toFixed(1)} MB · ${record.detail}`;
-    this.iconPath = new vscode.ThemeIcon(record.group === "exports" ? "archive" : "package");
+    this.iconPath = new vscode.ThemeIcon(
+      record.group === "exports" ? "archive" : "package",
+    );
     this.contextValue = "fovuxModel";
     this.command = {
       command: "fovux.revealPath",
@@ -63,7 +67,9 @@ export class ModelItem extends vscode.TreeItem {
 export class ModelsTreeProvider
   implements vscode.TreeDataProvider<ModelTreeNode>, vscode.Disposable
 {
-  private readonly onDidChangeEmitter = new vscode.EventEmitter<ModelTreeNode | undefined | null>();
+  private readonly onDidChangeEmitter = new vscode.EventEmitter<
+    ModelTreeNode | undefined | null
+  >();
   readonly onDidChangeTreeData = this.onDidChangeEmitter.event;
 
   private watchers: vscode.FileSystemWatcher[] = [];
@@ -172,9 +178,15 @@ export class ModelsTreeProvider
   private configureWatchers(): void {
     const home = resolveFovuxHome();
     this.watchers = [
-      vscode.workspace.createFileSystemWatcher(path.join(home, "models", "**", "*")),
-      vscode.workspace.createFileSystemWatcher(path.join(home, "runs", "**", "*")),
-      vscode.workspace.createFileSystemWatcher(path.join(home, "exports", "**", "*")),
+      vscode.workspace.createFileSystemWatcher(
+        path.join(home, "models", "**", "*"),
+      ),
+      vscode.workspace.createFileSystemWatcher(
+        path.join(home, "runs", "**", "*"),
+      ),
+      vscode.workspace.createFileSystemWatcher(
+        path.join(home, "exports", "**", "*"),
+      ),
     ];
 
     for (const watcher of this.watchers) {
@@ -219,7 +231,11 @@ function findModelFiles(root: string): string[] {
   return matches;
 }
 
-function buildDetail(baseDir: string, filePath: string, group: ModelGroupKey): string {
+function buildDetail(
+  baseDir: string,
+  filePath: string,
+  group: ModelGroupKey,
+): string {
   const relativePath = path.relative(baseDir, filePath);
   if (group === "checkpoints") {
     const segments = relativePath.split(path.sep);

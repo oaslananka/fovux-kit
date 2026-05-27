@@ -22,7 +22,7 @@ defaults:
 jobs:
   release-please:
     name: release-please-main
-    if: github.repository == 'oaslananka-lab/fovux' && github.event_name == 'push'
+    if: github.repository == 'oaslananka/fovux-kit' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -115,7 +115,7 @@ jobs:
   release-please-check:
     name: release-please
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       github.event_name != 'push' &&
       (
         github.event_name != 'pull_request' ||
@@ -134,7 +134,7 @@ jobs:
     needs: release-please
     if: >
       needs.release-please.outputs.mcp_release_created == 'true' &&
-      github.repository == 'oaslananka-lab/fovux'
+      github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     environment: pypi-production
     timeout-minutes: 30
@@ -208,7 +208,7 @@ jobs:
     needs: release-please
     if: >
       needs.release-please.outputs.studio_release_created == 'true' &&
-      github.repository == 'oaslananka-lab/fovux'
+      github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     environment: vsce-production
     timeout-minutes: 30
@@ -281,182 +281,3 @@ jobs:
           set -euo pipefail
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
           test -n "$PACKAGE_VERSION"
-
-  mirror-release-refs:
-    needs: release-please
-    if: >
-      github.repository == 'oaslananka-lab/fovux' &&
-      (
-        needs.release-please.outputs.mcp_release_created == 'true' ||
-        needs.release-please.outputs.studio_release_created == 'true'
-      )
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout release repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Mirror release refs and assets to personal repository
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MIRROR_PAT: ${{ secrets.MIRROR_PAT }}
-          PERSONAL_REPO: oaslananka/fovux
-          MCP_RELEASE_CREATED: ${{ needs.release-please.outputs.mcp_release_created }}
-          MCP_TAG: ${{ needs.release-please.outputs.mcp_tag_name }}
-          STUDIO_RELEASE_CREATED: ${{ needs.release-please.outputs.studio_release_created }}
-          STUDIO_TAG: ${{ needs.release-please.outputs.studio_tag_name }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${MIRROR_PAT:-}" ]]; then
-            echo "::error::MIRROR_PAT is required to mirror release refs and assets to ${PERSONAL_REPO}."
-            exit 1
-          fi
-
-          personal_ruleset="$(
-            GH_TOKEN="$MIRROR_PAT" gh api "repos/${PERSONAL_REPO}/rulesets" \
-              --jq '.[] | select(.name == "main-protection").id' | head -n 1
-          )"
-          if [[ -z "$personal_ruleset" ]]; then
-            echo "::error::main-protection ruleset was not found in ${PERSONAL_REPO}."
-            exit 1
-          fi
-          transition="$(mktemp)"
-          personal_final="$(mktemp)"
-          cat >"$transition" <<'JSON'
-          {
-            "name": "main-protection",
-            "target": "branch",
-            "enforcement": "active",
-            "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
-            "rules": [{ "type": "deletion" }],
-            "bypass_actors": []
-          }
-          JSON
-          jq '.rules |= map(select(.type != "required_status_checks"))' \
-            .github/rulesets/main.json >"$personal_final"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local --unset-all http.https://github.com/.extraheader || true
-          git config --global --unset-all http.https://github.com/.extraheader || true
-          git fetch origin --tags
-          git remote add personal "https://x-access-token:${MIRROR_PAT}@github.com/${PERSONAL_REPO}.git"
-          git fetch personal +refs/heads/main:refs/remotes/personal/main --tags
-
-          personal_main="$(git rev-parse refs/remotes/personal/main)"
-          org_main="$(git rev-parse HEAD)"
-          if [[ "$personal_main" != "$org_main" ]]; then
-            personal_tree="$(git rev-parse "refs/remotes/personal/main^{tree}")"
-            org_tree="$(git rev-parse "HEAD^{tree}")"
-            if [[ "$personal_tree" == "$org_tree" ]]; then
-              echo "Personal main already has the same tree as org main."
-            else
-              echo "Synchronizing personal main to org main with force-with-lease."
-              trap 'GH_TOKEN="$MIRROR_PAT" gh api -X PUT "repos/${PERSONAL_REPO}/rulesets/${personal_ruleset}" --input "$personal_final" >/dev/null || true' EXIT
-              GH_TOKEN="$MIRROR_PAT" gh api -X PUT "repos/${PERSONAL_REPO}/rulesets/${personal_ruleset}" --input "$transition" >/dev/null
-              git push personal "HEAD:refs/heads/main" --force-with-lease="refs/heads/main:${personal_main}"
-              GH_TOKEN="$MIRROR_PAT" gh api -X PUT "repos/${PERSONAL_REPO}/rulesets/${personal_ruleset}" --input "$personal_final" >/dev/null
-              trap - EXIT
-            fi
-          fi
-
-          mirror_release_record() {
-            local tag="$1"
-            local workdir
-            workdir="$(mktemp -d)"
-            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json name,body >"$workdir/release.json"
-            jq -r '.body // ""' "$workdir/release.json" >"$workdir/body.md"
-            git push personal "refs/tags/${tag}:refs/tags/${tag}"
-            local title
-            title="$(jq -r '.name' "$workdir/release.json")"
-            if GH_TOKEN="$MIRROR_PAT" gh release view "$tag" --repo "$PERSONAL_REPO" >/dev/null 2>&1; then
-              GH_TOKEN="$MIRROR_PAT" gh release edit "$tag" \
-                --repo "$PERSONAL_REPO" \
-                --title "$title" \
-                --notes-file "$workdir/body.md"
-            else
-              GH_TOKEN="$MIRROR_PAT" gh release create "$tag" \
-                --repo "$PERSONAL_REPO" \
-                --title "$title" \
-                --notes-file "$workdir/body.md"
-            fi
-            rm -rf "$workdir"
-          }
-
-          if [[ "$MCP_RELEASE_CREATED" == "true" ]]; then
-            mirror_release_record "$MCP_TAG"
-          fi
-          if [[ "$STUDIO_RELEASE_CREATED" == "true" ]]; then
-            mirror_release_record "$STUDIO_TAG"
-          fi
-
-  mirror-mcp-assets:
-    needs: [release-please, publish-mcp, mirror-release-refs]
-    if: >
-      github.repository == 'oaslananka-lab/fovux' &&
-      needs.release-please.outputs.mcp_release_created == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Mirror Python release assets to personal repository
-        env:
-          GH_TOKEN: ${{ secrets.MIRROR_PAT }}
-          PERSONAL_REPO: oaslananka/fovux
-          RELEASE_TAG: ${{ needs.release-please.outputs.mcp_tag_name }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::error::MIRROR_PAT is required to mirror release refs and assets to ${PERSONAL_REPO}."
-            exit 1
-          fi
-          workdir="$(mktemp -d)"
-          trap 'rm -rf "$workdir"' EXIT
-          mkdir -p "$workdir/assets"
-          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$workdir/assets"
-          shopt -s nullglob
-          assets=("$workdir"/assets/*)
-          if (( ${#assets[@]} == 0 )); then
-            echo "::error::No release assets found on ${GITHUB_REPOSITORY} for ${RELEASE_TAG}."
-            exit 1
-          fi
-          gh release upload "$RELEASE_TAG" --repo "$PERSONAL_REPO" "${assets[@]}" --clobber
-
-  mirror-studio-assets:
-    needs: [release-please, publish-studio, mirror-release-refs]
-    if: >
-      github.repository == 'oaslananka-lab/fovux' &&
-      needs.release-please.outputs.studio_release_created == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Mirror Studio release assets to personal repository
-        env:
-          GH_TOKEN: ${{ secrets.MIRROR_PAT }}
-          PERSONAL_REPO: oaslananka/fovux
-          RELEASE_TAG: ${{ needs.release-please.outputs.studio_tag_name }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::error::MIRROR_PAT is required to mirror release refs and assets to ${PERSONAL_REPO}."
-            exit 1
-          fi
-          workdir="$(mktemp -d)"
-          trap 'rm -rf "$workdir"' EXIT
-          mkdir -p "$workdir/assets"
-          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$workdir/assets"
-          shopt -s nullglob
-          assets=("$workdir"/assets/*)
-          if (( ${#assets[@]} == 0 )); then
-            echo "::error::No release assets found on ${GITHUB_REPOSITORY} for ${RELEASE_TAG}."
-            exit 1
-          fi
-          gh release upload "$RELEASE_TAG" --repo "$PERSONAL_REPO" "${assets[@]}" --clobber

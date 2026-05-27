@@ -24,7 +24,7 @@ defaults:
 jobs:
   analysis:
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       (
         github.event_name != 'pull_request' ||
         github.event.pull_request.draft == false
@@ -60,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           scorecard \
-            --repo=github.com/oaslananka-lab/fovux \
+            --repo=github.com/oaslananka/fovux-kit \
             --checks=Binary-Artifacts,Branch-Protection,Dangerous-Workflow,Dependency-Update-Tool,License,Pinned-Dependencies,SAST,Security-Policy,Token-Permissions,Vulnerabilities \
             --format=json \
             --show-details \
@@ -81,7 +81,7 @@ jobs:
   scorecard-required:
     name: scorecard-required
     needs: analysis
-    if: github.repository == 'oaslananka-lab/fovux'
+    if: github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

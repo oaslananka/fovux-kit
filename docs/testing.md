@@ -57,23 +57,23 @@ pnpm test --run
 
 ## Test Markers
 
-| Marker | Description | Included in `task test:fast`? |
-|---|---|---|
-| `network` | Requires external network access | No |
-| `integration` | Spawns services or crosses process boundaries | No |
-| `slow` | Long-running validation | No |
-| `gpu` | Requires CUDA or GPU-specific runtime | No |
-| `chaos` | Fault injection and adversarial tests | No |
-| `contract` | API contract tests | Yes |
-| `benchmark` | Performance benchmarks | No |
-| `security` | Security and pentest-style tests | No |
+| Marker        | Description                                   | Included in `task test:fast`? |
+| ------------- | --------------------------------------------- | ----------------------------- |
+| `network`     | Requires external network access              | No                            |
+| `integration` | Spawns services or crosses process boundaries | No                            |
+| `slow`        | Long-running validation                       | No                            |
+| `gpu`         | Requires CUDA or GPU-specific runtime         | No                            |
+| `chaos`       | Fault injection and adversarial tests         | No                            |
+| `contract`    | API contract tests                            | Yes                           |
+| `benchmark`   | Performance benchmarks                        | No                            |
+| `security`    | Security and pentest-style tests              | No                            |
 
 ## Coverage Targets
 
-| Package | Target | Current gate |
-|---|---:|---:|
-| `fovux-mcp` | 92% | `--cov-fail-under=92` |
-| `fovux-studio` | 85% | `pnpm coverage` |
+| Package        | Target |          Current gate |
+| -------------- | -----: | --------------------: |
+| `fovux-mcp`    |    92% | `--cov-fail-under=92` |
+| `fovux-studio` |    85% |       `pnpm coverage` |
 
 ## Security Scans
 

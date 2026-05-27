@@ -71,10 +71,10 @@ def _extract_gflops(model: object, imgsz: int) -> float:
     if isinstance(info, dict):
         for key in ("gflops", "GFLOPs", "flops"):
             value = info.get(key)
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 return round(float(value), 3)
 
-    if isinstance(info, (list, tuple)) and len(info) >= 4 and isinstance(info[3], (int, float)):
+    if isinstance(info, list | tuple) and len(info) >= 4 and isinstance(info[3], int | float):
         return round(float(info[3]), 3)
 
     if isinstance(info, str):

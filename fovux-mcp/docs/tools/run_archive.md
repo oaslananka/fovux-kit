@@ -8,22 +8,23 @@ Archive a completed training run to a compressed file.
 
 ## Input Schema
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `run_id` | `string` | Yes | — | ID of the run to archive. |
-| `output_path` | `string` | No | `null` | Path for the output archive. Defaults to `<run_path>.tar.gz`. |
+| Parameter     | Type     | Required | Default | Description                                                   |
+| ------------- | -------- | -------- | ------- | ------------------------------------------------------------- |
+| `run_id`      | `string` | Yes      | —       | ID of the run to archive.                                     |
+| `output_path` | `string` | No       | `null`  | Path for the output archive. Defaults to `<run_path>.tar.gz`. |
 
 ## Output Schema
 
-| Field | Type | Description |
-|---|---|---|
-| `run_id` | `string` | Archived run ID. |
-| `archive_path` | `string` | Path to the created archive. |
-| `size_bytes` | `integer` | Archive file size. |
+| Field          | Type      | Description                  |
+| -------------- | --------- | ---------------------------- |
+| `run_id`       | `string`  | Archived run ID.             |
+| `archive_path` | `string`  | Path to the created archive. |
+| `size_bytes`   | `integer` | Archive file size.           |
 
 ## Examples
 
 ### CLI
+
 ```bash
 curl -X POST http://127.0.0.1:7823/tools/run_archive \
   -H "Authorization: Bearer $(cat ~/.fovux/auth.token)" \
@@ -32,6 +33,7 @@ curl -X POST http://127.0.0.1:7823/tools/run_archive \
 ```
 
 ### Python
+
 ```python
 from fovux.tools.run_archive import run_archive
 result = run_archive("abc123", output_path="/backups/abc123.tar.gz")

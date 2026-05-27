@@ -4,7 +4,11 @@ import { createRoot } from "react-dom/client";
 
 import type { RunSummary } from "../shared/api";
 import { listRuns, type HttpClientConfig } from "../shared/api";
-import { postToExtension, readInitialState, type TimelineInitialState } from "../shared/types";
+import {
+  postToExtension,
+  readInitialState,
+  type TimelineInitialState,
+} from "../shared/types";
 
 function TimelineApp(): JSX.Element {
   const initial = readInitialState<TimelineInitialState>({
@@ -16,15 +20,21 @@ function TimelineApp(): JSX.Element {
   });
   const clientConfig = useMemo<HttpClientConfig>(
     () => ({ baseUrl: initial.baseUrl, authToken: initial.authToken }),
-    [initial.authToken, initial.baseUrl]
+    [initial.authToken, initial.baseUrl],
   );
   const [runs, setRuns] = useState<RunSummary[]>(initial.initialRuns);
   const [error, setError] = useState<string | null>(initial.initialError);
   const [statusFilter, setStatusFilter] = useState("all");
-  const statuses = useMemo(() => Array.from(new Set(runs.map((run) => run.status))).sort(), [runs]);
+  const statuses = useMemo(
+    () => Array.from(new Set(runs.map((run) => run.status))).sort(),
+    [runs],
+  );
   const visibleRuns = useMemo(
-    () => runs.filter((run) => statusFilter === "all" || run.status === statusFilter),
-    [runs, statusFilter]
+    () =>
+      runs.filter(
+        (run) => statusFilter === "all" || run.status === statusFilter,
+      ),
+    [runs, statusFilter],
   );
 
   return (
@@ -48,7 +58,11 @@ function TimelineApp(): JSX.Element {
               </option>
             ))}
           </select>
-          <button type="button" style={buttonStyle} onClick={() => void refreshRuns()}>
+          <button
+            type="button"
+            style={buttonStyle}
+            onClick={() => void refreshRuns()}
+          >
             Refresh
           </button>
         </div>
@@ -85,7 +99,9 @@ function TimelineApp(): JSX.Element {
       setError(null);
       setRuns(await listRuns(clientConfig));
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(
+        nextError instanceof Error ? nextError.message : String(nextError),
+      );
     }
   }
 }
@@ -93,14 +109,20 @@ function TimelineApp(): JSX.Element {
 function TimelineRow({ run }: { run: RunSummary }): JSX.Element {
   const progress = Math.max(
     4,
-    Math.min(100, ((run.current_epoch ?? 0) / Math.max(1, run.epochs || 1)) * 100)
+    Math.min(
+      100,
+      ((run.current_epoch ?? 0) / Math.max(1, run.epochs || 1)) * 100,
+    ),
   );
   const statusColor = statusColorFor(run.status);
   return (
     <button
       type="button"
       style={rowStyle}
-      onClick={() => run.run_path && postToExtension({ type: "openPath", path: run.run_path })}
+      onClick={() =>
+        run.run_path &&
+        postToExtension({ type: "openPath", path: run.run_path })
+      }
     >
       <span style={nameStyle}>{run.id}</span>
       <span style={mutedStyle}>{run.model}</span>

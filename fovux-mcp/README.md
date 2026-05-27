@@ -79,14 +79,14 @@ uv run fovux-mcp serve --http --tcp --metrics
 
 ```json
 {
-  "mcpServers": {
-    "fovux": {
-      "command": "fovux-mcp",
-      "env": {
-        "FOVUX_HOME": "~/.fovux"
-      }
+    "mcpServers": {
+        "fovux": {
+            "command": "fovux-mcp",
+            "env": {
+                "FOVUX_HOME": "~/.fovux"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -94,11 +94,11 @@ uv run fovux-mcp serve --http --tcp --metrics
 
 ```json
 {
-  "mcp.servers": {
-    "fovux": {
-      "command": "fovux-mcp"
+    "mcp.servers": {
+        "fovux": {
+            "command": "fovux-mcp"
+        }
     }
-  }
 }
 ```
 

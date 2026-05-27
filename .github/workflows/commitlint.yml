@@ -18,7 +18,7 @@ defaults:
 jobs:
   lint:
     if: >
-      github.repository == 'oaslananka-lab/fovux' &&
+      github.repository == 'oaslananka/fovux-kit' &&
       github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
     timeout-minutes: 10

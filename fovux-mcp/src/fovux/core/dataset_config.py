@@ -47,7 +47,7 @@ def validate_yolo_data_yaml(dataset_root: Path) -> dict[str, Any]:
         _validate_yaml_path_value(root, value, key)
 
     names = data.get("names")
-    if names is not None and not isinstance(names, (list, dict)):
+    if names is not None and not isinstance(names, list | dict):
         raise FovuxDatasetFormatError(
             f"{yaml_path.name} field 'names' must be a list or mapping.",
             hint="Use names: ['class_a', 'class_b'] or names: {0: class_a}.",

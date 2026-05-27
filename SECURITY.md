@@ -23,9 +23,9 @@ signing behavior.
 - The token is generated on first startup using `secrets.token_hex(32)`.
 - Rotate the token at any time:
 
-  ```bash
-  fovux-mcp rotate-token
-  ```
+    ```bash
+    fovux-mcp rotate-token
+    ```
 
 - The default rotation output prints the token path and fingerprint only. Use
   `fovux-mcp rotate-token --show-token` only for one-time local client setup.

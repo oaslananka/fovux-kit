@@ -22,7 +22,8 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
       properties: {
         dataset_path: {
           type: "string",
-          description: "Path to the YOLO dataset directory containing data.yaml.",
+          description:
+            "Path to the YOLO dataset directory containing data.yaml.",
         },
       },
       required: ["dataset_path"],
@@ -64,7 +65,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
           type: "string",
           description: "Path to the YOLO dataset directory.",
         },
-        threshold: { type: "number", description: "Hash distance threshold (default 8)." },
+        threshold: {
+          type: "number",
+          description: "Hash distance threshold (default 8).",
+        },
       },
       required: ["dataset_path"],
     },
@@ -81,12 +85,21 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        dataset_path: { type: "string", description: "Path to the YOLO training dataset." },
-        model: { type: "string", description: "Model architecture (e.g., yolov8n.pt)." },
+        dataset_path: {
+          type: "string",
+          description: "Path to the YOLO training dataset.",
+        },
+        model: {
+          type: "string",
+          description: "Model architecture (e.g., yolov8n.pt).",
+        },
         epochs: { type: "integer", description: "Number of training epochs." },
         batch: { type: "integer", description: "Batch size." },
         imgsz: { type: "integer", description: "Training image size." },
-        device: { type: "string", description: "Device: auto, cpu, 0, 1, etc." },
+        device: {
+          type: "string",
+          description: "Device: auto, cpu, 0, 1, etc.",
+        },
       },
       required: ["dataset_path"],
     },
@@ -119,7 +132,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        run_id: { type: "string", description: "ID of the training run to stop." },
+        run_id: {
+          type: "string",
+          description: "ID of the training run to stop.",
+        },
       },
       required: ["run_id"],
     },
@@ -136,8 +152,14 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        checkpoint: { type: "string", description: "Model checkpoint path or name." },
-        dataset_path: { type: "string", description: "Validation dataset path." },
+        checkpoint: {
+          type: "string",
+          description: "Model checkpoint path or name.",
+        },
+        dataset_path: {
+          type: "string",
+          description: "Validation dataset path.",
+        },
       },
       required: ["checkpoint", "dataset_path"],
     },
@@ -171,7 +193,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        checkpoint: { type: "string", description: "Model checkpoint to export." },
+        checkpoint: {
+          type: "string",
+          description: "Model checkpoint to export.",
+        },
         imgsz: { type: "integer", description: "Export image size." },
       },
       required: ["checkpoint"],
@@ -189,7 +214,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        checkpoint: { type: "string", description: "Model checkpoint to export." },
+        checkpoint: {
+          type: "string",
+          description: "Model checkpoint to export.",
+        },
         imgsz: { type: "integer", description: "Export image size." },
       },
       required: ["checkpoint"],
@@ -207,7 +235,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        checkpoint: { type: "string", description: "Model checkpoint to quantize." },
+        checkpoint: {
+          type: "string",
+          description: "Model checkpoint to quantize.",
+        },
         calibration_dataset: {
           type: "string",
           description: "Path to calibration dataset.",

@@ -33,20 +33,27 @@ describe("Fovux client and webview host", () => {
     fs.writeFileSync(path.join(home, "auth.token"), "secret-token\n");
 
     const client = await ExtensionFovuxClient.create();
-    const response = await client.invokeTool<{ total: number }>("model_list", {});
+    const response = await client.invokeTool<{ total: number }>(
+      "model_list",
+      {},
+    );
 
     expect(response.total).toBe(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "http://127.0.0.1:7823/tools/model_list",
       expect.objectContaining({
         method: "POST",
-        headers: expect.objectContaining({ Authorization: "Bearer secret-token" }),
-      })
+        headers: expect.objectContaining({
+          Authorization: "Bearer secret-token",
+        }),
+      }),
     );
   });
 
   it("rereads auth.token and retries once after a 401", async () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), "fovux-token-rotation-"));
+    const home = fs.mkdtempSync(
+      path.join(os.tmpdir(), "fovux-token-rotation-"),
+    );
     process.env["FOVUX_HOME"] = home;
     fs.writeFileSync(path.join(home, "auth.token"), "old-token\n");
     const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
@@ -54,7 +61,12 @@ describe("Fovux client and webview host", () => {
       if (fetchMock.mock.calls.length === 1) {
         fs.writeFileSync(path.join(home, "auth.token"), "new-token\n");
         expect(headers?.["Authorization"]).toBe("Bearer old-token");
-        return { ok: false, status: 401, statusText: "Unauthorized", json: async () => ({}) };
+        return {
+          ok: false,
+          status: 401,
+          statusText: "Unauthorized",
+          json: async () => ({}),
+        };
       }
       expect(headers?.["Authorization"]).toBe("Bearer new-token");
       return { ok: true, status: 200, statusText: "OK", json: async () => [] };
@@ -86,12 +98,14 @@ describe("Fovux client and webview host", () => {
       } as never,
       { path: "/extension" } as never,
       "webviews/exportWizard/main.js",
-      { hello: "fovux" }
+      { hello: "fovux" },
     );
 
     expect(html).toContain("webviews/exportWizard/main.js");
     expect(html).toContain("window.__FOVUX_INITIAL_STATE__");
-    expect(html).toContain("connect-src http://127.0.0.1:* https://127.0.0.1:*");
+    expect(html).toContain(
+      "connect-src http://127.0.0.1:* https://127.0.0.1:*",
+    );
     const cspNonce = html.match(/script-src[^"]*'nonce-([A-Za-z0-9_-]+)'/);
     const scriptNonce = html.match(/<script nonce="([A-Za-z0-9_-]+)">/);
     expect(cspNonce?.[1]).toBeTruthy();

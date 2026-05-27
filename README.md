@@ -66,12 +66,12 @@ To connect an MCP desktop client to Fovux, add the following to your MCP client 
 
 ```json
 {
-  "mcpServers": {
-    "fovux": {
-      "command": "fovux-mcp",
-      "args": ["serve"]
+    "mcpServers": {
+        "fovux": {
+            "command": "fovux-mcp",
+            "args": ["serve"]
+        }
     }
-  }
 }
 ```
 

@@ -52,7 +52,11 @@ export class ExtensionFovuxClient {
   }
 
   async getRun(runId: string): Promise<RunDetail> {
-    return this.requestJson<RunDetail>(`/runs/${encodeURIComponent(runId)}`, {}, `Run ${runId}`);
+    return this.requestJson<RunDetail>(
+      `/runs/${encodeURIComponent(runId)}`,
+      {},
+      `Run ${runId}`,
+    );
   }
 
   async health(): Promise<boolean> {
@@ -64,14 +68,17 @@ export class ExtensionFovuxClient {
     }
   }
 
-  async invokeTool<T>(name: string, payload: Record<string, unknown>): Promise<T> {
+  async invokeTool<T>(
+    name: string,
+    payload: Record<string, unknown>,
+  ): Promise<T> {
     return this.requestJson<T>(
       `/tools/${encodeURIComponent(name)}`,
       {
         method: "POST",
         body: JSON.stringify(payload),
       },
-      `Tool ${name} failed`
+      `Tool ${name} failed`,
     );
   }
 
@@ -83,7 +90,7 @@ export class ExtensionFovuxClient {
   private async requestJson<T>(
     pathName: string,
     init: RequestInit,
-    errorPrefix: string
+    errorPrefix: string,
   ): Promise<T> {
     const res = await this.fetchWithAuth(`${this.baseUrl}${pathName}`, init);
 
@@ -94,7 +101,10 @@ export class ExtensionFovuxClient {
     return res.json() as Promise<T>;
   }
 
-  private async fetchWithAuth(url: string, init: RequestInit): Promise<Response> {
+  private async fetchWithAuth(
+    url: string,
+    init: RequestInit,
+  ): Promise<Response> {
     const first = await fetch(url, {
       ...init,
       headers: buildHeaders(this.authToken, init.headers),
@@ -127,7 +137,10 @@ export async function getAuthToken(): Promise<string | null> {
   }
 }
 
-function buildHeaders(authToken: string | null, extra?: HeadersInit): Record<string, string> {
+function buildHeaders(
+  authToken: string | null,
+  extra?: HeadersInit,
+): Record<string, string> {
   const headers: Record<string, string> = {
     "content-type": "application/json",
   };
@@ -168,7 +181,10 @@ function extractErrorMessage(detail: unknown, response: Response): string {
     }
     if (nested && typeof nested === "object") {
       const nestedRecord = nested as Record<string, unknown>;
-      const code = typeof nestedRecord["code"] === "string" ? `${nestedRecord["code"]}: ` : "";
+      const code =
+        typeof nestedRecord["code"] === "string"
+          ? `${nestedRecord["code"]}: `
+          : "";
       if (typeof nestedRecord["message"] === "string") {
         return `${code}${nestedRecord["message"]}`;
       }

@@ -2,8 +2,8 @@
 
 ## Current Maintainers
 
-| Name | GitHub | Role | Since |
-|---|---|---|---|
+| Name        | GitHub                                       | Role         | Since   |
+| ----------- | -------------------------------------------- | ------------ | ------- |
 | Osman Aslan | [@oaslananka](https://github.com/oaslananka) | Project Lead | 2026-04 |
 
 ## Promotion Criteria

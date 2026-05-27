@@ -10,7 +10,9 @@ import {
   WebviewToExtensionMessage,
 } from "../webviews/shared/types";
 
-export async function openExportWizard(context: vscode.ExtensionContext): Promise<void> {
+export async function openExportWizard(
+  context: vscode.ExtensionContext,
+): Promise<void> {
   const panel = vscode.window.createWebviewPanel(
     "fovux.exportWizard",
     "Fovux Export Wizard",
@@ -19,12 +21,15 @@ export async function openExportWizard(context: vscode.ExtensionContext): Promis
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [context.extensionUri],
-    }
+    },
   );
 
   panel.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
     if (message.type === "openPath") {
-      void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(message.path));
+      void vscode.commands.executeCommand(
+        "revealFileInOS",
+        vscode.Uri.file(message.path),
+      );
       return;
     }
     if (message.type === "startServer") {
@@ -32,7 +37,7 @@ export async function openExportWizard(context: vscode.ExtensionContext): Promis
         .then(() => renderExportWizard(panel, context))
         .catch((error: unknown) => {
           void vscode.window.showErrorMessage(
-            error instanceof Error ? error.message : String(error)
+            error instanceof Error ? error.message : String(error),
           );
         });
     }
@@ -43,7 +48,7 @@ export async function openExportWizard(context: vscode.ExtensionContext): Promis
 
 async function renderExportWizard(
   panel: vscode.WebviewPanel,
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
 ): Promise<void> {
   const client = await ExtensionFovuxClient.create();
   const isServerReachable = await client.health();
@@ -52,10 +57,9 @@ async function renderExportWizard(
 
   if (isServerReachable) {
     try {
-      const response = await client.invokeTool<{ models: ExportWizardModelArtifact[] }>(
-        "model_list",
-        {}
-      );
+      const response = await client.invokeTool<{
+        models: ExportWizardModelArtifact[];
+      }>("model_list", {});
       initialModels = response.models;
     } catch (error) {
       initialError = error instanceof Error ? error.message : String(error);
@@ -78,6 +82,6 @@ async function renderExportWizard(
     panel.webview,
     context.extensionUri,
     "webviews/exportWizard/main.js",
-    initialState
+    initialState,
   );
 }

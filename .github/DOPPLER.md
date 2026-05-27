@@ -27,18 +27,18 @@ permissions rather than registry access.
    repository secret before enabling a release job.
 4. For local verification only, wrap consuming commands with:
 
-   ```bash
-   doppler run --project all --config main -- bash -lc 'task ci'
-   ```
+    ```bash
+    doppler run --project all --config main -- bash -lc 'task ci'
+    ```
 
-   ```powershell
-   doppler run --project all --config main -- pwsh -NoProfile -Command 'task ci'
-   ```
+    ```powershell
+    doppler run --project all --config main -- pwsh -NoProfile -Command 'task ci'
+    ```
 
 5. Verify with:
 
-   ```bash
-   bash scripts/verify_doppler_secrets.sh
-   ```
+    ```bash
+    bash scripts/verify_doppler_secrets.sh
+    ```
 
 Dashboard: https://dashboard.doppler.com/

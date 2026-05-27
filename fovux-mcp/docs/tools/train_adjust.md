@@ -8,24 +8,25 @@ Adjust hyperparameters of a running training run.
 
 ## Input Schema
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `run_id` | `string` | Yes | — | ID of the running training run. |
-| `lr` | `float` | No | `null` | New learning rate. |
-| `batch` | `integer` | No | `null` | New batch size. |
-| `epochs` | `integer` | No | `null` | New total epoch count. |
+| Parameter | Type      | Required | Default | Description                     |
+| --------- | --------- | -------- | ------- | ------------------------------- |
+| `run_id`  | `string`  | Yes      | —       | ID of the running training run. |
+| `lr`      | `float`   | No       | `null`  | New learning rate.              |
+| `batch`   | `integer` | No       | `null`  | New batch size.                 |
+| `epochs`  | `integer` | No       | `null`  | New total epoch count.          |
 
 ## Output Schema
 
-| Field | Type | Description |
-|---|---|---|
-| `run_id` | `string` | Run ID. |
+| Field      | Type     | Description                                          |
+| ---------- | -------- | ---------------------------------------------------- |
+| `run_id`   | `string` | Run ID.                                              |
 | `adjusted` | `object` | Map of adjusted parameter names to their new values. |
-| `status` | `string` | Current run status. |
+| `status`   | `string` | Current run status.                                  |
 
 ## Examples
 
 ### CLI
+
 ```bash
 curl -X POST http://127.0.0.1:7823/tools/train_adjust \
   -H "Authorization: Bearer $(cat ~/.fovux/auth.token)" \
@@ -34,6 +35,7 @@ curl -X POST http://127.0.0.1:7823/tools/train_adjust \
 ```
 
 ### Python
+
 ```python
 from fovux.tools.train_adjust import train_adjust
 result = train_adjust("abc123", lr=0.001, epochs=200)

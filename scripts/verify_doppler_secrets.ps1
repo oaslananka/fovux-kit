@@ -16,7 +16,7 @@ $missing = @()
 Get-Content ".doppler/secrets.txt" | ForEach-Object {
     $line = $_.Trim()
     if ($line -eq "" -or $line.StartsWith("#")) { return }
-    
+
     try {
         $null = doppler secrets get $line --plain --project $DopplerProject --config $DopplerConfig 2>$null
     } catch {

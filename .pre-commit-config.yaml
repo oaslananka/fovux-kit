@@ -62,7 +62,21 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-        args: [feat, fix, docs, style, refactor, perf, test, chore, build, ci, revert, security]
+        args:
+          [
+            feat,
+            fix,
+            docs,
+            style,
+            refactor,
+            perf,
+            test,
+            chore,
+            build,
+            ci,
+            revert,
+            security,
+          ]
 
   - repo: local
     hooks:

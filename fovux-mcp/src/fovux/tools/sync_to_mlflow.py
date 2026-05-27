@@ -53,7 +53,7 @@ def _run_sync_to_mlflow(run_id: str, mlflow_tracking_uri: str) -> SyncToMlflowOu
             metric_values = row.get("metrics", {})
             if isinstance(metric_values, dict):
                 for key, value in metric_values.items():
-                    if isinstance(value, (int, float)):
+                    if isinstance(value, int | float):
                         mlflow.log_metric(str(key), float(value), step=step)
 
     return SyncToMlflowOutput(
