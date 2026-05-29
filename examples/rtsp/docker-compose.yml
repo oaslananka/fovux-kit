@@ -1,6 +1,6 @@
 services:
   rtsp-mock:
-    image: bluenviron/mediamtx:latest
+    image: bluenviron/mediamtx@sha256:4d60efd45cfc9b688d011f0088031e21b8d5a828cb0fcdb444b7dcd5fc51c5b8
     ports:
       - "8554:8554"
     environment:
