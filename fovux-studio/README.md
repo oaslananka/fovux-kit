@@ -1,4 +1,4 @@
-# Fovux Studio
+# Fovux Studio Kit
 
 [![Repository](https://img.shields.io/badge/repo-oaslananka%2Ffovux--kit-black?logo=github)](https://github.com/oaslananka/fovux-kit)
 [![Install](https://img.shields.io/badge/install-source-blue.svg)](https://github.com/oaslananka/fovux-kit)
@@ -8,7 +8,7 @@ Visual companion for [Fovux MCP](https://github.com/oaslananka/fovux-kit/tree/ma
 
 ## Status
 
-Packaged releases are produced by GitHub Actions in `oaslananka/fovux-kit`. Use the Fovux Studio
+Packaged releases are produced by GitHub Actions in `oaslananka/fovux-kit`. Use the Fovux Studio Kit
 Marketplace/Open VSX release for normal installs, or package from source when developing the
 extension.
 

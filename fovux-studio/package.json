@@ -1,6 +1,6 @@
 {
   "name": "fovuxstudiokit",
-  "displayName": "Fovux Studio",
+  "displayName": "Fovux Studio Kit",
   "description": "Visual companion for Fovux MCP — run dashboards, dataset inspector, export wizard.",
   "version": "1.0.0",
   "publisher": "oaslananka",
@@ -22,7 +22,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Fovux Studio can display runs and models in untrusted workspaces but cannot start servers or launch training.",
+      "description": "Fovux Studio Kit can display runs and models in untrusted workspaces but cannot start servers or launch training.",
       "restrictedConfigurations": [
         "fovux.home",
         "fovux.serverCommand"
@@ -709,7 +709,7 @@
       ]
     },
     "configuration": {
-      "title": "Fovux Studio",
+      "title": "Fovux Studio Kit",
       "properties": {
         "fovux.home": {
           "type": "string",
@@ -724,7 +724,7 @@
         "fovux.serverCommand": {
           "type": "string",
           "default": "fovux-mcp",
-          "description": "Command used by Fovux Studio to start the local fovux-mcp server."
+          "description": "Command used by Fovux Studio Kit to start the local fovux-mcp server."
         },
         "fovux.pollIntervalMs": {
           "type": "number",

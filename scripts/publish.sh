@@ -24,7 +24,7 @@ if [ -d "fovux-studio" ]; then
 
   if [ -n "${OVSX_PAT:-}" ]; then
     echo "Publishing to Open VSX..."
-    pnpm dlx ovsx@0.10.12 publish "$VSIX_FILE" --pat "$OVSX_PAT"
+    pnpm dlx ovsx@1.0.0 publish "$VSIX_FILE" --pat "$OVSX_PAT"
   fi
 
   cd ..
