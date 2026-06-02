@@ -45,7 +45,7 @@ export function registerWalkthroughCommands(context: vscode.ExtensionContext): v
         await vscode.window.showTextDocument(files[0]);
       } else {
         await vscode.env.openExternal(
-          vscode.Uri.parse("https://github.com/oaslananka/fovux/blob/main/SECURITY.md")
+          vscode.Uri.parse("https://github.com/oaslananka/fovux-kit/blob/main/SECURITY.md")
         );
       }
     })

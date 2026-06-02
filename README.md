@@ -120,11 +120,11 @@ Fovux is built for enterprise privacy. **No telemetry is collected by default.**
 
 ## CI/CD and release model
 
-Fovux maintains a secure release model:
+Fovux maintains a secure GitHub Actions release model in this repository:
 
-- `oaslananka/fovux`: The primary developer-facing public repository.
-- `oaslananka-lab/fovux`: The GitHub organization repository containing the authoritative CI/CD pipelines and release gates.
-- `dev.azure.com/...`: An enterprise public mirror.
+- `oaslananka/fovux-kit`: The source of truth for code, issues, pull requests, CI, and releases.
+- `.github/workflows`: The active CI, security, release, and registry publishing workflows.
+- Protected GitHub environments gate PyPI, Marketplace, and Open VSX publishing.
 
 All releases are created by release-please from Conventional Commits, gated by CI, and published from GitHub Actions with checksums, SBOMs, and provenance.
 

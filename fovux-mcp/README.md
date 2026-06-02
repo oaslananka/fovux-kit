@@ -2,8 +2,8 @@
 
 **From dataset to deployed ONNX, in one conversation.**
 
-[![Primary CI](https://img.shields.io/badge/ci-Azure%20DevOps-blue.svg)](https://github.com/oaslananka/fovux-kit)
-[![Repository](https://img.shields.io/badge/repo-oaslananka%2Ffovux-black?logo=github)](https://github.com/oaslananka/fovux-kit)
+[![Primary CI](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml)
+[![Repository](https://img.shields.io/badge/repo-oaslananka%2Ffovux--kit-black?logo=github)](https://github.com/oaslananka/fovux-kit)
 [![Python 3.11-3.13](https://img.shields.io/badge/python-3.11%20to%203.13-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Install](https://img.shields.io/badge/install-source-blue.svg)](https://github.com/oaslananka/fovux-kit)
@@ -26,15 +26,14 @@ Fovux is a professional-grade, open-source edge-AI computer vision workbench. It
 
 ## Status
 
-Packaged releases are produced by the `oaslananka-lab/fovux` release pipeline and mirrored
-to `oaslananka/fovux`. Install fovux-mcp from PyPI when you need the signed release artifact, or use
-the source workflow below for development.
+Packaged releases are produced by GitHub Actions in `oaslananka/fovux-kit`. Install fovux-mcp from
+PyPI when you need the signed release artifact, or use the source workflow below for development.
 
 ## Install From Source
 
 ```bash
 git clone https://github.com/oaslananka/fovux-kit
-cd fovux/fovux-mcp
+cd fovux-kit/fovux-mcp
 uv sync --frozen --extra dev
 ```
 
@@ -52,7 +51,7 @@ See [docs/getting-started.md](docs/getting-started.md) for the full tutorial.
 ```bash
 # 1. Install from source
 git clone https://github.com/oaslananka/fovux-kit
-cd fovux/fovux-mcp
+cd fovux-kit/fovux-mcp
 uv sync --frozen --extra dev --extra yolo
 uv run fovux-mcp doctor
 

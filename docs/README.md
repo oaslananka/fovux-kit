@@ -14,12 +14,10 @@ Fovux. Product documentation for the MCP server lives under `fovux-mcp/docs`.
 
 ## Release Readiness
 
-The v2.0.0 hardening train is designed to keep source, local checks, and CI aligned:
+The release-readiness hardening train is designed to keep source, local checks, and CI aligned:
 
-- `oaslananka/fovux` is the canonical public source repository.
-- `oaslananka-lab/fovux` is the CI/CD repository that runs automatic GitHub Actions checks on push and
-  pull request.
-- Azure DevOps remains a non-authoritative fallback path.
+- `oaslananka/fovux-kit` is the canonical public source repository.
+- GitHub Actions in this repository run automatic checks on pushes and pull requests.
 - Registry publishing is driven by release-please outputs and protected GitHub environments.
 
 Before a release, run the repo-level quality gate:

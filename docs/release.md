@@ -1,11 +1,10 @@
 # Release Process
 
-Fovux uses a protected release model.
+Fovux uses a protected GitHub Actions release model.
 
-| Repo                   | Role                                  |
-| ---------------------- | ------------------------------------- |
-| `oaslananka/fovux`     | Public developer-facing repository    |
-| `oaslananka-lab/fovux` | CI/CD, security gates, and publishing |
+| Repo                   | Role                                       |
+| ---------------------- | ------------------------------------------ |
+| `oaslananka/fovux-kit` | Source, CI, security gates, and publishing |
 
 ## Release Tracks
 
@@ -17,8 +16,8 @@ Fovux uses a protected release model.
   first.
 - PyPI publishing prefers trusted publishing when
   `PYPI_TRUSTED_PUBLISHING_ENABLED=true` and the PyPI trusted publisher matches
-  `oaslananka-lab/fovux`, environment `pypi-production`, and
-  `.github/workflows/release-please.yml`.
+  `oaslananka/fovux-kit`, environment `pypi-production`, and
+  `.github/workflows/publish-production.yml`.
 - Until trusted publishing is configured, the guarded production job may use
   `PYPI_TOKEN` from the `pypi-production` environment. Only wheel and sdist
   files from the GitHub Actions runner are uploaded to PyPI.
@@ -37,7 +36,7 @@ Fovux uses a protected release model.
 ## Normal Release
 
 1. Merge changes to `main` through a reviewed pull request.
-2. CI, CodeQL, security scans, and review gates pass on the org repository.
+2. CI, CodeQL, security scans, and review gates pass in this repository.
 3. release-please opens one grouped release PR with version and changelog updates.
 4. A maintainer reviews and merges the release PR.
 5. Publish jobs run for each package that received a release.
@@ -58,5 +57,6 @@ gh pr create --base main --title "fix(mcp): critical bug description"
 ## Version Strategy
 
 `fovux-mcp` and `fovux-studio` use independent semantic-version tracks. The MCP package remains
-the source for `mcp.json`, `fovux-mcp/server.json`, and `fovux-mcp/smithery.yaml`. Studio starts its
-public Marketplace/Open VSX package track at `1.0.0` under `oaslananka.fovuxstudiokit`.
+the source for `mcp.json`, `fovux-mcp/server.json`, and `fovux-mcp/smithery.yaml`. Both public
+tracks start from `1.0.0` in `oaslananka/fovux-kit`; Studio publishes under
+`oaslananka.fovuxstudiokit`.

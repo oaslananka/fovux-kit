@@ -6,8 +6,8 @@ Thank you for your interest in contributing to Fovux! This document explains how
 
 ```bash
 # Clone and install with locked dev dependencies
-git clone https://github.com/oaslananka/fovux
-cd fovux
+git clone https://github.com/oaslananka/fovux-kit
+cd fovux-kit
 uv sync --project fovux-mcp --frozen --extra dev
 
 # Node.js / pnpm for the Studio companion
