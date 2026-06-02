@@ -220,10 +220,14 @@ if (!workflowNames.includes("publish-production.yml")) {
     "channel:",
     'gh release upload "$release_tag" --clobber',
     `OVSX_VERSION: "${OVSX_VERSION}"`,
+    "runs-on: ubuntu-24.04",
   ]) {
     if (!publishWorkflow.includes(required)) {
       fail(`production publish workflow must reference ${required}`);
     }
+  }
+  if (/runs-on:\s*\[?\s*["']?self-hosted\b/.test(publishWorkflow)) {
+    fail("production publish workflow must use GitHub-hosted runners");
   }
 }
 
