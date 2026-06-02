@@ -8,7 +8,7 @@
     "directory": "fovux-mcp"
   },
   "version": "1.0.0",
-  "websiteUrl": "https://oaslananka.github.io/fovux/",
+  "websiteUrl": "https://oaslananka.github.io/fovux-kit/",
   "packages": [
     {
       "registry_type": "pypi",

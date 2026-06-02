@@ -34,7 +34,7 @@ export function registerWalkthroughCommands(context: vscode.ExtensionContext): v
     }),
 
     vscode.commands.registerCommand("fovux.openUpgradeGuide", async () => {
-      const uri = vscode.Uri.parse("https://oaslananka.github.io/fovux/upgrade/");
+      const uri = vscode.Uri.parse("https://oaslananka.github.io/fovux-kit/upgrade/");
       await vscode.env.openExternal(uri);
     }),
 
