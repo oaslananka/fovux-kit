@@ -21,7 +21,7 @@ for artifact in "$DIST_DIR"/*.whl "$DIST_DIR"/*.tar.gz; do
   echo ""
   echo "Verifying: $(basename "$artifact")"
   sigstore verify identity \
-    --cert-identity "https://github.com/oaslananka-lab/fovux/.github/workflows/release-please.yml@refs/heads/main" \
+    --cert-identity "https://github.com/oaslananka/fovux-kit/.github/workflows/release-please.yml@refs/heads/main" \
     --cert-oidc-issuer "https://token.actions.githubusercontent.com" \
     "$artifact" || {
     echo "FAILED: $artifact"

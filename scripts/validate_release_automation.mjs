@@ -127,10 +127,10 @@ if (config["separate-pull-requests"] !== false) {
 
 if (
   config["group-pull-request-title-pattern"] !==
-  "chore(release): release ${component} ${version}"
+  "chore(release): release${component}"
 ) {
   fail(
-    "group release pull request title must include component and version for release-please tagging",
+    "group release pull request title must preserve release-please's parseable grouped PR title",
   );
 }
 
