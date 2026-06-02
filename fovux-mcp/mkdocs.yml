@@ -1,8 +1,8 @@
 site_name: Fovux MCP
 site_description: Professional-grade edge-AI computer vision workbench MCP server
-site_url: https://oaslananka.github.io/fovux/
-repo_url: https://github.com/oaslananka/fovux
-repo_name: oaslananka/fovux
+site_url: https://oaslananka.github.io/fovux-kit/
+repo_url: https://github.com/oaslananka/fovux-kit
+repo_name: oaslananka/fovux-kit
 edit_uri: edit/main/fovux-mcp/docs/
 
 theme:

@@ -5,8 +5,8 @@ This quickstart walks through the end-to-end local workflow on a YOLO dataset.
 ## 1. Install From Source
 
 ```bash
-git clone https://github.com/oaslananka/fovux
-cd fovux/fovux-mcp
+git clone https://github.com/oaslananka/fovux-kit
+cd fovux-kit/fovux-mcp
 uv sync --frozen --extra dev
 ```
 

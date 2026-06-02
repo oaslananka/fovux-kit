@@ -5,38 +5,43 @@ All notable changes to `fovux-mcp` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
-## [4.1.8](https://github.com/oaslananka-lab/fovux/compare/fovux-mcp-v4.1.7...fovux-mcp-v4.1.8) (2026-05-10)
+## [1.0.0] - 2026-06-02
+
+### Changed
+
+- Reset the public `fovux-mcp` package baseline to `1.0.0` for the first verified
+  `oaslananka/fovux-kit` registry publish.
+- Aligned PyPI, MCP Registry, Smithery, root MCP metadata, lockfile, and release-please version
+  state on the public baseline.
+- Moved active release-path documentation to the current GitHub Actions workflow in
+  `oaslananka/fovux-kit`.
+
+## [4.1.7](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v4.1.6...fovux-mcp-v4.1.7) (2026-05-09)
 
 ### Bug Fixes
 
-- **ci:** repair maintenance workflow checks ([#22](https://github.com/oaslananka-lab/fovux/issues/22)) ([8498bfd](https://github.com/oaslananka-lab/fovux/commit/8498bfde26ac88f1ecf92a89ca62bd39f56412c9))
+- **release:** document package distribution pipeline ([#20](https://github.com/oaslananka/fovux-kit/issues/20)) ([36e6d84](https://github.com/oaslananka/fovux-kit/commit/36e6d848b93a5d45aa3ff67e89f14c8f25b9b1c6))
 
-## [4.1.7](https://github.com/oaslananka-lab/fovux/compare/fovux-mcp-v4.1.6...fovux-mcp-v4.1.7) (2026-05-09)
-
-### Bug Fixes
-
-- **release:** document package distribution pipeline ([#20](https://github.com/oaslananka-lab/fovux/issues/20)) ([36e6d84](https://github.com/oaslananka-lab/fovux/commit/36e6d848b93a5d45aa3ff67e89f14c8f25b9b1c6))
-
-## [4.1.6](https://github.com/oaslananka-lab/fovux/compare/fovux-mcp-v4.1.5...fovux-mcp-v4.1.6) (2026-05-09)
+## [4.1.6](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v4.1.5...fovux-mcp-v4.1.6) (2026-05-09)
 
 ### Bug Fixes
 
-- **dataset:** canonicalize image scan roots ([1dee570](https://github.com/oaslananka-lab/fovux/commit/1dee570a68a54f4e53db9544881499278ad01ae3))
-- **process:** harden resumed worker termination ([a9c692f](https://github.com/oaslananka-lab/fovux/commit/a9c692fa16d69d4d8c23b99c384c0021201799fe))
-- **process:** preserve empty procfs command arguments ([3640024](https://github.com/oaslananka-lab/fovux/commit/3640024cd5dd2d2ad149fb208a6bfca19edaa389))
-- **security:** address review hardening follow-ups ([825cd40](https://github.com/oaslananka-lab/fovux/commit/825cd400b2216aa878030446d23ca186e55deb82))
-- **security:** harden runtime control surface ([d443d48](https://github.com/oaslananka-lab/fovux/commit/d443d483effc4697c982158854aef7a5d9f7169f))
+- **dataset:** canonicalize image scan roots ([1dee570](https://github.com/oaslananka/fovux-kit/commit/1dee570a68a54f4e53db9544881499278ad01ae3))
+- **process:** harden resumed worker termination ([a9c692f](https://github.com/oaslananka/fovux-kit/commit/a9c692fa16d69d4d8c23b99c384c0021201799fe))
+- **process:** preserve empty procfs command arguments ([3640024](https://github.com/oaslananka/fovux-kit/commit/3640024cd5dd2d2ad149fb208a6bfca19edaa389))
+- **security:** address review hardening follow-ups ([825cd40](https://github.com/oaslananka/fovux-kit/commit/825cd400b2216aa878030446d23ca186e55deb82))
+- **security:** harden runtime control surface ([d443d48](https://github.com/oaslananka/fovux-kit/commit/d443d483effc4697c982158854aef7a5d9f7169f))
 
-## [4.1.5](https://github.com/oaslananka-lab/fovux/compare/fovux-mcp-v4.1.4...fovux-mcp-v4.1.5) (2026-05-08)
+## [4.1.5](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v4.1.4...fovux-mcp-v4.1.5) (2026-05-08)
 
 ### Bug Fixes
 
-- correct cwd path for smoke tests ([6eeb2c3](https://github.com/oaslananka-lab/fovux/commit/6eeb2c3cc74050bfc42a1ed5a0c1a340cae70f3c))
-- **dataset:** avoid recursive root scans in format detection ([e58833a](https://github.com/oaslananka-lab/fovux/commit/e58833a95d5f204c54870ac016b1b8a421216654))
-- keep docker image buildable on slim base ([07cda6c](https://github.com/oaslananka-lab/fovux/commit/07cda6c27b3e6080a24a614f2768fce4bf49315c))
-- **release:** align grouped release automation ([dd310b3](https://github.com/oaslananka-lab/fovux/commit/dd310b37b8bcd48d63b942e85d8ee625bf47cc23))
-- **release:** keep uv lock version synced ([dcbc8d2](https://github.com/oaslananka-lab/fovux/commit/dcbc8d2cf82fc921b802acdb18ebf1e85739561c))
-- resolve ruff and eslint errors failing the CI ([edfd82b](https://github.com/oaslananka-lab/fovux/commit/edfd82b4fb4da324a316e49e47a982e8aebc6da7))
+- correct cwd path for smoke tests ([6eeb2c3](https://github.com/oaslananka/fovux-kit/commit/6eeb2c3cc74050bfc42a1ed5a0c1a340cae70f3c))
+- **dataset:** avoid recursive root scans in format detection ([e58833a](https://github.com/oaslananka/fovux-kit/commit/e58833a95d5f204c54870ac016b1b8a421216654))
+- keep docker image buildable on slim base ([07cda6c](https://github.com/oaslananka/fovux-kit/commit/07cda6c27b3e6080a24a614f2768fce4bf49315c))
+- **release:** align grouped release automation ([dd310b3](https://github.com/oaslananka/fovux-kit/commit/dd310b37b8bcd48d63b942e85d8ee625bf47cc23))
+- **release:** keep uv lock version synced ([dcbc8d2](https://github.com/oaslananka/fovux-kit/commit/dcbc8d2cf82fc921b802acdb18ebf1e85739561c))
+- resolve ruff and eslint errors failing the CI ([edfd82b](https://github.com/oaslananka/fovux-kit/commit/edfd82b4fb4da324a316e49e47a982e8aebc6da7))
 
 ## [4.1.4] - 2026-04-29
 
@@ -142,7 +147,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - export history JSONL entries for ONNX, TFLite, and INT8 artifacts
 - `run_delete` and `run_tag` tools for Studio context actions
 - strict YOLO `data.yaml` validation before training and quantization
-- SPDX SBOM generation and release preflight scripts for Azure DevOps
+- SPDX SBOM generation and release preflight scripts for GitHub Actions
 
 ### Changed
 
@@ -174,7 +179,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - HTTP tool proxy at `POST /tools/{name}`
 - docs site expansion with per-tool pages, recipes, ADRs, and API reference
 - property-based tests, benchmark coverage, and slow E2E training scaffolding
-- Azure docs validation stage, optional slow validation stage, and SBOM generation
+- CI docs validation stage, optional slow validation stage, and SBOM generation
 
 ### Changed
 

@@ -34,7 +34,7 @@ export function registerWalkthroughCommands(context: vscode.ExtensionContext): v
     }),
 
     vscode.commands.registerCommand("fovux.openUpgradeGuide", async () => {
-      const uri = vscode.Uri.parse("https://oaslananka.github.io/fovux/upgrade/");
+      const uri = vscode.Uri.parse("https://oaslananka.github.io/fovux-kit/upgrade/");
       await vscode.env.openExternal(uri);
     }),
 
@@ -45,7 +45,7 @@ export function registerWalkthroughCommands(context: vscode.ExtensionContext): v
         await vscode.window.showTextDocument(files[0]);
       } else {
         await vscode.env.openExternal(
-          vscode.Uri.parse("https://github.com/oaslananka/fovux/blob/main/SECURITY.md")
+          vscode.Uri.parse("https://github.com/oaslananka/fovux-kit/blob/main/SECURITY.md")
         );
       }
     })

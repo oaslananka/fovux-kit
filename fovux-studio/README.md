@@ -1,16 +1,16 @@
 # Fovux Studio
 
-[![Repository](https://img.shields.io/badge/repo-oaslananka%2Ffovux-black?logo=github)](https://github.com/oaslananka/fovux)
-[![Install](https://img.shields.io/badge/install-source-blue.svg)](https://github.com/oaslananka/fovux)
+[![Repository](https://img.shields.io/badge/repo-oaslananka%2Ffovux--kit-black?logo=github)](https://github.com/oaslananka/fovux-kit)
+[![Install](https://img.shields.io/badge/install-source-blue.svg)](https://github.com/oaslananka/fovux-kit)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Visual companion for [Fovux MCP](https://github.com/oaslananka/fovux/tree/main/fovux-mcp), focused on the daily loop of local YOLO work: start runs, watch metrics, inspect datasets, compare checkpoints, and export deployment artifacts.
+Visual companion for [Fovux MCP](https://github.com/oaslananka/fovux-kit/tree/main/fovux-mcp), focused on the daily loop of local YOLO work: start runs, watch metrics, inspect datasets, compare checkpoints, and export deployment artifacts.
 
 ## Status
 
-Packaged releases are produced by the `oaslananka-lab/fovux` release pipeline and mirrored
-to `oaslananka/fovux`. Use the Fovux Studio Marketplace/Open VSX release for normal installs, or package
-from source when developing the extension.
+Packaged releases are produced by GitHub Actions in `oaslananka/fovux-kit`. Use the Fovux Studio
+Marketplace/Open VSX release for normal installs, or package from source when developing the
+extension.
 
 ## Features
 
@@ -23,15 +23,15 @@ from source when developing the extension.
 
 ## Screenshots
 
-![Fovux Dashboard](https://raw.githubusercontent.com/oaslananka/fovux/refs/heads/main/fovux-studio/resources/screenshots/dashboard.png)
+![Fovux Dashboard](https://raw.githubusercontent.com/oaslananka/fovux-kit/refs/heads/main/fovux-studio/resources/screenshots/dashboard.png)
 
-![Fovux Dataset Inspector](https://raw.githubusercontent.com/oaslananka/fovux/refs/heads/main/fovux-studio/resources/screenshots/dataset-inspector.png)
+![Fovux Dataset Inspector](https://raw.githubusercontent.com/oaslananka/fovux-kit/refs/heads/main/fovux-studio/resources/screenshots/dataset-inspector.png)
 
-![Fovux Export Wizard](https://raw.githubusercontent.com/oaslananka/fovux/refs/heads/main/fovux-studio/resources/screenshots/export-wizard.png)
+![Fovux Export Wizard](https://raw.githubusercontent.com/oaslananka/fovux-kit/refs/heads/main/fovux-studio/resources/screenshots/export-wizard.png)
 
 ## Requirements
 
-- [fovux-mcp](https://github.com/oaslananka/fovux/tree/main/fovux-mcp) installed from this repository
+- [fovux-mcp](https://github.com/oaslananka/fovux-kit/tree/main/fovux-mcp) installed from this repository
 - VS Code ≥ 1.98
 - Node `24.14.1` LTS with Corepack-enabled `pnpm@10.33.0`
 
@@ -44,8 +44,8 @@ code --install-extension oaslananka.fovuxstudiokit
 When developing from source:
 
 ```bash
-git clone https://github.com/oaslananka/fovux
-cd fovux/fovux-studio
+git clone https://github.com/oaslananka/fovux-kit
+cd fovux-kit/fovux-studio
 corepack enable
 corepack prepare pnpm@10.33.0 --activate
 pnpm install --frozen-lockfile
@@ -68,7 +68,7 @@ fovux-mcp serve --http --tcp --metrics
 
 Studio uses the same `FOVUX_HOME` as the backend. Set `fovux.home` in VS Code settings when you want a workspace-specific demo directory.
 
-For documentation source, see [fovux-mcp/docs](https://github.com/oaslananka/fovux/tree/main/fovux-mcp/docs).
+For documentation source, see [fovux-mcp/docs](https://github.com/oaslananka/fovux-kit/tree/main/fovux-mcp/docs).
 
 ## License
 

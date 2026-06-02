@@ -22,22 +22,16 @@ ci:
   - changed-files:
       - any-glob-to-any-file:
           - ".github/**"
-          - "azure-pipelines.yml"
-          - ".gitlab-ci.yml"
           - "Taskfile.yml"
           - ".pre-commit-config.yaml"
-          - "pipelines/**"
           - "scripts/**"
 
 area:ci:
   - changed-files:
       - any-glob-to-any-file:
           - ".github/**"
-          - "azure-pipelines.yml"
-          - ".gitlab-ci.yml"
           - "Taskfile.yml"
           - ".pre-commit-config.yaml"
-          - "pipelines/**"
           - "scripts/**"
 
 documentation:

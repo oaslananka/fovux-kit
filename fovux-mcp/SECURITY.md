@@ -12,7 +12,7 @@
 **Please do not report security vulnerabilities through public GitHub issues.**
 
 Report vulnerabilities via GitHub's private vulnerability reporting:
-[Security Advisories](https://github.com/oaslananka/fovux/security/advisories/new)
+[Security Advisories](https://github.com/oaslananka/fovux-kit/security/advisories/new)
 
 Or email the maintainers with subject `[SECURITY] fovux`.
 

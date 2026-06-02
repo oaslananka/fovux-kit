@@ -1,6 +1,6 @@
 # Release Process
 
-Releases are automated from merges to `main` in `oaslananka-lab/fovux`.
+Releases are automated from merges to `main` in `oaslananka/fovux-kit`.
 
 1. A maintainer merges a normal pull request with Conventional Commits.
 2. `release-please` evaluates commit history and updates package version files plus package changelogs in one grouped release pull request.

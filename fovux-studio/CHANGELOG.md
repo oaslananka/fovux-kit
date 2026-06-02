@@ -13,33 +13,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Reset the public Studio package version to `1.0.0` while preserving the existing `Fovux Studio`
   display name and stable `fovux.*` contribution identifiers.
 
-## [4.1.8](https://github.com/oaslananka-lab/fovux/compare/fovux-studio-v4.1.7...fovux-studio-v4.1.8) (2026-05-10)
-
-### Miscellaneous Chores
-
-- **fovux-studio:** Synchronize fovux versions
-
-## [4.1.7](https://github.com/oaslananka-lab/fovux/compare/fovux-studio-v4.1.6...fovux-studio-v4.1.7) (2026-05-09)
+## [4.1.7](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v4.1.6...fovux-studio-v4.1.7) (2026-05-09)
 
 ### Bug Fixes
 
-- **release:** document package distribution pipeline ([#20](https://github.com/oaslananka-lab/fovux/issues/20)) ([36e6d84](https://github.com/oaslananka-lab/fovux/commit/36e6d848b93a5d45aa3ff67e89f14c8f25b9b1c6))
+- **release:** document package distribution pipeline ([#20](https://github.com/oaslananka/fovux-kit/issues/20)) ([36e6d84](https://github.com/oaslananka/fovux-kit/commit/36e6d848b93a5d45aa3ff67e89f14c8f25b9b1c6))
 
-## [4.1.6](https://github.com/oaslananka-lab/fovux/compare/fovux-studio-v4.1.5...fovux-studio-v4.1.6) (2026-05-09)
-
-### Bug Fixes
-
-- **process:** harden resumed worker termination ([a9c692f](https://github.com/oaslananka-lab/fovux/commit/a9c692fa16d69d4d8c23b99c384c0021201799fe))
-- **security:** address review hardening follow-ups ([825cd40](https://github.com/oaslananka-lab/fovux/commit/825cd400b2216aa878030446d23ca186e55deb82))
-- **security:** harden runtime control surface ([d443d48](https://github.com/oaslananka-lab/fovux/commit/d443d483effc4697c982158854aef7a5d9f7169f))
-
-## [4.1.5](https://github.com/oaslananka-lab/fovux/compare/fovux-studio-v4.1.4...fovux-studio-v4.1.5) (2026-05-08)
+## [4.1.6](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v4.1.5...fovux-studio-v4.1.6) (2026-05-09)
 
 ### Bug Fixes
 
-- **readme:** update screenshot links to use absolute URLs ([a163ed2](https://github.com/oaslananka-lab/fovux/commit/a163ed2c32ab9a77f5a299ef0ee461fa3a3069c0))
-- resolve ruff and eslint errors failing the CI ([edfd82b](https://github.com/oaslananka-lab/fovux/commit/edfd82b4fb4da324a316e49e47a982e8aebc6da7))
-- **security:** remove vulnerable uuid transitive lock ([4dc9647](https://github.com/oaslananka-lab/fovux/commit/4dc96473dc994f91eaed578ec4841d3268a8da73))
+- **process:** harden resumed worker termination ([a9c692f](https://github.com/oaslananka/fovux-kit/commit/a9c692fa16d69d4d8c23b99c384c0021201799fe))
+- **security:** address review hardening follow-ups ([825cd40](https://github.com/oaslananka/fovux-kit/commit/825cd400b2216aa878030446d23ca186e55deb82))
+- **security:** harden runtime control surface ([d443d48](https://github.com/oaslananka/fovux-kit/commit/d443d483effc4697c982158854aef7a5d9f7169f))
+
+## [4.1.5](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v4.1.4...fovux-studio-v4.1.5) (2026-05-08)
+
+### Bug Fixes
+
+- **readme:** update screenshot links to use absolute URLs ([a163ed2](https://github.com/oaslananka/fovux-kit/commit/a163ed2c32ab9a77f5a299ef0ee461fa3a3069c0))
+- resolve ruff and eslint errors failing the CI ([edfd82b](https://github.com/oaslananka/fovux-kit/commit/edfd82b4fb4da324a316e49e47a982e8aebc6da7))
+- **security:** remove vulnerable uuid transitive lock ([4dc9647](https://github.com/oaslananka/fovux-kit/commit/4dc96473dc994f91eaed578ec4841d3268a8da73))
 
 ## [4.1.4] - 2026-04-29
 
@@ -145,7 +139,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Security
 
 - Studio sends bearer auth headers to every protected Fovux HTTP endpoint
-- publishing remains manual-gated through Azure DevOps release variables
+- publishing remains manual-gated through GitHub Actions environment secrets
 
 ## [1.0.0] - 2026-04-21
 

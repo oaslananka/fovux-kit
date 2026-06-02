@@ -6,9 +6,9 @@ Audited and improved the release-readiness of the fovux-kit.
 
 ## Public artifact/package identity
 
-- Verified fovux-mcp is 4.1.8 and fovuxstudiokit is 1.0.0.
+- Verified fovux-mcp is 1.0.0 and fovuxstudiokit is 1.0.0.
 - Normalized URLs to fovux-kit instead of fovux (Issue #17).
-- Verified valid dry-run deployment configuration baseline (Issue #14).
+- Reset public package metadata to the 1.0.0 deployment configuration baseline (Issue #14).
 
 ## Dependency PR queue
 

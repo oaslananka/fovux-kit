@@ -67,7 +67,7 @@ The default operating model is intentionally simple:
 - no hosted control plane
 - no telemetry unless explicitly enabled
 - no registry publishing without maintainer approval
-- no background CI on Azure or GitLab mirrors
+- no background mirror CI outside the active GitHub Actions workflows
 
 ## Run Lifecycle
 

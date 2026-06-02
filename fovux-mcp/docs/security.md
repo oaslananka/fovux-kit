@@ -59,4 +59,5 @@ Training inputs are validated before the detached worker starts:
 
 ## Supply chain
 
-The Azure release train produces SBOM artifacts and keeps Python and Studio builds on a single CI system. Publishing remains manual-gated by the maintainer.
+The GitHub Actions release train produces SBOM artifacts and keeps Python and Studio builds on a
+single CI system. Publishing remains manual-gated by the maintainer.
