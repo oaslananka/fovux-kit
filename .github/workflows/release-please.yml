@@ -176,7 +176,7 @@ jobs:
           RELEASE_TAG: ${{ needs.release-please.outputs.mcp_tag_name }}
         run: |
           set -euo pipefail
-          gh release upload "$RELEASE_TAG" \
+          gh release upload "$RELEASE_TAG" --clobber \
             fovux-mcp/dist/* \
             fovux-mcp-sbom.spdx.json \
             fovux-mcp.sha256
@@ -253,7 +253,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in {1..20}; do
-            published="$(npm view fovux-mcp version --json 2>/dev/null | tr -d '"')"
+            published="$(npm view fovux-mcp version --json 2>/dev/null | tr -d '"' || true)"
             if [[ "$published" == "$PACKAGE_VERSION" ]]; then
               exit 0
             fi
@@ -281,7 +281,7 @@ jobs:
           ref: ${{ needs.release-please.outputs.studio_tag_name }}
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          node-version-file: .nvmrc
+          node-version: "22"
 
       - name: Build VSIX
         working-directory: fovux-studio
@@ -292,6 +292,7 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
           test "$(node -p "require('./package.json').publisher + '.' + require('./package.json').name")" = "oaslananka.fovuxstudiokit"
+          test "$(node -p "require('./package.json').displayName")" = "Fovux Studio Kit"
           test "$(node -p "require('./package.json').version")" = "1.0.0"
           pnpm dlx @vscode/vsce@3.9.1 package --out fovuxstudiokit.vsix
 
@@ -314,7 +315,7 @@ jobs:
           RELEASE_TAG: ${{ needs.release-please.outputs.studio_tag_name }}
         run: |
           set -euo pipefail
-          gh release upload "$RELEASE_TAG" \
+          gh release upload "$RELEASE_TAG" --clobber \
             fovux-studio/fovuxstudiokit.vsix \
             fovux-studio-sbom.spdx.json \
             fovux-studio.sha256
@@ -330,8 +331,35 @@ jobs:
             echo "::notice::Skipping VS Marketplace/Open VSX publish until VSCE_PAT and OVSX_PAT are configured."
             exit 0
           fi
-          pnpm dlx @vscode/vsce@3.9.1 publish --packagePath fovuxstudiokit.vsix --pat "$VSCE_PAT"
-          pnpm dlx ovsx@0.10.12 publish fovuxstudiokit.vsix --pat "$OVSX_PAT"
+          publish_status=0
+
+          set +e
+          vsce_output="$(pnpm dlx @vscode/vsce@3.9.1 publish --packagePath fovuxstudiokit.vsix --pat "$VSCE_PAT" 2>&1)"
+          vsce_status="$?"
+          set -e
+          printf '%s\n' "$vsce_output"
+          if [[ "$vsce_status" -ne 0 ]]; then
+            if printf '%s\n' "$vsce_output" | grep -Eiq 'already.*published|version.*already|already exists'; then
+              echo "MARKETPLACE_VERSION_ALREADY_PUBLISHED"
+            else
+              publish_status=1
+            fi
+          fi
+
+          set +e
+          ovsx_output="$(pnpm dlx ovsx@1.0.0 publish fovuxstudiokit.vsix --pat "$OVSX_PAT" 2>&1)"
+          ovsx_status="$?"
+          set -e
+          printf '%s\n' "$ovsx_output"
+          if [[ "$ovsx_status" -ne 0 ]]; then
+            if printf '%s\n' "$ovsx_output" | grep -Eiq 'already.*published|version.*already|already exists'; then
+              echo "OPEN_VSX_VERSION_ALREADY_PUBLISHED"
+            else
+              publish_status=1
+            fi
+          fi
+
+          exit "$publish_status"
 
       - name: Verify Studio release
         env:

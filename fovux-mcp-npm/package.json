@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/oaslananka/fovux-kit.git",
+    "url": "git+https://github.com/oaslananka/fovux-kit.git",
     "directory": "fovux-mcp-npm"
   },
   "keywords": [

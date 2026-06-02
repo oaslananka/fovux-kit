@@ -4,6 +4,13 @@ All notable changes to Fovux Studio (`fovuxstudiokit`) are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Changed
+
+- Renamed the Marketplace display name to `Fovux Studio Kit` so the first public VSIX publish uses
+  a unique display name while keeping the `oaslananka.fovuxstudiokit` extension identifier stable.
+
 ## [1.0.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.0.0...fovux-studio-v1.0.0) (2026-06-02)
 
 

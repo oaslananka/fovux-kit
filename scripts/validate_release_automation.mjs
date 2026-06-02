@@ -30,7 +30,8 @@ const workflowNames = await readdir(workflowsDir);
 const STUDIO_PACKAGE_NAME = "fovuxstudiokit";
 const STUDIO_IDENTIFIER = "oaslananka.fovuxstudiokit";
 const STUDIO_VSIX = "fovuxstudiokit.vsix";
-const OVSX_VERSION = "0.10.12";
+const STUDIO_DISPLAY_NAME = "Fovux Studio Kit";
+const OVSX_VERSION = "1.0.0";
 const MCP_NPM_PACKAGE_NAME = "fovux-mcp";
 const FIRST_PUBLIC_RELEASE_VERSION = "1.0.0";
 const studioIdentifier = `${studioPackage.publisher}.${studioPackage.name}`;
@@ -62,8 +63,8 @@ const expectedPackages = {
   },
 };
 
-if (studioPackage.displayName !== "Fovux Studio") {
-  fail("Fovux Studio displayName must stay stable");
+if (studioPackage.displayName !== STUDIO_DISPLAY_NAME) {
+  fail(`Fovux Studio displayName must be ${STUDIO_DISPLAY_NAME}`);
 }
 if (mcpNpmPackage.name !== MCP_NPM_PACKAGE_NAME) {
   fail(`Fovux MCP npm wrapper package name must be ${MCP_NPM_PACKAGE_NAME}`);
@@ -186,6 +187,7 @@ if (!workflowNames.includes("release-please.yml")) {
     STUDIO_IDENTIFIER,
     STUDIO_VSIX,
     `ovsx@${OVSX_VERSION}`,
+    'gh release upload "$RELEASE_TAG" --clobber',
     "publish-npm-wrapper",
     "npm publish --provenance --access public",
   ]) {
@@ -193,7 +195,11 @@ if (!workflowNames.includes("release-please.yml")) {
       fail(`release workflow must reference ${required}`);
     }
   }
-  for (const forbidden of ["fovux-studio.vsix", "ovsx@0.10.11"]) {
+  for (const forbidden of [
+    "fovux-studio.vsix",
+    "ovsx@0.10.11",
+    "ovsx@0.10.12",
+  ]) {
     if (releaseWorkflow.includes(forbidden)) {
       fail(`release workflow must not reference ${forbidden}`);
     }
@@ -210,6 +216,9 @@ if (!workflowNames.includes("publish-production.yml")) {
   for (const required of [
     STUDIO_IDENTIFIER,
     "extension_identifier",
+    "studio-release-assets",
+    "channel:",
+    'gh release upload "$release_tag" --clobber',
     `OVSX_VERSION: "${OVSX_VERSION}"`,
   ]) {
     if (!publishWorkflow.includes(required)) {
@@ -226,6 +235,7 @@ const forbiddenReleaseInputs = [
   ["github", "event", "inputs", "tag"].join("."),
   ["workflow_dispatch", "inputs", "version"].join("."),
   ["workflow_dispatch", "inputs", ["release", "version"].join("_")].join("."),
+  ["workflow_dispatch", "inputs", "tag"].join("."),
 ];
 
 for (const name of workflowNames.filter(
@@ -244,5 +254,5 @@ if (process.exitCode) {
 }
 
 console.log(
-  `Release automation config is manifest-driven, workflow-input free, first-public pinned to ${FIRST_PUBLIC_RELEASE_VERSION}, and targets ${STUDIO_IDENTIFIER}.`,
+  `Release automation config is manifest-driven, release-version-input free, first-public pinned to ${FIRST_PUBLIC_RELEASE_VERSION}, and targets ${STUDIO_IDENTIFIER}.`,
 );

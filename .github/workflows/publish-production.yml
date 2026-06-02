@@ -6,6 +6,16 @@ on:
       ref:
         description: Commit SHA to publish
         required: true
+      channel:
+        description: Registry channel to publish
+        required: true
+        default: studio
+        type: choice
+        options:
+          - studio
+          - pypi
+          - mcp-registry
+          - all
   release:
     types: [published]
 
@@ -15,9 +25,10 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "24.15.0"
+  PUBLISH_NODE_VERSION: "22"
   MCP_PUBLISHER_VERSION: "1.7.9"
   VSCE_VERSION: "3.9.1"
-  OVSX_VERSION: "0.10.12"
+  OVSX_VERSION: "1.0.0"
   PYPI_DIRECTORY: "fovux-mcp"
   VSCODE_DIRECTORY: "fovux-studio"
 
@@ -31,7 +42,18 @@ concurrency:
 
 jobs:
   build-python:
-    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        (
+          github.event_name == 'workflow_dispatch' &&
+          contains(fromJSON('["all","pypi","mcp-registry"]'), inputs.channel)
+        ) ||
+        (
+          github.event_name == 'release' &&
+          startsWith(github.event.release.tag_name, 'fovux-mcp-v')
+        )
+      )
     outputs:
       publish_ref: ${{ steps.ref.outputs.value }}
     runs-on: [self-hosted, Linux, X64]
@@ -87,7 +109,18 @@ jobs:
           if-no-files-found: error
 
   pypi-publish:
-    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        (
+          github.event_name == 'workflow_dispatch' &&
+          contains(fromJSON('["all","pypi","mcp-registry"]'), inputs.channel)
+        ) ||
+        (
+          github.event_name == 'release' &&
+          startsWith(github.event.release.tag_name, 'fovux-mcp-v')
+        )
+      )
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 10
     needs: build-python
@@ -166,7 +199,18 @@ jobs:
           if-no-files-found: ignore
 
   mcp-registry-publish:
-    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        (
+          github.event_name == 'workflow_dispatch' &&
+          contains(fromJSON('["all","mcp-registry"]'), inputs.channel)
+        ) ||
+        (
+          github.event_name == 'release' &&
+          startsWith(github.event.release.tag_name, 'fovux-mcp-v')
+        )
+      )
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 15
     environment: production
@@ -239,8 +283,20 @@ jobs:
           if-no-files-found: ignore
 
   package-extension:
-    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        (
+          github.event_name == 'workflow_dispatch' &&
+          contains(fromJSON('["all","studio"]'), inputs.channel)
+        ) ||
+        (
+          github.event_name == 'release' &&
+          startsWith(github.event.release.tag_name, 'fovux-studio-v')
+        )
+      )
     outputs:
+      publish_ref: ${{ steps.ref.outputs.value }}
       package_name: ${{ steps.meta.outputs.name }}
       package_version: ${{ steps.meta.outputs.version }}
       extension_identifier: ${{ steps.meta.outputs.identifier }}
@@ -280,7 +336,7 @@ jobs:
           fi
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ env.PUBLISH_NODE_VERSION }}
           cache: ""
       - name: Install dependencies
         run: |
@@ -307,6 +363,7 @@ jobs:
           }
           const identifier = `${p.publisher}.${p.name}`;
           if (identifier !== "oaslananka.fovuxstudiokit") throw new Error(`EXTENSION_IDENTIFIER_INVALID ${identifier}`);
+          if (p.displayName !== "Fovux Studio Kit") throw new Error(`EXTENSION_DISPLAY_NAME_INVALID ${p.displayName}`);
           if (p.version !== "1.0.0") throw new Error(`EXTENSION_VERSION_INVALID ${p.version}`);
           if (!p.engines?.vscode) throw new Error("EXTENSION_MANIFEST_INVALID engines.vscode");
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `name=${p.name}\nversion=${p.version}\nidentifier=${identifier}\n`);
@@ -317,8 +374,7 @@ jobs:
           cd "${VSCODE_DIRECTORY}"
           mkdir -p out
           package_name="${{ steps.meta.outputs.name }}"
-          package_version="${{ steps.meta.outputs.version }}"
-          npx --yes "@vscode/vsce@${VSCE_VERSION}" package --no-dependencies --out "out/${package_name}-${package_version}.vsix"
+          npx --yes "@vscode/vsce@${VSCE_VERSION}" package --no-dependencies --out "out/${package_name}.vsix"
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -326,8 +382,75 @@ jobs:
           path: fovux-studio/out/*.vsix
           if-no-files-found: error
 
+  studio-release-assets:
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        (
+          github.event_name == 'workflow_dispatch' &&
+          contains(fromJSON('["all","studio"]'), inputs.channel)
+        ) ||
+        (
+          github.event_name == 'release' &&
+          startsWith(github.event.release.tag_name, 'fovux-studio-v')
+        )
+      )
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 10
+    needs: package-extension
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ needs.package-extension.outputs.publish_ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ""
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: vscode-extension-package
+          path: fovux-studio/out
+      - name: Generate Studio release assets
+        run: |
+          set -euo pipefail
+          node scripts/build_node_spdx_sbom.mjs \
+            --package fovux-studio/package.json \
+            --output fovux-studio-sbom.spdx.json
+          sha256sum fovux-studio/out/*.vsix fovux-studio-sbom.spdx.json > fovux-studio.sha256
+      - name: Attest Studio release assets
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
+        with:
+          subject-checksums: fovux-studio.sha256
+      - name: Upload Studio release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          release_tag="fovux-studio-v${{ needs.package-extension.outputs.package_version }}"
+          gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release upload "$release_tag" --clobber \
+            fovux-studio/out/*.vsix \
+            fovux-studio-sbom.spdx.json \
+            fovux-studio.sha256
+
   vscode-marketplace:
-    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        (
+          github.event_name == 'workflow_dispatch' &&
+          contains(fromJSON('["all","studio"]'), inputs.channel)
+        ) ||
+        (
+          github.event_name == 'release' &&
+          startsWith(github.event.release.tag_name, 'fovux-studio-v')
+        )
+      )
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 10
     needs: package-extension
@@ -337,7 +460,7 @@ jobs:
     steps:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ env.PUBLISH_NODE_VERSION }}
           cache: ""
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
@@ -406,7 +529,18 @@ jobs:
           if-no-files-found: ignore
 
   open-vsx:
-    if: ${{ github.repository == 'oaslananka/fovux-kit' }}
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        (
+          github.event_name == 'workflow_dispatch' &&
+          contains(fromJSON('["all","studio"]'), inputs.channel)
+        ) ||
+        (
+          github.event_name == 'release' &&
+          startsWith(github.event.release.tag_name, 'fovux-studio-v')
+        )
+      )
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 10
     needs: package-extension
@@ -416,7 +550,7 @@ jobs:
     steps:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ env.PUBLISH_NODE_VERSION }}
           cache: ""
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
