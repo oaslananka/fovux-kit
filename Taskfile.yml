@@ -31,8 +31,8 @@ tasks:
     cmds:
       - cmd: cd fovux-mcp && uv run ruff check --fix .
       - cmd: cd fovux-mcp && uv run ruff format .
-      - cmd: cd fovux-studio && {{.PNPM}} prettier --write .
-      - cmd: cd fovux-studio && {{.PNPM}} prettier --write ../fovux-mcp-npm
+      - cmd: cd fovux-studio && {{.PNPM}} prettier --write --ignore-path ../.prettierignore .
+      - cmd: cd fovux-studio && {{.PNPM}} prettier --write ../fovux-mcp-npm/README.md ../fovux-mcp-npm/package.json ../fovux-mcp-npm/bin/fovux-mcp.js
 
   lint:
     desc: Run all linters (read-only)
@@ -40,7 +40,7 @@ tasks:
       - cmd: cd fovux-mcp && uv run ruff check .
       - cmd: cd fovux-mcp && uv run ruff format --check .
       - cmd: cd fovux-studio && {{.PNPM}} run lint
-      - cmd: cd fovux-studio && {{.PNPM}} prettier --check ../fovux-mcp-npm
+      - cmd: cd fovux-studio && {{.PNPM}} prettier --check ../fovux-mcp-npm/README.md ../fovux-mcp-npm/package.json ../fovux-mcp-npm/bin/fovux-mcp.js
       - cmd: node --check fovux-mcp-npm/bin/fovux-mcp.js
       - cmd: actionlint
 

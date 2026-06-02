@@ -70,4 +70,6 @@ Python `fovux-mcp` package and npm `fovux-mcp` wrapper are linked because the
 wrapper executes the matching Python package version. The MCP package remains the
 source for `mcp.json`, `fovux-mcp/server.json`, and `fovux-mcp/smithery.yaml`.
 Public tracks start from `1.0.0` in `oaslananka/fovux-kit`; Studio publishes
-under `oaslananka.fovuxstudiokit`.
+under `oaslananka.fovuxstudiokit`. The first-public release keeps a temporary
+release-please `release-as: 1.0.0` override until registry publish verification
+is complete.

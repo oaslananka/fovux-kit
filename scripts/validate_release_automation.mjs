@@ -32,6 +32,7 @@ const STUDIO_IDENTIFIER = "oaslananka.fovuxstudiokit";
 const STUDIO_VSIX = "fovuxstudiokit.vsix";
 const OVSX_VERSION = "0.10.12";
 const MCP_NPM_PACKAGE_NAME = "fovux-mcp";
+const FIRST_PUBLIC_RELEASE_VERSION = "1.0.0";
 const studioIdentifier = `${studioPackage.publisher}.${studioPackage.name}`;
 const studioPackageVersion = studioPackage.version;
 const mcpPackageVersion = pyprojectValue(mcpPyproject, "version");
@@ -109,6 +110,11 @@ for (const [path, expected] of Object.entries(expectedPackages)) {
   }
   if (actual["include-component-in-tag"] !== true) {
     fail(`${path} must use component-specific tags`);
+  }
+  if (actual["release-as"] !== FIRST_PUBLIC_RELEASE_VERSION) {
+    fail(
+      `${path} release-as must pin the first public release to ${FIRST_PUBLIC_RELEASE_VERSION}`,
+    );
   }
   if (manifest[path] !== expected.version) {
     fail(`${path} manifest version must match current package version`);
@@ -238,5 +244,5 @@ if (process.exitCode) {
 }
 
 console.log(
-  `Release automation config is manifest-driven, version-input free, and targets ${STUDIO_IDENTIFIER}.`,
+  `Release automation config is manifest-driven, workflow-input free, first-public pinned to ${FIRST_PUBLIC_RELEASE_VERSION}, and targets ${STUDIO_IDENTIFIER}.`,
 );
