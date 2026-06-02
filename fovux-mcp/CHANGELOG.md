@@ -5,6 +5,15 @@ All notable changes to `fovux-mcp` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.0.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.0.0...fovux-mcp-v1.0.0) (2026-06-02)
+
+
+### Bug Fixes
+
+* **ci:** restore validation gates for fovux-kit ([1a067ff](https://github.com/oaslananka/fovux-kit/commit/1a067ff2caf759508ee240978b0e18ecdda77d2f)), closes [#18](https://github.com/oaslananka/fovux-kit/issues/18)
+* **packaging:** rename studio extension package ([#33](https://github.com/oaslananka/fovux-kit/issues/33)) ([b70c1b2](https://github.com/oaslananka/fovux-kit/commit/b70c1b2cd5a19909189e2696472d82b944875e64))
+* **packaging:** reset public release baseline ([d314a54](https://github.com/oaslananka/fovux-kit/commit/d314a549820baa48cc204d5fdc852a870fcb19bc)), closes [#14](https://github.com/oaslananka/fovux-kit/issues/14) [#17](https://github.com/oaslananka/fovux-kit/issues/17)
+
 ## [1.0.0] - 2026-06-02
 
 ### Changed
