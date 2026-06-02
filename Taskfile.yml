@@ -4,6 +4,7 @@ dotenv: [".env"]
 
 vars:
   PYTHON: '{{.PYTHON | default "python"}}'
+  NPM: '{{.NPM | default "npm"}}'
   PNPM: '{{.PNPM | default "corepack pnpm@10.33.0 --ignore-workspace"}}'
 
 tasks:
@@ -16,6 +17,7 @@ tasks:
       - cmd: "{{.PNPM}} --version"
         platforms: [linux, darwin, windows]
       - cmd: cd fovux-studio && {{.PNPM}} install --frozen-lockfile
+      - cmd: cd fovux-mcp-npm && {{.NPM}} ci --ignore-scripts
 
   hooks:
     desc: Install git hooks
@@ -30,6 +32,7 @@ tasks:
       - cmd: cd fovux-mcp && uv run ruff check --fix .
       - cmd: cd fovux-mcp && uv run ruff format .
       - cmd: cd fovux-studio && {{.PNPM}} prettier --write .
+      - cmd: cd fovux-studio && {{.PNPM}} prettier --write ../fovux-mcp-npm
 
   lint:
     desc: Run all linters (read-only)
@@ -37,6 +40,8 @@ tasks:
       - cmd: cd fovux-mcp && uv run ruff check .
       - cmd: cd fovux-mcp && uv run ruff format --check .
       - cmd: cd fovux-studio && {{.PNPM}} run lint
+      - cmd: cd fovux-studio && {{.PNPM}} prettier --check ../fovux-mcp-npm
+      - cmd: node --check fovux-mcp-npm/bin/fovux-mcp.js
       - cmd: actionlint
 
   typecheck:
@@ -69,6 +74,7 @@ tasks:
       - cmd: cd fovux-mcp && uv export --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
       - cmd: cd fovux-mcp && uv run pip-audit --requirement requirements-audit.txt
       - cmd: cd fovux-studio && {{.PNPM}} audit --prod
+      - cmd: cd fovux-mcp-npm && {{.NPM}} audit --omit=dev
       - cmd: gitleaks detect --no-banner --redact
 
   build:
@@ -76,6 +82,7 @@ tasks:
     cmds:
       - cmd: cd fovux-mcp && uv build
       - cmd: cd fovux-studio && {{.PNPM}} run build
+      - cmd: cd fovux-mcp-npm && {{.NPM}} pack --dry-run
 
   pre-push:
     desc: What pre-push hook runs (typecheck + fast tests + workflow lint)

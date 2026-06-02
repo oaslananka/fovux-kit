@@ -6,6 +6,7 @@
 
 [![Org CI/CD](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/fovux-mcp)](https://pypi.org/project/fovux-mcp/)
+[![npm](https://img.shields.io/npm/v/fovux-mcp)](https://www.npmjs.com/package/fovux-mcp)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/oaslananka.fovuxstudiokit)](https://marketplace.visualstudio.com/items?itemName=oaslananka.fovuxstudiokit)
 [![Python 3.11-3.13](https://img.shields.io/badge/Python-3.11_|_3.12_|_3.13-blue)](https://pypi.org/project/fovux-mcp/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -35,6 +36,8 @@ fovux doctor
 
 `fovux-mcp` is the primary CLI alias used by Fovux Studio and MCP clients. The shorter `fovux`
 alias points to the same Typer application for direct terminal use.
+npm users can install the wrapper package with `npm install -g fovux-mcp`; it delegates to
+the matching Python package through `uvx`.
 
 Initialize your Fovux environment and start the MCP server:
 
@@ -50,6 +53,12 @@ Install the VS Code extension, open the command palette (`Ctrl+Shift+P`), and ty
 
 ```bash
 uv tool install fovux-mcp
+```
+
+### Using npm
+
+```bash
+npm install -g fovux-mcp
 ```
 
 ### Fovux Studio (VS Code Extension)
@@ -124,7 +133,7 @@ Fovux maintains a secure GitHub Actions release model in this repository:
 
 - `oaslananka/fovux-kit`: The source of truth for code, issues, pull requests, CI, and releases.
 - `.github/workflows`: The active CI, security, release, and registry publishing workflows.
-- Protected GitHub environments gate PyPI, Marketplace, and Open VSX publishing.
+- Protected GitHub environments gate PyPI, npm, Marketplace, and Open VSX publishing.
 
 All releases are created by release-please from Conventional Commits, gated by CI, and published from GitHub Actions with checksums, SBOMs, and provenance.
 

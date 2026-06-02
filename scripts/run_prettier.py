@@ -9,7 +9,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 
-CHUNK_SIZE = 80
+CHUNK_SIZE = 5
 PNPM_VERSION = "10.33.0"
 
 

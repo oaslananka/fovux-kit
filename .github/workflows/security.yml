@@ -123,6 +123,28 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm audit --prod
 
+  npm-wrapper-audit:
+    name: npm audit (fovux-mcp wrapper)
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version-file: .nvmrc
+      - name: Run npm wrapper audit
+        working-directory: fovux-mcp-npm
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm audit --omit=dev
+
   osv-scan:
     name: OSV lockfile scan
     if: >
@@ -150,11 +172,16 @@ jobs:
       - name: Run OSV scanner
         run: |
           set -euo pipefail
-          osv-scanner scan source --lockfile fovux-mcp/uv.lock --lockfile fovux-studio/pnpm-lock.yaml .
+          osv-scanner scan source \
+            --lockfile fovux-mcp/uv.lock \
+            --lockfile fovux-studio/pnpm-lock.yaml \
+            --lockfile fovux-mcp-npm/package-lock.json \
+            .
 
   security-required:
     name: security-required
-    needs: [gitleaks, trivy-fs, pip-audit, pnpm-audit, osv-scan]
+    needs:
+      [gitleaks, trivy-fs, pip-audit, pnpm-audit, npm-wrapper-audit, osv-scan]
     if: github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
