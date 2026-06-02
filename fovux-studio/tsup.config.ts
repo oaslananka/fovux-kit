@@ -14,15 +14,12 @@ export default defineConfig([
   {
     entry: {
       "webviews/dashboard/main": "src/webviews/dashboard/main.tsx",
-      "webviews/datasetInspector/main":
-        "src/webviews/datasetInspector/main.tsx",
+      "webviews/datasetInspector/main": "src/webviews/datasetInspector/main.tsx",
       "webviews/exportWizard/main": "src/webviews/exportWizard/main.tsx",
       "webviews/compareRuns/main": "src/webviews/compareRuns/main.tsx",
-      "webviews/trainingLauncher/main":
-        "src/webviews/trainingLauncher/main.tsx",
+      "webviews/trainingLauncher/main": "src/webviews/trainingLauncher/main.tsx",
       "webviews/timeline/main": "src/webviews/timeline/main.tsx",
-      "webviews/annotationEditor/main":
-        "src/webviews/annotationEditor/main.tsx",
+      "webviews/annotationEditor/main": "src/webviews/annotationEditor/main.tsx",
     },
     format: ["esm"],
     platform: "browser",

@@ -21,7 +21,7 @@ repos:
         args: [--fix=lf]
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
 
@@ -50,13 +50,6 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-    hooks:
-      - id: prettier
-        types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
-        exclude: ^fovux-studio/|(^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$
-
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.4.0
     hooks:
@@ -80,6 +73,12 @@ repos:
 
   - repo: local
     hooks:
+      - id: repo-prettier
+        name: Prettier
+        entry: python scripts/run_prettier.py
+        language: system
+        types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
+        exclude: (^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$
       - id: ci-parity
         name: CI parity (typecheck + fast tests)
         entry: task pre-push
@@ -87,9 +86,3 @@ repos:
         pass_filenames: false
         stages: [pre-push]
         always_run: true
-      - id: fovux-studio-format
-        name: Fovux Studio formatting
-        entry: bash -c 'cd fovux-studio && pnpm format:write'
-        language: system
-        pass_filenames: false
-        files: ^fovux-studio/
