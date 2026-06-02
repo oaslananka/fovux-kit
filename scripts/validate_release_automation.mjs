@@ -31,7 +31,6 @@ const STUDIO_PACKAGE_NAME = "fovuxstudiokit";
 const STUDIO_IDENTIFIER = "oaslananka.fovuxstudiokit";
 const STUDIO_VSIX = "fovuxstudiokit.vsix";
 const STUDIO_DISPLAY_NAME = "Fovux Studio Kit";
-const OVSX_VERSION = "1.0.0";
 const MCP_NPM_PACKAGE_NAME = "fovux-mcp";
 const FIRST_PUBLIC_RELEASE_VERSION = "1.0.0";
 const studioIdentifier = `${studioPackage.publisher}.${studioPackage.name}`;
@@ -186,7 +185,8 @@ if (!workflowNames.includes("release-please.yml")) {
   for (const required of [
     STUDIO_IDENTIFIER,
     STUDIO_VSIX,
-    `ovsx@${OVSX_VERSION}`,
+    "scripts/package_vscode_extension.mjs",
+    "scripts/publish_vscode_extension.mjs",
     'gh release upload "$RELEASE_TAG" --clobber',
     "publish-npm-wrapper",
     "npm publish --provenance --access public",
@@ -219,7 +219,8 @@ if (!workflowNames.includes("publish-production.yml")) {
     "studio-release-assets",
     "channel:",
     'gh release upload "$release_tag" --clobber',
-    `OVSX_VERSION: "${OVSX_VERSION}"`,
+    "scripts/package_vscode_extension.mjs",
+    "scripts/publish_vscode_extension.mjs",
     "runs-on: ubuntu-24.04",
   ]) {
     if (!publishWorkflow.includes(required)) {
