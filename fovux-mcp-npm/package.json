@@ -1,0 +1,39 @@
+{
+  "name": "fovux-mcp",
+  "version": "1.0.0",
+  "description": "npm CLI shim for the Fovux MCP Python package.",
+  "license": "Apache-2.0",
+  "author": "Fovux Contributors",
+  "homepage": "https://github.com/oaslananka/fovux-kit/tree/main/fovux-mcp-npm",
+  "bugs": {
+    "url": "https://github.com/oaslananka/fovux-kit/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oaslananka/fovux-kit.git",
+    "directory": "fovux-mcp-npm"
+  },
+  "keywords": [
+    "computer-vision",
+    "yolo",
+    "mcp",
+    "uvx",
+    "fovux"
+  ],
+  "bin": {
+    "fovux-mcp": "bin/fovux-mcp.js",
+    "fovux": "bin/fovux-mcp.js"
+  },
+  "files": [
+    "bin/",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

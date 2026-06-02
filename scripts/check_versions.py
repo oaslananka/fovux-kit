@@ -39,6 +39,15 @@ def _read_package_json_version(root: Path) -> str:
     return str(data.get("version", "<not found in package.json>"))
 
 
+def _read_npm_wrapper_package_version(root: Path) -> str:
+    """Extract version from fovux-mcp-npm/package.json."""
+    pkg = root / "fovux-mcp-npm" / "package.json"
+    if not pkg.exists():
+        return "<fovux-mcp-npm/package.json not found>"
+    data = json.loads(pkg.read_text(encoding="utf-8"))
+    return str(data.get("version", "<not found in package.json>"))
+
+
 def _read_jsonpath_version(path: Path, *keys: str | int) -> str:
     """Extract a nested version value from a JSON metadata file."""
     if not path.exists():
@@ -123,6 +132,10 @@ def _version_sources(root: Path) -> dict[str, dict[str, str]]:
             ),
             "fovux-mcp/CHANGELOG.md": _read_changelog_top_version(
                 root / "fovux-mcp" / "CHANGELOG.md"
+            ),
+            "fovux-mcp-npm/package.json": _read_npm_wrapper_package_version(root),
+            "fovux-mcp-npm/CHANGELOG.md": _read_changelog_top_version(
+                root / "fovux-mcp-npm" / "CHANGELOG.md"
             ),
         },
         "Studio": {

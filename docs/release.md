@@ -24,6 +24,15 @@ Fovux uses a protected GitHub Actions release model.
 - A package release fails closed when neither trusted publishing nor `PYPI_TOKEN`
   is available.
 
+### fovux-mcp npm wrapper
+
+- Published to npm as `fovux-mcp`.
+- Versioned with the Python `fovux-mcp` package because the wrapper delegates CLI
+  execution to the matching Python package version through `uvx`.
+- npm publishing runs with provenance on GitHub-hosted runners. Trusted
+  publishing can use GitHub Actions OIDC when configured for the package;
+  otherwise `NPM_TOKEN` from the `npm-production` environment is required.
+
 ### fovux-studio to VS Marketplace and Open VSX
 
 - Published as `oaslananka.fovuxstudiokit`; the extension keeps the `Fovux Studio` display name and
@@ -56,7 +65,9 @@ gh pr create --base main --title "fix(mcp): critical bug description"
 
 ## Version Strategy
 
-`fovux-mcp` and `fovux-studio` use independent semantic-version tracks. The MCP package remains
-the source for `mcp.json`, `fovux-mcp/server.json`, and `fovux-mcp/smithery.yaml`. Both public
-tracks start from `1.0.0` in `oaslananka/fovux-kit`; Studio publishes under
-`oaslananka.fovuxstudiokit`.
+`fovux-mcp` and `fovux-studio` use independent semantic-version tracks. The
+Python `fovux-mcp` package and npm `fovux-mcp` wrapper are linked because the
+wrapper executes the matching Python package version. The MCP package remains the
+source for `mcp.json`, `fovux-mcp/server.json`, and `fovux-mcp/smithery.yaml`.
+Public tracks start from `1.0.0` in `oaslananka/fovux-kit`; Studio publishes
+under `oaslananka.fovuxstudiokit`.

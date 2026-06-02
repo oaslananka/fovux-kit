@@ -30,6 +30,14 @@
         }
       ]
     },
+    "fovux-mcp-npm": {
+      "release-type": "node",
+      "component": "fovux-mcp-npm",
+      "package-name": "fovux-mcp",
+      "changelog-path": "CHANGELOG.md",
+      "include-component-in-tag": true,
+      "bump-patch-for-minor-pre-major": true
+    },
     "fovux-studio": {
       "release-type": "node",
       "component": "fovux-studio",
@@ -39,6 +47,13 @@
       "bump-patch-for-minor-pre-major": true
     }
   },
+  "plugins": [
+    {
+      "type": "linked-versions",
+      "groupName": "fovux-mcp",
+      "components": ["fovux-mcp", "fovux-mcp-npm"]
+    }
+  ],
   "separate-pull-requests": false,
   "always-update": true,
   "pull-request-title-pattern": "chore${scope}: release${component} ${version}",

@@ -22,6 +22,7 @@ function pyprojectValue(text, key) {
 const config = JSON.parse(await readText("release-please-config.json"));
 const manifest = JSON.parse(await readText(".release-please-manifest.json"));
 const mcpPyproject = await readText("fovux-mcp/pyproject.toml");
+const mcpNpmPackage = JSON.parse(await readText("fovux-mcp-npm/package.json"));
 const studioPackage = JSON.parse(await readText("fovux-studio/package.json"));
 const workflowsDir = new URL(".github/workflows/", root);
 const workflowsPath = fileURLToPath(workflowsDir);
@@ -30,15 +31,25 @@ const STUDIO_PACKAGE_NAME = "fovuxstudiokit";
 const STUDIO_IDENTIFIER = "oaslananka.fovuxstudiokit";
 const STUDIO_VSIX = "fovuxstudiokit.vsix";
 const OVSX_VERSION = "0.10.12";
+const MCP_NPM_PACKAGE_NAME = "fovux-mcp";
 const studioIdentifier = `${studioPackage.publisher}.${studioPackage.name}`;
 const studioPackageVersion = studioPackage.version;
+const mcpPackageVersion = pyprojectValue(mcpPyproject, "version");
+const mcpNpmPackageVersion = mcpNpmPackage.version;
 
 const expectedPackages = {
   "fovux-mcp": {
     releaseType: "python",
     component: "fovux-mcp",
     packageName: pyprojectValue(mcpPyproject, "name"),
-    version: pyprojectValue(mcpPyproject, "version"),
+    version: mcpPackageVersion,
+    changelog: "CHANGELOG.md",
+  },
+  "fovux-mcp-npm": {
+    releaseType: "node",
+    component: "fovux-mcp-npm",
+    packageName: MCP_NPM_PACKAGE_NAME,
+    version: mcpNpmPackageVersion,
     changelog: "CHANGELOG.md",
   },
   "fovux-studio": {
@@ -52,6 +63,18 @@ const expectedPackages = {
 
 if (studioPackage.displayName !== "Fovux Studio") {
   fail("Fovux Studio displayName must stay stable");
+}
+if (mcpNpmPackage.name !== MCP_NPM_PACKAGE_NAME) {
+  fail(`Fovux MCP npm wrapper package name must be ${MCP_NPM_PACKAGE_NAME}`);
+}
+if (mcpNpmPackageVersion !== mcpPackageVersion) {
+  fail("Fovux MCP npm wrapper version must match the Python package version");
+}
+if (mcpNpmPackage.bin?.["fovux-mcp"] !== "bin/fovux-mcp.js") {
+  fail("Fovux MCP npm wrapper must expose the fovux-mcp command");
+}
+if (mcpNpmPackage.bin?.fovux !== "bin/fovux-mcp.js") {
+  fail("Fovux MCP npm wrapper must expose the fovux command");
 }
 if (studioPackage.name !== STUDIO_PACKAGE_NAME) {
   fail(`Fovux Studio package name must be ${STUDIO_PACKAGE_NAME}`);
@@ -105,13 +128,23 @@ if (
   );
 }
 
+let hasMcpLinkedVersions = false;
 for (const plugin of config.plugins ?? []) {
-  if (
-    plugin.type === "linked-versions" &&
-    (plugin.components ?? []).includes("fovux-studio")
-  ) {
-    fail("fovux-studio must not be part of release-please linked-versions");
+  if (plugin.type === "linked-versions") {
+    const components = plugin.components ?? [];
+    if (components.includes("fovux-studio")) {
+      fail("fovux-studio must not be part of release-please linked-versions");
+    }
+    if (
+      components.includes("fovux-mcp") &&
+      components.includes("fovux-mcp-npm")
+    ) {
+      hasMcpLinkedVersions = true;
+    }
   }
+}
+if (!hasMcpLinkedVersions) {
+  fail("fovux-mcp and fovux-mcp-npm must use release-please linked-versions");
 }
 
 const mcpExtraFiles = config.packages?.["fovux-mcp"]?.["extra-files"] ?? [];
@@ -147,6 +180,8 @@ if (!workflowNames.includes("release-please.yml")) {
     STUDIO_IDENTIFIER,
     STUDIO_VSIX,
     `ovsx@${OVSX_VERSION}`,
+    "publish-npm-wrapper",
+    "npm publish --provenance --access public",
   ]) {
     if (!releaseWorkflow.includes(required)) {
       fail(`release workflow must reference ${required}`);

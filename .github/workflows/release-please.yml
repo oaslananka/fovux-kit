@@ -33,6 +33,9 @@ jobs:
       mcp_release_created: ${{ steps.rp.outputs['fovux-mcp--release_created'] }}
       mcp_tag_name: ${{ steps.rp.outputs['fovux-mcp--tag_name'] }}
       mcp_version: ${{ steps.rp.outputs['fovux-mcp--version'] }}
+      mcp_npm_release_created: ${{ steps.rp.outputs['fovux-mcp-npm--release_created'] }}
+      mcp_npm_tag_name: ${{ steps.rp.outputs['fovux-mcp-npm--tag_name'] }}
+      mcp_npm_version: ${{ steps.rp.outputs['fovux-mcp-npm--version'] }}
       studio_release_created: ${{ steps.rp.outputs['fovux-studio--release_created'] }}
       studio_tag_name: ${{ steps.rp.outputs['fovux-studio--tag_name'] }}
       studio_version: ${{ steps.rp.outputs['fovux-studio--version'] }}
@@ -203,6 +206,62 @@ jobs:
           set -euo pipefail
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
           test -n "$PACKAGE_VERSION"
+
+  publish-npm-wrapper:
+    needs: release-please
+    if: >
+      needs.release-please.outputs.mcp_npm_release_created == 'true' &&
+      github.repository == 'oaslananka/fovux-kit'
+    runs-on: ubuntu-24.04
+    environment: npm-production
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ needs.release-please.outputs.mcp_npm_tag_name }}
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version-file: .nvmrc
+          registry-url: "https://registry.npmjs.org"
+          cache: ""
+
+      - name: Verify npm wrapper package
+        working-directory: fovux-mcp-npm
+        env:
+          PACKAGE_VERSION: ${{ needs.release-please.outputs.mcp_npm_version }}
+        run: |
+          set -euo pipefail
+          test "$(node -p "require('./package.json').name")" = "fovux-mcp"
+          test "$(node -p "require('./package.json').version")" = "$PACKAGE_VERSION"
+          test "$(node -p "require('./package.json').bin['fovux-mcp']")" = "bin/fovux-mcp.js"
+          npm pack --dry-run
+
+      - name: Publish npm wrapper
+        working-directory: fovux-mcp-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          npm publish --provenance --access public
+
+      - name: Verify npm wrapper release
+        env:
+          PACKAGE_VERSION: ${{ needs.release-please.outputs.mcp_npm_version }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..20}; do
+            published="$(npm view fovux-mcp version --json 2>/dev/null | tr -d '"')"
+            if [[ "$published" == "$PACKAGE_VERSION" ]]; then
+              exit 0
+            fi
+            echo "Waiting for npm fovux-mcp $PACKAGE_VERSION to become visible (attempt $attempt/20)."
+            sleep 10
+          done
+          echo "::error::npm fovux-mcp $PACKAGE_VERSION was not visible after publish."
+          exit 1
 
   publish-studio:
     needs: release-please
