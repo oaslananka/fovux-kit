@@ -294,7 +294,7 @@ jobs:
           test "$(node -p "require('./package.json').publisher + '.' + require('./package.json').name")" = "oaslananka.fovuxstudiokit"
           test "$(node -p "require('./package.json').displayName")" = "Fovux Studio Kit"
           test "$(node -p "require('./package.json').version")" = "1.0.0"
-          pnpm dlx @vscode/vsce@3.9.1 package --out fovuxstudiokit.vsix
+          node ../scripts/package_vscode_extension.mjs --extension-dir . --out fovuxstudiokit.vsix
 
       - name: Generate SBOM and checksums
         run: |
@@ -333,31 +333,17 @@ jobs:
           fi
           publish_status=0
 
-          set +e
-          vsce_output="$(pnpm dlx @vscode/vsce@3.9.1 publish --packagePath fovuxstudiokit.vsix --pat "$VSCE_PAT" 2>&1)"
-          vsce_status="$?"
-          set -e
-          printf '%s\n' "$vsce_output"
-          if [[ "$vsce_status" -ne 0 ]]; then
-            if printf '%s\n' "$vsce_output" | grep -Eiq 'already.*published|version.*already|already exists'; then
-              echo "MARKETPLACE_VERSION_ALREADY_PUBLISHED"
-            else
-              publish_status=1
-            fi
-          fi
+          node ../scripts/publish_vscode_extension.mjs marketplace \
+            --vsix fovuxstudiokit.vsix \
+            --publisher oaslananka \
+            --name fovuxstudiokit \
+            --version 1.0.0 || publish_status=1
 
-          set +e
-          ovsx_output="$(pnpm dlx ovsx@1.0.0 publish fovuxstudiokit.vsix --pat "$OVSX_PAT" 2>&1)"
-          ovsx_status="$?"
-          set -e
-          printf '%s\n' "$ovsx_output"
-          if [[ "$ovsx_status" -ne 0 ]]; then
-            if printf '%s\n' "$ovsx_output" | grep -Eiq 'already.*published|version.*already|already exists'; then
-              echo "OPEN_VSX_VERSION_ALREADY_PUBLISHED"
-            else
-              publish_status=1
-            fi
-          fi
+          node ../scripts/publish_vscode_extension.mjs open-vsx \
+            --vsix fovuxstudiokit.vsix \
+            --publisher oaslananka \
+            --name fovuxstudiokit \
+            --version 1.0.0 || publish_status=1
 
           exit "$publish_status"
 

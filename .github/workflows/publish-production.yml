@@ -27,8 +27,6 @@ env:
   NODE_VERSION: "24.15.0"
   PUBLISH_NODE_VERSION: "22"
   MCP_PUBLISHER_VERSION: "1.7.9"
-  VSCE_VERSION: "3.9.1"
-  OVSX_VERSION: "1.0.0"
   PYPI_DIRECTORY: "fovux-mcp"
   VSCODE_DIRECTORY: "fovux-studio"
 
@@ -371,10 +369,11 @@ jobs:
       - name: Package VSIX
         run: |
           set -euo pipefail
-          cd "${VSCODE_DIRECTORY}"
-          mkdir -p out
+          mkdir -p "${VSCODE_DIRECTORY}/out"
           package_name="${{ steps.meta.outputs.name }}"
-          npx --yes "@vscode/vsce@${VSCE_VERSION}" package --no-dependencies --out "out/${package_name}.vsix"
+          node scripts/package_vscode_extension.mjs \
+            --extension-dir "${VSCODE_DIRECTORY}" \
+            --out "${VSCODE_DIRECTORY}/out/${package_name}.vsix"
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -458,6 +457,10 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ needs.package-extension.outputs.publish_ref }}
+          persist-credentials: false
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: ${{ env.PUBLISH_NODE_VERSION }}
@@ -507,19 +510,12 @@ jobs:
           if [[ -z "${token}" ]]; then echo "MARKETPLACE_SECRET_MISSING"; write_report "failed" "external_blocker" "MARKETPLACE_SECRET_MISSING"; exit 1; fi
           vsix="$(find out -maxdepth 1 -type f -name '*.vsix' -print -quit)"
           if [[ -z "${vsix}" ]]; then echo "EXTENSION_PACKAGE_MISSING"; write_report "failed" "workflow_failure" "EXTENSION_PACKAGE_MISSING"; exit 1; fi
-          set +e
-          output="$(npx --yes "@vscode/vsce@${VSCE_VERSION}" publish --packagePath "${vsix}" --pat "${token}" 2>&1)"
-          status="$?"
-          set -e
-          printf '%s\n' "${output}"
-          if [[ "${status}" -eq 0 ]]; then write_report "published" "fresh_publish_success" ""; exit 0; fi
-          if printf '%s\n' "${output}" | grep -Eiq 'already.*published|version.*already|already exists'; then
-            echo "MARKETPLACE_VERSION_ALREADY_PUBLISHED"
-            write_report "already_published" "idempotent_noop" ""
-            exit 0
-          fi
-          write_report "failed" "workflow_failure" "MARKETPLACE_PUBLISH_FAILED"
-          exit "${status}"
+          node scripts/publish_vscode_extension.mjs marketplace \
+            --vsix "${vsix}" \
+            --publisher "oaslananka" \
+            --name "${package_name}" \
+            --version "${package_version}" \
+            --report-path "out/publish-report-vscode-marketplace.json"
       - name: Upload VS Code Marketplace publish report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -548,6 +544,10 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ needs.package-extension.outputs.publish_ref }}
+          persist-credentials: false
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: ${{ env.PUBLISH_NODE_VERSION }}
@@ -597,19 +597,12 @@ jobs:
           if [[ -z "${token}" ]]; then echo "OPEN_VSX_SECRET_MISSING"; write_report "failed" "external_blocker" "OPEN_VSX_SECRET_MISSING"; exit 1; fi
           vsix="$(find out -maxdepth 1 -type f -name '*.vsix' -print -quit)"
           if [[ -z "${vsix}" ]]; then echo "EXTENSION_PACKAGE_MISSING"; write_report "failed" "workflow_failure" "EXTENSION_PACKAGE_MISSING"; exit 1; fi
-          set +e
-          output="$(npx --yes "ovsx@${OVSX_VERSION}" publish "${vsix}" --pat "${token}" 2>&1)"
-          status="$?"
-          set -e
-          printf '%s\n' "${output}"
-          if [[ "${status}" -eq 0 ]]; then write_report "published" "fresh_publish_success" ""; exit 0; fi
-          if printf '%s\n' "${output}" | grep -Eiq 'already.*published|version.*already|already exists'; then
-            echo "OPEN_VSX_VERSION_ALREADY_PUBLISHED"
-            write_report "already_published" "idempotent_noop" ""
-            exit 0
-          fi
-          write_report "failed" "workflow_failure" "OPEN_VSX_PUBLISH_FAILED"
-          exit "${status}"
+          node scripts/publish_vscode_extension.mjs open-vsx \
+            --vsix "${vsix}" \
+            --publisher "oaslananka" \
+            --name "${package_name}" \
+            --version "${package_version}" \
+            --report-path "out/publish-report-open-vsx.json"
       - name: Upload Open VSX publish report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

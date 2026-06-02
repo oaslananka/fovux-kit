@@ -19,12 +19,20 @@ if [ -d "fovux-studio" ]; then
 
   if [ -n "${VSCE_PAT:-}" ]; then
     echo "Publishing to VS Code Marketplace..."
-    pnpm dlx @vscode/vsce@3.9.1 publish --packagePath "$VSIX_FILE" --pat "$VSCE_PAT"
+    node ../scripts/publish_vscode_extension.mjs marketplace \
+      --vsix "$VSIX_FILE" \
+      --publisher oaslananka \
+      --name fovuxstudiokit \
+      --version "$(node -p "require('./package.json').version")"
   fi
 
   if [ -n "${OVSX_PAT:-}" ]; then
     echo "Publishing to Open VSX..."
-    pnpm dlx ovsx@1.0.0 publish "$VSIX_FILE" --pat "$OVSX_PAT"
+    node ../scripts/publish_vscode_extension.mjs open-vsx \
+      --vsix "$VSIX_FILE" \
+      --publisher oaslananka \
+      --name fovuxstudiokit \
+      --version "$(node -p "require('./package.json').version")"
   fi
 
   cd ..
