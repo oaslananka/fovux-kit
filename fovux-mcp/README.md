@@ -2,11 +2,11 @@
 
 **From dataset to deployed ONNX, in one conversation.**
 
-[![Primary CI](https://img.shields.io/badge/ci-Azure%20DevOps-blue.svg)](https://github.com/oaslananka/fovux)
-[![Repository](https://img.shields.io/badge/repo-oaslananka%2Ffovux-black?logo=github)](https://github.com/oaslananka/fovux)
+[![Primary CI](https://img.shields.io/badge/ci-Azure%20DevOps-blue.svg)](https://github.com/oaslananka/fovux-kit)
+[![Repository](https://img.shields.io/badge/repo-oaslananka%2Ffovux-black?logo=github)](https://github.com/oaslananka/fovux-kit)
 [![Python 3.11-3.13](https://img.shields.io/badge/python-3.11%20to%203.13-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Install](https://img.shields.io/badge/install-source-blue.svg)](https://github.com/oaslananka/fovux)
+[![Install](https://img.shields.io/badge/install-source-blue.svg)](https://github.com/oaslananka/fovux-kit)
 
 Fovux is a professional-grade, open-source edge-AI computer vision workbench. It lets a computer vision practitioner run the full YOLO lifecycle through natural-language conversation with any MCP-compatible AI client: dataset curation, training, evaluation, error analysis, quantization, export, on-device benchmarking, and RTSP inference.
 
@@ -33,7 +33,7 @@ the source workflow below for development.
 ## Install From Source
 
 ```bash
-git clone https://github.com/oaslananka/fovux
+git clone https://github.com/oaslananka/fovux-kit
 cd fovux/fovux-mcp
 uv sync --frozen --extra dev
 ```
@@ -51,7 +51,7 @@ See [docs/getting-started.md](docs/getting-started.md) for the full tutorial.
 
 ```bash
 # 1. Install from source
-git clone https://github.com/oaslananka/fovux
+git clone https://github.com/oaslananka/fovux-kit
 cd fovux/fovux-mcp
 uv sync --frozen --extra dev --extra yolo
 uv run fovux-mcp doctor
@@ -143,11 +143,11 @@ Fovux MCP currently exposes 28 local tools.
 
 ## VS Code companion
 
-Use [Fovux Studio in this repo](https://github.com/oaslananka/fovux/tree/main/fovux-studio) for visual run dashboards, dataset inspection, and an export wizard.
+Use [Fovux Studio in this repo](https://github.com/oaslananka/fovux-kit/tree/main/fovux-studio) for visual run dashboards, dataset inspection, and an export wizard.
 
 ## Documentation
 
-Docs source lives in [fovux-mcp/docs](https://github.com/oaslananka/fovux/tree/main/fovux-mcp/docs).
+Docs source lives in [fovux-mcp/docs](https://github.com/oaslananka/fovux-kit/tree/main/fovux-mcp/docs).
 Generated `site/` output is a build artifact and is not committed.
 
 ```bash

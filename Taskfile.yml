@@ -4,6 +4,7 @@ dotenv: [".env"]
 
 vars:
   PYTHON: '{{.PYTHON | default "python"}}'
+  PNPM: '{{.PNPM | default "corepack pnpm@10.33.0 --ignore-workspace"}}'
 
 tasks:
   install:
@@ -12,9 +13,9 @@ tasks:
       - cmd: cd fovux-mcp && uv sync --frozen --extra dev
         platforms: [linux, darwin, windows]
         ignore_error: false
-      - cmd: pnpm --version
+      - cmd: "{{.PNPM}} --version"
         platforms: [linux, darwin, windows]
-      - cmd: cd fovux-studio && pnpm install --frozen-lockfile
+      - cmd: cd fovux-studio && {{.PNPM}} install --frozen-lockfile
 
   hooks:
     desc: Install git hooks
@@ -28,27 +29,27 @@ tasks:
     cmds:
       - cmd: cd fovux-mcp && uv run ruff check --fix .
       - cmd: cd fovux-mcp && uv run ruff format .
-      - cmd: cd fovux-studio && pnpm prettier --write .
+      - cmd: cd fovux-studio && {{.PNPM}} prettier --write .
 
   lint:
     desc: Run all linters (read-only)
     cmds:
       - cmd: cd fovux-mcp && uv run ruff check .
       - cmd: cd fovux-mcp && uv run ruff format --check .
-      - cmd: cd fovux-studio && pnpm run lint
+      - cmd: cd fovux-studio && {{.PNPM}} run lint
       - cmd: actionlint
 
   typecheck:
     desc: Static type checking
     cmds:
       - cmd: cd fovux-mcp && uv run mypy --strict --warn-unused-ignores src/fovux
-      - cmd: cd fovux-studio && pnpm run typecheck
+      - cmd: cd fovux-studio && {{.PNPM}} run typecheck
 
   test:
     desc: Run unit tests
     cmds:
       - cmd: cd fovux-mcp && uv run pytest -x --no-header -q
-      - cmd: cd fovux-studio && pnpm test --run
+      - cmd: cd fovux-studio && {{.PNPM}} test --run
 
   test:fast:
     desc: Run only fast tests
@@ -59,7 +60,7 @@ tasks:
     desc: Run tests with coverage
     cmds:
       - cmd: cd fovux-mcp && uv run pytest --cov=fovux --cov-fail-under=92 --cov-report=term-missing --cov-report=html --cov-report=xml
-      - cmd: cd fovux-studio && pnpm test
+      - cmd: cd fovux-studio && {{.PNPM}} test
 
   security:
     desc: Security scans
@@ -67,14 +68,14 @@ tasks:
       - cmd: cd fovux-mcp && uv run bandit -r src/fovux -ll
       - cmd: cd fovux-mcp && uv export --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
       - cmd: cd fovux-mcp && uv run pip-audit --requirement requirements-audit.txt
-      - cmd: cd fovux-studio && pnpm audit --prod
+      - cmd: cd fovux-studio && {{.PNPM}} audit --prod
       - cmd: gitleaks detect --no-banner --redact
 
   build:
     desc: Build distributable packages
     cmds:
       - cmd: cd fovux-mcp && uv build
-      - cmd: cd fovux-studio && pnpm run build
+      - cmd: cd fovux-studio && {{.PNPM}} run build
 
   pre-push:
     desc: What pre-push hook runs (typecheck + fast tests + workflow lint)

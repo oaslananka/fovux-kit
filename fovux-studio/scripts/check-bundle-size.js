@@ -25,9 +25,7 @@ function main() {
   const webviewRoot = join(ROOT, "out", "webviews");
   const webviewFiles = existsSync(webviewRoot) ? findJsFiles(webviewRoot) : [];
   if (webviewFiles.length === 0) {
-    failures.push(
-      "No webview bundles found under out/webviews. Run `pnpm build` first.",
-    );
+    failures.push("No webview bundles found under out/webviews. Run `pnpm build` first.");
   }
   for (const file of webviewFiles) {
     checkRequiredFile(file, LIMITS.webviewBytes, failures);
@@ -56,20 +54,14 @@ function main() {
 
 function checkRequiredFile(file, limitBytes, failures) {
   if (!existsSync(file)) {
-    failures.push(
-      `${relative(ROOT, file)} is missing. Run \`pnpm build\` first.`,
-    );
+    failures.push(`${relative(ROOT, file)} is missing. Run \`pnpm build\` first.`);
     return;
   }
   const sizeBytes = statSync(file).size;
   const label = relative(ROOT, file).replace(/\\/g, "/");
-  console.log(
-    `${label}: ${formatBytes(sizeBytes)} / ${formatBytes(limitBytes)}`,
-  );
+  console.log(`${label}: ${formatBytes(sizeBytes)} / ${formatBytes(limitBytes)}`);
   if (sizeBytes > limitBytes) {
-    failures.push(
-      `${label} is ${formatBytes(sizeBytes)}, limit is ${formatBytes(limitBytes)}`,
-    );
+    failures.push(`${label} is ${formatBytes(sizeBytes)}, limit is ${formatBytes(limitBytes)}`);
   }
 }
 

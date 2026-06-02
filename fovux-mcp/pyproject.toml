@@ -8,7 +8,7 @@ version = "4.1.8"
 description = "Local-first edge-AI computer vision workbench MCP server"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.15"
 authors = [{ name = "Fovux Contributors" }]
 keywords = ["computer-vision", "yolo", "mcp", "edge-ai", "ultralytics"]
 classifiers = [
@@ -26,27 +26,29 @@ dependencies = [
     "onnxruntime>=1.24.4",
     "onnx>=1.21.0",
     "opencv-python-headless>=4.13.0.92",
-    "numpy>=2.1,<3",
+    "numpy>=2.4.6,<3",
     "pydantic>=2.13",
-    "fastmcp>=3.2,<4",
-    "fastapi>=0.136",
+    "fastmcp>=3.3.1,<4",
+    "fastapi>=0.136.3",
     "uvicorn[standard]>=0.45",
     "typer>=0.24",
     "rich>=15.0",
-    "sqlalchemy>=2.0.49",
+    "sqlalchemy>=2.0.50",
     "pillow>=12.2",
     "imagehash>=4.3.2",
     "platformdirs>=4.9",
     "tomli-w>=1.2",
     "structlog>=25.5",
-    "watchfiles>=1.1",
+    "watchfiles>=1.2.0",
     "httpx>=0.28.1",
     "cryptography>=46.0",
     "python-multipart>=0.0.27",
 ]
 
 [project.optional-dependencies]
-yolo = ["ultralytics>=8.4.41"]
+yolo = [
+    "ultralytics>=8.4.56",
+]
 gpu = ["onnxruntime-gpu>=1.24.4"]
 tensorrt = ["tensorrt>=10.7"]
 coreml = ["coremltools>=8.1 ; sys_platform == 'darwin'"]
@@ -57,15 +59,15 @@ dev = [
     "pytest-xdist>=3.6",
     "pytest-benchmark>=4.0",
     "pytest-timeout>=2.4",
-    "ruff>=0.15",
-    "mypy>=1.20",
+    "ruff>=0.15.14",
+    "mypy>=2.1.0",
     "bandit>=1.9",
     "pip-audit>=2.10",
     "pre-commit>=4.0",
-    "hypothesis>=6.152",
+    "hypothesis>=6.153.2",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7",
-    "mkdocstrings[python]>=1.0",
+    "mkdocstrings[python]>=1.0.4",
     "build>=1.2",
     "cyclonedx-bom>=7.3",
     "types-pillow",
@@ -78,11 +80,11 @@ fovux-mcp = "fovux.cli:app"
 fovux = "fovux.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/oaslananka/fovux"
-Documentation = "https://github.com/oaslananka/fovux/tree/main/fovux-mcp/docs"
-Repository = "https://github.com/oaslananka/fovux"
-Issues = "https://github.com/oaslananka/fovux/issues"
-Changelog = "https://github.com/oaslananka/fovux/blob/main/fovux-mcp/CHANGELOG.md"
+Homepage = "https://github.com/oaslananka/fovux-kit"
+Documentation = "https://github.com/oaslananka/fovux-kit/tree/main/fovux-mcp/docs"
+Repository = "https://github.com/oaslananka/fovux-kit"
+Issues = "https://github.com/oaslananka/fovux-kit/issues"
+Changelog = "https://github.com/oaslananka/fovux-kit/blob/main/fovux-mcp/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fovux"]

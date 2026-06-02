@@ -4,7 +4,7 @@
   <strong>Local-first YOLO workbench for edge AI.</strong>
 </p>
 
-[![Org CI/CD](https://github.com/oaslananka-lab/fovux/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka-lab/fovux/actions/workflows/ci.yml)
+[![Org CI/CD](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/fovux-mcp)](https://pypi.org/project/fovux-mcp/)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/oaslananka.fovuxstudiokit)](https://marketplace.visualstudio.com/items?itemName=oaslananka.fovuxstudiokit)
 [![Python 3.11-3.13](https://img.shields.io/badge/Python-3.11_|_3.12_|_3.13-blue)](https://pypi.org/project/fovux-mcp/)
