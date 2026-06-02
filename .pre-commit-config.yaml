@@ -78,7 +78,7 @@ repos:
         entry: python scripts/run_prettier.py
         language: system
         types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
-        exclude: (^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$
+        exclude: (^|/)(CHANGELOG\.md|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$
       - id: ci-parity
         name: CI parity (typecheck + fast tests)
         entry: task pre-push
