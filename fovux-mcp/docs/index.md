@@ -21,7 +21,8 @@ Fovux MCP is the local Python server behind the Fovux workflow. It exposes MCP t
 
 1. Read [Getting Started](getting-started.md) for the 5-minute tour.
 2. Learn the core mental model in [Concepts](concepts.md).
-3. Jump to [Tool Reference](tools/dataset_inspect.md) for exact inputs, outputs, and examples.
+3. Review [MCP 2025-11-25 Conformance](mcp-conformance.md) for protocol and transport support.
+4. Jump to [Tool Reference](tools/dataset_inspect.md) for exact inputs, outputs, and examples.
 
 ## Availability
 

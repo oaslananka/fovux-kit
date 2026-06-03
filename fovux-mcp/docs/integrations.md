@@ -19,4 +19,6 @@ fovux-mcp serve --http --host 127.0.0.1 --port 7823
 
 ## Other MCP Clients
 
-Use Fovux as a standard MCP server entry in any MCP-compatible client and keep the filesystem local.
+Use Fovux as a standard stdio MCP server entry in any MCP-compatible client and keep the filesystem
+local. The `serve --http` command is the Fovux Studio REST/SSE bridge, not an MCP Streamable HTTP
+endpoint.

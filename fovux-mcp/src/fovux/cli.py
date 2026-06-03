@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import Any
 
@@ -52,8 +53,9 @@ def _run_stdio() -> None:
     """Run MCP server in stdio mode (default for MCP clients)."""
     from fovux.server import mcp
 
+    os.environ.setdefault("FASTMCP_CHECK_FOR_UPDATES", "off")
     logger.info("stdio_server_start")
-    mcp.run()
+    mcp.run(show_banner=False)
 
 
 @app.command()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -73,16 +74,18 @@ def test_default_invocation_runs_stdio_server() -> None:
     run_stdio.assert_called_once()
 
 
-def test_run_stdio_invokes_mcp_server() -> None:
-    """The stdio helper should log startup and invoke the MCP runtime."""
+def test_run_stdio_invokes_mcp_server(monkeypatch) -> None:
+    """The stdio helper should keep MCP stdout free of CLI chatter."""
+    monkeypatch.delenv("FASTMCP_CHECK_FOR_UPDATES", raising=False)
     with (
         patch("fovux.cli.logger") as logger,
         patch("fovux.server.mcp.run") as run_server,
     ):
         _run_stdio()
 
+    assert os.environ["FASTMCP_CHECK_FOR_UPDATES"] == "off"
     logger.info.assert_called_once_with("stdio_server_start")
-    run_server.assert_called_once()
+    run_server.assert_called_once_with(show_banner=False)
 
 
 def test_serve_stdio_uses_context_logging() -> None:
