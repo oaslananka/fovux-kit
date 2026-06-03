@@ -16,7 +16,7 @@ npm install -g fovux-mcp
 fovux-mcp --help
 ```
 
-The shim requires `uv` or `uvx` to be available on `PATH`. By default it runs
-`fovux-mcp` from the Python package version matching this npm package. For local
-development before a release is published, set `FOVUX_MCP_PYTHON_PACKAGE` to a
-local package path or alternate package spec.
+The shim requires Node 22 or 24 and `uv` or `uvx` to be available on `PATH`. By
+default it runs `fovux-mcp` from the Python package version matching this npm
+package. For local development before a release is published, set
+`FOVUX_MCP_PYTHON_PACKAGE` to a local package path or alternate package spec.

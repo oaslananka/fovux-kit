@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "publisher": "oaslananka",
   "license": "Apache-2.0",
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@10.34.1",
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"

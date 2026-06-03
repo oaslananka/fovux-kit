@@ -33,7 +33,7 @@ extension.
 
 - [fovux-mcp](https://github.com/oaslananka/fovux-kit/tree/main/fovux-mcp) installed from this repository
 - VS Code ≥ 1.98
-- Node `24.14.1` LTS with Corepack-enabled `pnpm@10.33.0`
+- Node 22 LTS or Node `24.16.0` LTS with Corepack-enabled `pnpm@10.34.1`
 
 ## Install
 
@@ -47,7 +47,7 @@ When developing from source:
 git clone https://github.com/oaslananka/fovux-kit
 cd fovux-kit/fovux-studio
 corepack enable
-corepack prepare pnpm@10.33.0 --activate
+corepack prepare pnpm@10.34.1 --activate
 pnpm install --frozen-lockfile
 pnpm verify
 pnpm dlx @vscode/vsce@3.9.1 package --out fovuxstudiokit.vsix --no-dependencies
