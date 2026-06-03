@@ -11,7 +11,7 @@ from pathlib import Path
 
 DEFAULT_CHUNK_SIZE = 80
 WINDOWS_CHUNK_SIZE = 5
-PNPM_VERSION = "10.33.0"
+PNPM_VERSION = "10.34.1"
 
 
 def _chunks(values: list[str], size: int) -> Iterable[list[str]]:
