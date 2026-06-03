@@ -12,7 +12,7 @@ uv sync --project fovux-mcp --frozen --extra dev
 
 # Node.js / pnpm for the Studio companion
 corepack enable
-corepack prepare pnpm@10.33.0 --activate
+corepack prepare pnpm@10.34.1 --activate
 cd fovux-studio
 pnpm install --frozen-lockfile
 cd ..

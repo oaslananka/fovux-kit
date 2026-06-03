@@ -288,7 +288,7 @@ jobs:
         run: |
           set -euo pipefail
           corepack enable
-          corepack prepare pnpm@10.33.0 --activate
+          corepack prepare pnpm@10.34.1 --activate
           pnpm install --frozen-lockfile
           pnpm build
           test "$(node -p "require('./package.json').publisher + '.' + require('./package.json').name")" = "oaslananka.fovuxstudiokit"
