@@ -55,8 +55,12 @@ async def test_tools_list_returns_stable_valid_tool_schemas() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.contract
-async def test_tools_call_returns_structured_content_with_text_fallback() -> None:
+async def test_tools_call_returns_structured_content_with_text_fallback(
+    tmp_fovux_home: Path,
+) -> None:
     """tools/call should return structured results and a text fallback."""
+    assert tmp_fovux_home.is_dir()
+
     async with Client(mcp) as client:
         result = await client.call_tool("model_list", {})
 

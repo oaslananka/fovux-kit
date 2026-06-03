@@ -16,25 +16,25 @@ Checked on 2026-06-03:
 
 ## Conformance Checklist
 
-| Surface | Status | Evidence |
-| --- | --- | --- |
-| Protocol revision | Supported | FastMCP negotiates `2025-11-25` during `initialize`. |
-| stdio transport | Supported | `fovux-mcp` with no subcommand starts the FastMCP stdio server. |
-| Streamable HTTP transport | Not exposed | `fovux-mcp serve --http` is the Studio REST/SSE bridge, not an MCP endpoint. |
-| Lifecycle | Supported | The stdio contract test initializes, lists tools, calls a tool, then closes. |
-| Tools capability | Supported | Server initialization advertises `capabilities.tools.listChanged=true`. |
-| `tools/list` | Supported | All 36 registered tools are returned with object input schemas. |
-| `tools/call` | Supported | `model_list` returns structured content plus a JSON text fallback. |
-| Protocol tool errors | Supported | Unknown tool calls raise FastMCP `ToolError` instead of invoking local code. |
-| Studio HTTP auth | Supported | `/health` is public; `/runs` and `/tools/{name}` require bearer auth. |
-| HTTP tool policy | Supported | Studio tool calls use a fixed allow-list, rate limits, and confirmation gates. |
-| Tool list change notifications | Declared static | The server advertises list changes, but Fovux has a static release-time registry. |
-| Prompts | Empty | No Fovux prompts are registered in this release. |
-| Resources | Empty | No Fovux MCP resources are registered in this release. |
-| MCP Tasks | Unsupported | Fovux does not advertise `capabilities.tasks`; HTTP background jobs are REST-only. |
-| Roots | Client-dependent | Fovux does not request `roots/list`; filesystem bounds are local config based. |
-| Sampling | Unsupported | Fovux tools do not call `sampling/createMessage`. |
-| Elicitation | Unsupported | Fovux tools do not call `elicitation/create`. |
+| Surface                        | Status           | Evidence                                                                           |
+| ------------------------------ | ---------------- | ---------------------------------------------------------------------------------- |
+| Protocol revision              | Supported        | FastMCP negotiates `2025-11-25` during `initialize`.                               |
+| stdio transport                | Supported        | `fovux-mcp` with no subcommand starts the FastMCP stdio server.                    |
+| Streamable HTTP transport      | Not exposed      | `fovux-mcp serve --http` is the Studio REST/SSE bridge, not an MCP endpoint.       |
+| Lifecycle                      | Supported        | The stdio contract test initializes, lists tools, calls a tool, then closes.       |
+| Tools capability               | Supported        | Server initialization advertises `capabilities.tools.listChanged=true`.            |
+| `tools/list`                   | Supported        | All 36 registered tools are returned with object input schemas.                    |
+| `tools/call`                   | Supported        | `model_list` returns structured content plus a JSON text fallback.                 |
+| Protocol tool errors           | Supported        | Unknown tool calls raise FastMCP `ToolError` instead of invoking local code.       |
+| Studio HTTP auth               | Supported        | `/health` is public; `/runs` and `/tools/{name}` require bearer auth.              |
+| HTTP tool policy               | Supported        | Studio tool calls use a fixed allow-list, rate limits, and confirmation gates.     |
+| Tool list change notifications | Declared static  | The server advertises list changes, but Fovux has a static release-time registry.  |
+| Prompts                        | Empty            | No Fovux prompts are registered in this release.                                   |
+| Resources                      | Empty            | No Fovux MCP resources are registered in this release.                             |
+| MCP Tasks                      | Unsupported      | Fovux does not advertise `capabilities.tasks`; HTTP background jobs are REST-only. |
+| Roots                          | Client-dependent | Fovux does not request `roots/list`; filesystem bounds are local config based.     |
+| Sampling                       | Unsupported      | Fovux tools do not call `sampling/createMessage`.                                  |
+| Elicitation                    | Unsupported      | Fovux tools do not call `elicitation/create`.                                      |
 
 ## Transport Policy
 
@@ -42,12 +42,12 @@ Use stdio for MCP clients:
 
 ```json
 {
-  "mcpServers": {
-    "fovux": {
-      "command": "fovux-mcp",
-      "args": ["serve"]
+    "mcpServers": {
+        "fovux": {
+            "command": "fovux-mcp",
+            "args": ["serve"]
+        }
     }
-  }
 }
 ```
 

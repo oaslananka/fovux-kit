@@ -53,7 +53,7 @@ def _run_stdio() -> None:
     """Run MCP server in stdio mode (default for MCP clients)."""
     from fovux.server import mcp
 
-    os.environ.setdefault("FASTMCP_CHECK_FOR_UPDATES", "off")
+    os.environ["FASTMCP_CHECK_FOR_UPDATES"] = "off"
     logger.info("stdio_server_start")
     mcp.run(show_banner=False)
 

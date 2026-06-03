@@ -76,7 +76,7 @@ def test_default_invocation_runs_stdio_server() -> None:
 
 def test_run_stdio_invokes_mcp_server(monkeypatch) -> None:
     """The stdio helper should keep MCP stdout free of CLI chatter."""
-    monkeypatch.delenv("FASTMCP_CHECK_FOR_UPDATES", raising=False)
+    monkeypatch.setenv("FASTMCP_CHECK_FOR_UPDATES", "stable")
     with (
         patch("fovux.cli.logger") as logger,
         patch("fovux.server.mcp.run") as run_server,
