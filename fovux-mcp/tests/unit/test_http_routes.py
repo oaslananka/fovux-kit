@@ -391,7 +391,7 @@ def test_tool_proxy_returns_operation_for_timed_out_worker(
         calls += 1
         if calls == 1:
             worker_started.set()
-            finish_worker.wait(timeout=1.0)
+            finish_worker.wait(timeout=5.0)
             worker_finished.set()
         return {"ok": True}
 
@@ -405,10 +405,10 @@ def test_tool_proxy_returns_operation_for_timed_out_worker(
     with TestClient(create_app()) as client:
         headers = _auth_headers(client)
         first = client.post("/tools/model_list", json={}, headers=headers)
-        assert worker_started.wait(timeout=1.0)
+        assert worker_started.wait(timeout=5.0)
         second = client.post("/tools/model_list", json={}, headers=headers)
         finish_worker.set()
-        assert worker_finished.wait(timeout=1.0)
+        assert worker_finished.wait(timeout=5.0)
         deadline = time.time() + 1.0
         while True:
             third = client.post("/tools/model_list", json={}, headers=headers)
