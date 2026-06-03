@@ -1,7 +1,7 @@
 services:
   rtsp-mock:
-    image: bluenviron/mediamtx@sha256:4d60efd45cfc9b688d011f0088031e21b8d5a828cb0fcdb444b7dcd5fc51c5b8
+    image: bluenviron/mediamtx:1.19.0@sha256:35f9e8aefaca5352b5f4667c8cd529360a53a493c51fa639e8f5898c03bc0d06
     ports:
       - "8554:8554"
     environment:
-      MTX_PROTOCOLS: tcp
+      MTX_RTSPTRANSPORTS: tcp
