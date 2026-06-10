@@ -72,7 +72,7 @@ The format follows Keep a Changelog, and this project uses semantic versioning.
 - Backend install walkthrough action now uses `uv tool install fovux-mcp` as the supported path.
 - `nightly-compat.yml` now uses setup-uv and writes a compatibility report consumed by issue
   creation on failure.
-- `verify_doppler_secrets.sh` now fails early with a clear message when the Doppler CLI is missing.
+- Release secret verification now fails early with a clear message when required credentials are missing.
 
 ### Security
 

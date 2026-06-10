@@ -33,7 +33,7 @@ using a STRIDE-inspired framework.
 
 ### Registry Tokens
 
-- **Description:** PyPI, VS Code Marketplace, and Open VSX tokens managed via Doppler.
+- **Description:** PyPI, VS Code Marketplace, and Open VSX tokens stored as protected GitHub Actions secrets.
 - **Trust level:** CI-only, never exposed to end users.
 - **Threats:** Token leakage in CI logs, misconfigured secrets.
 
@@ -52,4 +52,4 @@ using a STRIDE-inspired framework.
 | DNS rebinding                 | HTTP server binds to `127.0.0.1` by default and does not bind to all interfaces unless explicitly configured |
 | Zombie processes              | Training worker writes PID and status atomically; `train_stop` uses process group kill                       |
 | Malicious ONNX                | Only user-provided local models are loaded; no remote model download                                         |
-| CI token exposure             | Doppler secrets injected at runtime; never committed or logged                                               |
+| CI token exposure             | Protected GitHub Actions secrets injected only into publishing jobs; never committed or logged               |

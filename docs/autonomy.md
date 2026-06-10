@@ -6,5 +6,5 @@ This repository is maintained autonomously to meet high standards of CI/CD, secu
 - `oaslananka/fovux-kit` is the canonical source repository for code, issues, pull requests, CI,
   releases, and registry publishing.
 - Code changes are validated via `pre-commit` and `task ci`.
-- Secrets are centralized in Doppler and injected at runtime.
+- Publishing credentials are stored in protected GitHub Actions secrets and injected at runtime.
 - Automated release drafting, issue labeling, PR sizing, and branch cleanups are set up.

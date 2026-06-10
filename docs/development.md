@@ -32,7 +32,8 @@ task ci:act      # optional: run GitHub Actions in Docker locally
 
 - `task: command not found`: install Task with `brew install go-task` or download from https://taskfile.dev/installation/
 - pre-commit hook is too slow: run `pre-commit run --all-files` once to warm caches
-- `task ci` fails but CI passes, or vice versa: likely Doppler secrets differ; run `task doppler:check`
+- `task ci` fails but CI passes, or vice versa: compare local runtime versions with
+  `docs/runtime-compatibility.md` and rerun `task install`
 
 ```bash
 # https://github.com/nektos/act
