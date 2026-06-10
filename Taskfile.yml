@@ -6,8 +6,7 @@ vars:
   PYTHON: '{{.PYTHON | default "python"}}'
   NPM: '{{.NPM | default "npm"}}'
   PNPM: '{{.PNPM | default "corepack pnpm@10.34.1 --ignore-workspace"}}'
-  PYTEST_TEMP_ROOT:
-    sh: '{{.PYTHON}} -c "import tempfile; print(tempfile.gettempdir())"'
+  PYTEST_TEMP_ROOT: '{{env "TMPDIR" | default (env "TEMP" | default "/tmp")}}'
 
 tasks:
   install:

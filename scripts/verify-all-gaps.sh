@@ -28,10 +28,11 @@ check_remote_file() {
 
 check_clean_github_queue() {
   local repo=$1
-  local open_prs open_issues extra_branches issues_enabled
+  local current_branch open_prs open_issues extra_branches issues_enabled
+  current_branch="$(git branch --show-current 2>/dev/null || true)"
   open_prs="$(
     gh pr list --repo "$repo" --state open --limit 100 --json headRefName \
-      --jq '[.[] | select(.headRefName != "release-please--branches--main")] | length'
+      --jq "[.[] | select(.headRefName != \"release-please--branches--main\" and .headRefName != \"$current_branch\")] | length"
   )"
   issues_enabled="$(gh repo view "$repo" --json hasIssuesEnabled --jq '.hasIssuesEnabled')"
   if [ "$issues_enabled" = "true" ]; then
@@ -41,7 +42,8 @@ check_clean_github_queue() {
   fi
   extra_branches="$(
     gh api "repos/$repo/branches" --paginate --jq '.[].name' \
-      | awk '$0 != "main" && $0 != "gh-pages" && $0 != "release-please--branches--main" { count++ } END { print count + 0 }'
+      | awk -v current_branch="$current_branch" \
+          '$0 != "main" && $0 != "gh-pages" && $0 != "release-please--branches--main" && $0 != current_branch { count++ } END { print count + 0 }'
   )"
 
   if [ "$open_prs" = "0" ] && [ "$open_issues" = "0" ] && [ "$extra_branches" = "0" ]; then
@@ -77,12 +79,17 @@ for item in "${required_common[@]}"; do
 done
 
 if command -v gh >/dev/null 2>&1; then
-  echo ""
-  echo "=== oaslananka/fovux-kit ==="
-  for item in "${required_common[@]}"; do
-    check_remote_file "oaslananka/fovux-kit" "${item%%:*}" "${item##*:}"
-  done
-  check_clean_github_queue "oaslananka/fovux-kit"
+  if gh auth status >/dev/null 2>&1; then
+    echo ""
+    echo "=== oaslananka/fovux-kit ==="
+    for item in "${required_common[@]}"; do
+      check_remote_file "oaslananka/fovux-kit" "${item%%:*}" "${item##*:}"
+    done
+    check_clean_github_queue "oaslananka/fovux-kit"
+  else
+    echo ""
+    echo "WARNING: gh CLI is installed but not authenticated. Skipping remote checks."
+  fi
 fi
 
 echo ""
