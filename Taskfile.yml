@@ -6,6 +6,7 @@ vars:
   PYTHON: '{{.PYTHON | default "python"}}'
   NPM: '{{.NPM | default "npm"}}'
   PNPM: '{{.PNPM | default "corepack pnpm@10.34.1 --ignore-workspace"}}'
+  PYTEST_TEMP_ROOT: '{{env "TMPDIR" | default (env "TEMP" | default "/tmp")}}'
 
 tasks:
   install:
@@ -53,18 +54,18 @@ tasks:
   test:
     desc: Run unit tests
     cmds:
-      - cmd: cd fovux-mcp && uv run pytest -x --no-header -q
+      - cmd: cd fovux-mcp && uv run pytest -x --no-header -q --basetemp="{{.PYTEST_TEMP_ROOT}}/fovux-kit-pytest"
       - cmd: cd fovux-studio && {{.PNPM}} test --run
 
   test:fast:
     desc: Run only fast tests
     cmds:
-      - cmd: cd fovux-mcp && uv run pytest -x --no-header -q -m "not slow and not integration and not network and not gpu and not security and not chaos and not benchmark"
+      - cmd: cd fovux-mcp && uv run pytest -x --no-header -q --basetemp="{{.PYTEST_TEMP_ROOT}}/fovux-kit-pytest" -m "not slow and not integration and not network and not gpu and not security and not chaos and not benchmark"
 
   test:cov:
     desc: Run tests with coverage
     cmds:
-      - cmd: cd fovux-mcp && uv run pytest --cov=fovux --cov-fail-under=92 --cov-report=term-missing --cov-report=html --cov-report=xml
+      - cmd: cd fovux-mcp && uv run pytest --basetemp="{{.PYTEST_TEMP_ROOT}}/fovux-kit-pytest" --cov=fovux --cov-fail-under=92 --cov-report=term-missing --cov-report=html --cov-report=xml
       - cmd: cd fovux-studio && {{.PNPM}} test
 
   security:
@@ -111,11 +112,6 @@ tasks:
     desc: Run GitHub Actions workflows locally with nektos/act
     cmds:
       - act -W .github/workflows/ci.yml --container-architecture linux/amd64
-
-  doppler:check:
-    desc: Verify all required Doppler secrets are present
-    cmds:
-      - bash scripts/verify_doppler_secrets.sh
 
   clean:
     desc: Remove build artifacts and caches

@@ -4,9 +4,9 @@ This matrix is the repository policy for development, CI, and release builds.
 
 ## Python
 
-`fovux-mcp` supports CPython 3.11, 3.12, 3.13, and 3.14.
+`fovux-mcp` supports CPython 3.12, 3.13, and 3.14.
 
-- `requires-python` is `>=3.11,<3.15`.
+- `requires-python` is `>=3.12,<3.15`.
 - CI runs the backend test suite across all supported Python minors.
 - The nightly latest-dependency compatibility job runs on Python 3.13 and 3.14 to catch resolver or wheel regressions early.
 

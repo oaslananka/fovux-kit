@@ -18,17 +18,17 @@ fovux/
 
 | Tool                             | Version                                                       | Install                                                       |
 | -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
-| Python                           | ≥ 3.11                                                        | https://python.org                                            |
+| Python                           | ≥ 3.12                                                        | https://python.org                                            |
 | [uv](https://docs.astral.sh/uv/) | latest                                                        | official standalone installer                                 |
-| Node.js                          | >= 22.0.0, with 24.14.1 pinned in `.nvmrc` for release builds | https://nodejs.org                                            |
-| pnpm                             | 10.33.0                                                       | `corepack enable && corepack prepare pnpm@10.33.0 --activate` |
+| Node.js                          | >= 22.0.0, with 24.16.0 pinned in `.nvmrc` for release builds | https://nodejs.org                                            |
+| pnpm                             | 10.34.1                                                       | `corepack enable && corepack prepare pnpm@10.34.1 --activate` |
 | pre-commit                       | ≥ 4.0                                                         | included in `dev` extra                                       |
 
 ## Local setup
 
 ```bash
-git clone https://github.com/oaslananka/fovux
-cd fovux
+git clone https://github.com/oaslananka/fovux-kit
+cd fovux-kit
 
 # Fast path: install dependencies, hooks, and run the repo-quality gate.
 task install
@@ -81,12 +81,11 @@ The backend publishes two command aliases on purpose:
 
 Keep both aliases working when changing CLI registration, documentation, or release scripts.
 
-## Optional Doppler setup
+## Environment and publishing credentials
 
-Normal local development does not require Doppler. Release workflows that publish artifacts do
-require the Doppler CLI and a `DOPPLER_TOKEN` secret because release signing and publishing commands
-run through `doppler run --project all --config main`. See `docs/doppler-setup.md` for maintainer
-setup and troubleshooting.
+Copy the variable names from `.env.example` into an untracked `.env` file when local overrides are
+needed. Publishing credentials are stored as protected GitHub Actions secrets and are never required
+for normal local development.
 
 ## Commit style
 
@@ -107,13 +106,12 @@ The pre-push hook runs the full quality gate. Do not skip it with `--no-verify`.
 1. Fork the repo and create a branch from `main`.
 2. Make your changes with appropriate tests.
 3. Ensure `python scripts/quality_gate.py repo-check` passes locally.
-4. Open a pull request against `main` in `oaslananka/fovux` (the canonical repo).
+4. Open a pull request against `main` in `oaslananka/fovux-kit` (the canonical repo).
 5. Fill in the pull request template.
 
 ## Branch / remote model
 
-- `oaslananka/fovux` — canonical public repo; submit PRs here.
-- `oaslananka-lab/fovux` — CI mirror; do not submit PRs here.
+- `oaslananka/fovux-kit` — canonical public repo; submit PRs here.
 
 See [docs/repository-operations.md](docs/repository-operations.md) for the full
 multi-remote model.

@@ -6,8 +6,8 @@ authors:
   - family-names: "Aslan"
     given-names: "Osman"
     alias: "oaslananka"
-repository-code: "https://github.com/oaslananka/fovux"
-url: "https://oaslananka.github.io/fovux/"
+repository-code: "https://github.com/oaslananka/fovux-kit"
+url: "https://oaslananka.github.io/fovux-kit/"
 license: Apache-2.0
 version: "4.1.4"
 date-released: "2026-04-27"

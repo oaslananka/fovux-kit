@@ -26,7 +26,7 @@ Audited and improved the release-readiness of the fovux-kit.
 
 ## Python / Node Compatibility
 
-- Extended support array up to Python 3.14 via `requires-python = ">=3.11,<3.15"`.
+- Extended support array up to Python 3.14; the current baseline is `requires-python = ">=3.12,<3.15"`.
 - Extended GitHub action matrices for node version 24. (Issue #21).
 
 ## DX

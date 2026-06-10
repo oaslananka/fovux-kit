@@ -8,7 +8,7 @@
 [![PyPI](https://img.shields.io/pypi/v/fovux-mcp)](https://pypi.org/project/fovux-mcp/)
 [![npm](https://img.shields.io/npm/v/fovux-mcp)](https://www.npmjs.com/package/fovux-mcp)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/oaslananka.fovuxstudiokit)](https://marketplace.visualstudio.com/items?itemName=oaslananka.fovuxstudiokit)
-[![Python 3.11-3.14](https://img.shields.io/badge/Python-3.11_|_3.12_|_3.13_|_3.14-blue)](https://pypi.org/project/fovux-mcp/)
+[![Python 3.12-3.14](https://img.shields.io/badge/Python-3.12_|_3.13_|_3.14-blue)](https://pypi.org/project/fovux-mcp/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## What is Fovux?
@@ -27,7 +27,7 @@ Fovux is a local-first vision workbench for YOLO datasets, training, evaluation,
 
 ## 60-second quickstart
 
-Ensure you have Python 3.11 through 3.14 installed. Install the backend globally using `uv`:
+Ensure you have Python 3.12 through 3.14 installed. Install the backend globally using `uv`:
 
 ```bash
 uv tool install fovux-mcp
@@ -139,7 +139,12 @@ All releases are created by release-please from Conventional Commits, gated by C
 
 ## Repository operations
 
-Repository operations, runtime compatibility, Doppler secret management, branch protection, and the release process are documented in [docs/repository-operations.md](docs/repository-operations.md), [docs/runtime-compatibility.md](docs/runtime-compatibility.md), [docs/doppler-setup.md](docs/doppler-setup.md), [docs/branch-protection.md](docs/branch-protection.md), and [docs/release-process.md](docs/release-process.md).
+Repository operations, runtime compatibility, branch protection, and the release process are
+documented in [docs/repository-operations.md](docs/repository-operations.md),
+[docs/runtime-compatibility.md](docs/runtime-compatibility.md),
+[docs/branch-protection.md](docs/branch-protection.md), and
+[docs/release-process.md](docs/release-process.md). Local environment variable names are listed in
+[`.env.example`](.env.example); publishing credentials remain in protected GitHub Actions secrets.
 
 ## Roadmap
 
