@@ -4,7 +4,7 @@
 
 [![Primary CI](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml)
 [![Repository](https://img.shields.io/badge/repo-oaslananka%2Ffovux--kit-black?logo=github)](https://github.com/oaslananka/fovux-kit)
-[![Python 3.11-3.14](https://img.shields.io/badge/python-3.11%20to%203.14-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12-3.14](https://img.shields.io/badge/python-3.12%20to%203.14-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Install](https://img.shields.io/badge/install-source-blue.svg)](https://github.com/oaslananka/fovux-kit)
 

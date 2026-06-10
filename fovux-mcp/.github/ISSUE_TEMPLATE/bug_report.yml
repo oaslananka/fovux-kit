@@ -32,7 +32,7 @@ body:
     id: python
     attributes:
       label: Python version
-      placeholder: "e.g. 3.11.9"
+      placeholder: "e.g. 3.12.10"
     validations:
       required: true
 
