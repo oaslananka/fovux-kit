@@ -5,6 +5,13 @@ All notable changes to `fovux-mcp` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.0.1](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.0.0...fovux-mcp-v1.0.1) (2026-06-11)
+
+
+### Bug Fixes
+
+* **repo:** harden release gates and dataset metrics ([573f812](https://github.com/oaslananka/fovux-kit/commit/573f812ce9ebb237739b2e089169b431f1120327))
+
 ## [1.0.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.0.0...fovux-mcp-v1.0.0) (2026-06-02)
 
 

@@ -11,6 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Renamed the Marketplace display name to `Fovux Studio Kit` so the first public VSIX publish uses
   a unique display name while keeping the `oaslananka.fovuxstudiokit` extension identifier stable.
 
+## [1.0.1](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.0.0...fovux-studio-v1.0.1) (2026-06-11)
+
+
+### Bug Fixes
+
+* **release:** recover studio marketplace publish ([#39](https://github.com/oaslananka/fovux-kit/issues/39)) ([f9ac39f](https://github.com/oaslananka/fovux-kit/commit/f9ac39fe446bc241aca99c565e2c3e976e69c228))
+
 ## [1.0.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.0.0...fovux-studio-v1.0.0) (2026-06-02)
 
 ### Bug Fixes
