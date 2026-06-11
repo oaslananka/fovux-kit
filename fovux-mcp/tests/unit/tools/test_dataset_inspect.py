@@ -86,6 +86,29 @@ def test_inspect_gini_balanced():
     assert out.class_balance_gini < 0.5
 
 
+def test_inspect_yolo_includes_declared_classes_without_annotations(tmp_path: Path):
+    """Declared but unused classes should contribute to class-balance statistics."""
+    images_dir = tmp_path / "images" / "train"
+    labels_dir = tmp_path / "labels" / "train"
+    images_dir.mkdir(parents=True)
+    labels_dir.mkdir(parents=True)
+    Image.new("RGB", (16, 16), color=(10, 20, 30)).save(images_dir / "sample.jpg")
+    (labels_dir / "sample.txt").write_text("0 0.5 0.5 0.5 0.5\n", encoding="utf-8")
+    (tmp_path / "data.yaml").write_text(
+        "path: .\ntrain: images/train\nnc: 2\nnames: ['present', 'missing']\n",
+        encoding="utf-8",
+    )
+
+    out = _run_inspect(DatasetInspectInput(dataset_path=tmp_path))
+
+    assert out.num_classes == 2
+    assert [(item.name, item.count) for item in out.classes] == [
+        ("present", 1),
+        ("missing", 0),
+    ]
+    assert out.class_balance_gini == 0.5
+
+
 def test_inspect_duration_recorded():
     """Duration should be a positive float."""
     inp = DatasetInspectInput(dataset_path=FIXTURES / "mini_yolo")

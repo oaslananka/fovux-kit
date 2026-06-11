@@ -155,14 +155,15 @@ def _inspect_yolo(
     if total_images == 0:
         raise FovuxDatasetEmptyError(str(path))
 
+    class_ids = sorted(set(class_counts) | set(range(len(class_names))))
     total_anns = sum(class_counts.values()) or 1
     classes = [
         ClassStat(
             name=class_names[idx] if idx < len(class_names) else f"class_{idx}",
-            count=cnt,
-            pct=round(cnt / total_anns * 100, 2),
+            count=class_counts.get(idx, 0),
+            pct=round(class_counts.get(idx, 0) / total_anns * 100, 2),
         )
-        for idx, cnt in sorted(class_counts.items())
+        for idx in class_ids
     ]
 
     wl, wc = bucket_distribution([float(s[0]) for s in image_sizes])
@@ -176,7 +177,7 @@ def _inspect_yolo(
         format_detected=fmt,
         total_images=total_images,
         total_annotations=total_annotations,
-        num_classes=len(class_counts),
+        num_classes=len(class_ids),
         classes=classes,
         image_size_distribution=img_size_hist,
         bbox_size_distribution=bbox_size_hist,
@@ -185,7 +186,7 @@ def _inspect_yolo(
         orphan_images=orphan_images,
         missing_label_images=missing_label_images,
         orphan_annotations=orphan_annotations,
-        class_balance_gini=gini(list(class_counts.values())),
+        class_balance_gini=gini([class_counts.get(idx, 0) for idx in class_ids]),
         splits_detected=splits_detected,
         warnings=warnings,
         sample_paths=sample_paths,
@@ -244,14 +245,15 @@ def _inspect_coco(
     if total_images == 0:
         raise FovuxDatasetEmptyError(str(path))
 
+    class_ids = sorted(set(class_counts) | set(id_to_name))
     total_anns = sum(class_counts.values()) or 1
     classes = [
         ClassStat(
             name=id_to_name.get(cid, f"class_{cid}"),
-            count=cnt,
-            pct=round(cnt / total_anns * 100, 2),
+            count=class_counts.get(cid, 0),
+            pct=round(class_counts.get(cid, 0) / total_anns * 100, 2),
         )
-        for cid, cnt in sorted(class_counts.items())
+        for cid in class_ids
     ]
 
     bal, bac = bucket_distribution(bbox_areas)
@@ -261,7 +263,7 @@ def _inspect_coco(
         format_detected=fmt,
         total_images=total_images,
         total_annotations=total_annotations,
-        num_classes=len(class_counts),
+        num_classes=len(class_ids),
         classes=classes,
         image_size_distribution=SizeHistogram(buckets=["N/A"], counts=[total_images]),
         bbox_size_distribution=SizeHistogram(buckets=bal or ["N/A"], counts=bac or [0]),
@@ -270,7 +272,7 @@ def _inspect_coco(
         orphan_images=0,
         missing_label_images=[],
         orphan_annotations=0,
-        class_balance_gini=gini(list(class_counts.values())),
+        class_balance_gini=gini([class_counts.get(cid, 0) for cid in class_ids]),
         splits_detected=splits_detected,
         warnings=warnings,
         sample_paths=sample_paths,

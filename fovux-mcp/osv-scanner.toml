@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "GHSA-rrmf-rvhw-rf47"
+ignoreUntil = 2026-09-10
+reason = "torch is only pulled into uv.lock through the optional yolo extra, OSV reports no fixed version, and Fovux core/runtime installs do not include this extra by default. Re-evaluate once PyTorch or Ultralytics publishes a fixed path."

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from fovux.core.dataset_utils import find_images
+from fovux.core.dataset_utils import find_images, gini
 
 
 def test_find_images_rejects_filesystem_root_without_scanning() -> None:
@@ -42,3 +42,10 @@ def test_find_images_returns_sorted_images(tmp_path: Path) -> None:
     (images_dir / "notes.txt").write_text("skip", encoding="utf-8")
 
     assert [path.name for path in find_images(tmp_path)] == ["a.jpg", "b.png"]
+
+
+def test_gini_returns_standard_non_negative_values() -> None:
+    """Class imbalance should use the standard Gini coefficient."""
+    assert gini([1, 1]) == 0.0
+    assert gini([0, 10]) == 0.5
+    assert gini([1, 2, 3]) == pytest.approx(2 / 9)

@@ -68,37 +68,42 @@ def _run_find_duplicates(inp: DatasetFindDuplicatesInput) -> DatasetFindDuplicat
     }
     hash_fn = hash_fn_map.get(inp.algorithm, imagehash.phash)
 
-    hashes: list[tuple[Path, object]] = []
+    hashes: list[tuple[Path, object, str]] = []
     for img_path in images:
         try:
             with Image.open(img_path) as im:
                 h = hash_fn(im)
-            hashes.append((img_path, h))
+            hashes.append((img_path, h, _split_key(path, img_path)))
         except Exception as exc:
             logger.debug("Skipping unreadable image %s: %s", img_path, exc)
             continue
 
     # O(n²) comparison — acceptable for typical dataset sizes
-    used = set()
+    used: set[int] = set()
     groups: list[DuplicateGroup] = []
 
-    for i, (p1, h1) in enumerate(hashes):
+    for i, (p1, h1, split1) in enumerate(hashes):
         if i in used:
             continue
         group = [p1]
-        for j, (p2, h2) in enumerate(hashes[i + 1 :], start=i + 1):
+        max_distance = 0
+        for j in range(i + 1, len(hashes)):
             if j in used:
                 continue
-            dist = h1 - h2  # type: ignore[operator]
+            p2, h2, split2 = hashes[j]
+            if not inp.across_splits and split1 != split2:
+                continue
+            dist = int(h1 - h2)  # type: ignore[operator]
             if dist <= inp.hamming_threshold:
                 group.append(p2)
                 used.add(j)
+                max_distance = max(max_distance, dist)
         if len(group) > 1:
             used.add(i)
-            groups.append(DuplicateGroup(images=group, hamming_distance=inp.hamming_threshold))
+            groups.append(DuplicateGroup(images=group, hamming_distance=max_distance))
 
     groups.sort(key=lambda g: len(g.images), reverse=True)
-    total_dup = sum(len(g.images) for g in groups)
+    total_dup = sum(len(g.images) - 1 for g in groups)
     pct = round(total_dup / len(images) * 100, 2) if images else 0.0
 
     return DatasetFindDuplicatesOutput(
@@ -108,3 +113,25 @@ def _run_find_duplicates(inp: DatasetFindDuplicatesInput) -> DatasetFindDuplicat
         duplicate_pct=pct,
         analysis_duration_seconds=round(time.perf_counter() - t0, 3),
     )
+
+
+def _split_key(dataset_root: Path, image_path: Path) -> str:
+    """Return a stable split key for train/val/test-aware duplicate comparisons."""
+    try:
+        parts = image_path.relative_to(dataset_root).parts
+    except ValueError:
+        parts = image_path.parts
+
+    split_mapping = {
+        "train": "train",
+        "val": "val",
+        "valid": "val",
+        "validation": "val",
+        "dev": "val",
+        "eval": "val",
+        "test": "test",
+    }
+    for part in (part.lower() for part in parts):
+        if part in split_mapping:
+            return split_mapping[part]
+    return "__unsplit__"

@@ -219,7 +219,8 @@ def gini(counts: list[int]) -> float:
     s = sorted(counts)
     total = sum(s)
     gini_num = sum((i + 1) * v for i, v in enumerate(s))
-    return float(1 - (2 * gini_num) / (n * total))
+    coefficient = (2 * gini_num) / (n * total) - (n + 1) / n
+    return float(min(max(coefficient, 0.0), 1.0))
 
 
 def bucket_distribution(values: list[float], n_buckets: int = 10) -> tuple[list[str], list[int]]:

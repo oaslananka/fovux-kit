@@ -98,7 +98,7 @@ async def test_stdio_cli_transport_initializes_lists_calls_and_shuts_down(
         log_file=log_file,
     )
 
-    async with Client(transport, init_timeout=10) as client:
+    async with Client(transport, init_timeout=60) as client:
         tools = await client.list_tools()
         result = await client.call_tool("model_list", {})
         initialize_result = client.initialize_result

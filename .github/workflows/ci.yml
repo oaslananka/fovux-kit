@@ -109,11 +109,17 @@ jobs:
   ci-required:
     name: ci-required
     needs: ci
-    if: github.repository == 'oaslananka/fovux-kit'
+    if: always() && github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Confirm CI matrix passed
+        env:
+          CI_RESULT: ${{ needs.ci.result }}
         run: |
           set -euo pipefail
+          if [[ "$CI_RESULT" != "success" ]]; then
+            echo "::error::CI matrix result was $CI_RESULT."
+            exit 1
+          fi
           echo "CI matrix passed."

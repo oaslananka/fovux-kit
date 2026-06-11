@@ -7,12 +7,14 @@ Perceptual hash duplicate detection for image datasets.
 - `dataset_path`
 - `algorithm`: `phash`, `dhash`, `whash`, `avg`
 - `hamming_threshold`
-- `across_splits`
+- `across_splits`: when `false`, train/val/test splits are compared only
+  within the same split
 
 ## Outputs
 
 - duplicate groups
-- total duplicate count and percentage
+- total duplicate count and percentage, counting only extra copies beyond each
+  group's representative image
 - total image count and analysis duration
 
 ## Examples

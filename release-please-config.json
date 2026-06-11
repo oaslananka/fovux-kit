@@ -8,7 +8,6 @@
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": true,
       "bump-patch-for-minor-pre-major": true,
-      "release-as": "1.0.0",
       "extra-files": [
         {
           "type": "generic",
@@ -37,8 +36,7 @@
       "package-name": "fovux-mcp",
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": true,
-      "bump-patch-for-minor-pre-major": true,
-      "release-as": "1.0.0"
+      "bump-patch-for-minor-pre-major": true
     },
     "fovux-studio": {
       "release-type": "node",
@@ -46,8 +44,7 @@
       "package-name": "fovuxstudiokit",
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": true,
-      "bump-patch-for-minor-pre-major": true,
-      "release-as": "1.0.0"
+      "bump-patch-for-minor-pre-major": true
     }
   },
   "plugins": [

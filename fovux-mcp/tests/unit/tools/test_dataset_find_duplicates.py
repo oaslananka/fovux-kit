@@ -29,8 +29,54 @@ def test_finds_exact_duplicates(tmp_path: Path):
         img.save(tmp_path / name)
     inp = DatasetFindDuplicatesInput(dataset_path=tmp_path, hamming_threshold=0)
     out = _run_find_duplicates(inp)
-    assert len(out.duplicate_groups) >= 1
-    assert out.total_duplicates >= 2
+    assert len(out.duplicate_groups) == 1
+    assert out.duplicate_groups[0].hamming_distance == 0
+    assert out.total_duplicates == 2
+    assert out.duplicate_pct == pytest.approx(66.67)
+
+
+def test_across_splits_false_does_not_group_cross_split_duplicates(tmp_path: Path):
+    """Cross-split duplicate detection should honor the across_splits flag."""
+    for split in ("train", "val"):
+        image_dir = tmp_path / "images" / split
+        image_dir.mkdir(parents=True)
+        Image.new("RGB", (64, 64), color=(100, 150, 200)).save(image_dir / "same.jpg")
+
+    within_splits = _run_find_duplicates(
+        DatasetFindDuplicatesInput(
+            dataset_path=tmp_path,
+            hamming_threshold=0,
+            across_splits=False,
+        )
+    )
+    across_splits = _run_find_duplicates(
+        DatasetFindDuplicatesInput(
+            dataset_path=tmp_path,
+            hamming_threshold=0,
+            across_splits=True,
+        )
+    )
+
+    assert within_splits.total_duplicates == 0
+    assert across_splits.total_duplicates == 1
+
+
+def test_across_splits_false_normalizes_common_split_aliases(tmp_path: Path):
+    """Common validation aliases should not collapse into unsplit comparisons."""
+    for split in ("validation", "holdout"):
+        image_dir = tmp_path / "images" / split
+        image_dir.mkdir(parents=True)
+        Image.new("RGB", (64, 64), color=(100, 150, 200)).save(image_dir / "same.jpg")
+
+    out = _run_find_duplicates(
+        DatasetFindDuplicatesInput(
+            dataset_path=tmp_path,
+            hamming_threshold=0,
+            across_splits=False,
+        )
+    )
+
+    assert out.total_duplicates == 0
 
 
 def test_nonexistent_path_raises():
