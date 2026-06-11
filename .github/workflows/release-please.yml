@@ -24,11 +24,12 @@ jobs:
     name: release-please-main
     if: github.repository == 'oaslananka/fovux-kit' && github.event_name == 'push'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 45
     permissions:
       actions: write
       contents: write
       pull-requests: write
+      statuses: write
     outputs:
       mcp_release_created: ${{ steps.rp.outputs['fovux-mcp--release_created'] }}
       mcp_tag_name: ${{ steps.rp.outputs['fovux-mcp--tag_name'] }}
@@ -98,6 +99,80 @@ jobs:
           RELEASE_PULL_REQUESTS: ${{ steps.rp.outputs.prs }}
         run: |
           set -euo pipefail
+          declare -A workflow_contexts=(
+            ["ci.yml"]="ci-required"
+            ["security.yml"]="security-required"
+            ["codeql.yml"]="codeql-required"
+            ["scorecard.yml"]="scorecard-required"
+            ["release-please.yml"]="release-please"
+          )
+
+          create_status() {
+            local sha="$1"
+            local state="$2"
+            local context="$3"
+            local description="$4"
+            local target_url="${5:-}"
+
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${sha}" \
+              -f state="$state" \
+              -f context="$context" \
+              -f description="$description" \
+              ${target_url:+-f target_url="$target_url"} >/dev/null
+          }
+
+          wait_for_workflow() {
+            local branch="$1"
+            local sha="$2"
+            local workflow="$3"
+            local context="$4"
+            local run_id=""
+
+            for _ in {1..60}; do
+              run_id="$(
+                gh run list \
+                  --repo "$GITHUB_REPOSITORY" \
+                  --workflow "$workflow" \
+                  --branch "$branch" \
+                  --json databaseId,headSha,createdAt \
+                  --limit 20 \
+                  | jq -r --arg sha "$sha" \
+                    '[.[] | select(.headSha == $sha)] | sort_by(.createdAt) | reverse | .[0].databaseId // empty'
+              )"
+              if [[ -n "$run_id" ]]; then
+                break
+              fi
+              sleep 5
+            done
+
+            if [[ -z "$run_id" ]]; then
+              create_status "$sha" failure "$context" "No $workflow run was created for release PR checks."
+              return 1
+            fi
+
+            while true; do
+              run="$(
+                gh run view "$run_id" \
+                  --repo "$GITHUB_REPOSITORY" \
+                  --json status,conclusion,url
+              )"
+              status="$(jq -r '.status' <<<"$run")"
+              conclusion="$(jq -r '.conclusion // empty' <<<"$run")"
+              url="$(jq -r '.url' <<<"$run")"
+
+              if [[ "$status" == "completed" ]]; then
+                if [[ "$conclusion" == "success" ]]; then
+                  create_status "$sha" success "$context" "$workflow completed successfully." "$url"
+                  return 0
+                fi
+                create_status "$sha" failure "$context" "$workflow concluded ${conclusion:-unknown}." "$url"
+                return 1
+              fi
+
+              sleep 10
+            done
+          }
+
           branches="$(
             jq -r '.[] | .headBranchName // .headRefName // .head_branch // empty' \
               <<<"$RELEASE_PULL_REQUESTS" | sort -u
@@ -110,8 +185,14 @@ jobs:
 
           while IFS= read -r branch; do
             [[ -z "$branch" ]] && continue
-            for workflow in ci.yml security.yml codeql.yml scorecard.yml release-please.yml; do
+            head_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${branch}" --jq '.sha')"
+            for workflow in "${!workflow_contexts[@]}"; do
+              context="${workflow_contexts[$workflow]}"
+              create_status "$head_sha" pending "$context" "$workflow release PR check is queued."
               gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref "$branch"
+            done
+            for workflow in "${!workflow_contexts[@]}"; do
+              wait_for_workflow "$branch" "$head_sha" "$workflow" "${workflow_contexts[$workflow]}"
             done
           done <<<"$branches"
 

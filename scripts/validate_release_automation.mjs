@@ -185,6 +185,13 @@ if (!workflowNames.includes("release-please.yml")) {
     "scripts/package_vscode_extension.mjs",
     "scripts/publish_vscode_extension.mjs",
     'gh release upload "$RELEASE_TAG" --clobber',
+    "statuses: write",
+    "repos/${GITHUB_REPOSITORY}/statuses/${sha}",
+    '["ci.yml"]="ci-required"',
+    '["security.yml"]="security-required"',
+    '["codeql.yml"]="codeql-required"',
+    '["scorecard.yml"]="scorecard-required"',
+    '["release-please.yml"]="release-please"',
     "publish-npm-wrapper",
     "npm publish --provenance --access public",
   ]) {
