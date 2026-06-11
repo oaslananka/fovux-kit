@@ -117,11 +117,17 @@ jobs:
   codeql-required:
     name: codeql-required
     needs: analyze
-    if: github.repository == 'oaslananka/fovux-kit'
+    if: always() && github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Confirm CodeQL passed
+        env:
+          CODEQL_RESULT: ${{ needs.analyze.result }}
         run: |
           set -euo pipefail
+          if [[ "$CODEQL_RESULT" != "success" ]]; then
+            echo "::error::CodeQL analysis result was $CODEQL_RESULT."
+            exit 1
+          fi
           echo "CodeQL passed."

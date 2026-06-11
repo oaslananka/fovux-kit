@@ -14,6 +14,9 @@ Fovux uses a protected GitHub Actions release model.
 - Release artifacts are built from the tagged source.
 - GitHub Release artifacts, SBOMs, checksums, and provenance are always attached
   first.
+- The automatic publish path is `.github/workflows/release-please.yml`.
+- `.github/workflows/publish-production.yml` is a manual recovery workflow and
+  never races the automatic release publisher.
 - PyPI publishing prefers trusted publishing when
   `PYPI_TRUSTED_PUBLISHING_ENABLED=true` and the PyPI trusted publisher matches
   `oaslananka/fovux-kit`, environment `pypi-production`, and
@@ -70,6 +73,5 @@ Python `fovux-mcp` package and npm `fovux-mcp` wrapper are linked because the
 wrapper executes the matching Python package version. The MCP package remains the
 source for `mcp.json`, `fovux-mcp/server.json`, and `fovux-mcp/smithery.yaml`.
 Public tracks start from `1.0.0` in `oaslananka/fovux-kit`; Studio publishes
-under `oaslananka.fovuxstudiokit`. The first-public release keeps a temporary
-release-please `release-as: 1.0.0` override until registry publish verification
-is complete.
+under `oaslananka.fovuxstudiokit`. The verified first-public release is complete,
+so subsequent versions are calculated normally from Conventional Commits.

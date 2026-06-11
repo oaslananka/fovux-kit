@@ -16,9 +16,6 @@ on:
           - pypi
           - mcp-registry
           - all
-  release:
-    types: [published]
-
 permissions:
   contents: read
 
@@ -42,16 +39,7 @@ jobs:
   build-python:
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
-      (
-        (
-          github.event_name == 'workflow_dispatch' &&
-          contains(fromJSON('["all","pypi","mcp-registry"]'), inputs.channel)
-        ) ||
-        (
-          github.event_name == 'release' &&
-          startsWith(github.event.release.tag_name, 'fovux-mcp-v')
-        )
-      )
+      contains(fromJSON('["all","pypi","mcp-registry"]'), inputs.channel)
     outputs:
       publish_ref: ${{ steps.ref.outputs.value }}
     runs-on: ubuntu-24.04
@@ -109,20 +97,11 @@ jobs:
   pypi-publish:
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
-      (
-        (
-          github.event_name == 'workflow_dispatch' &&
-          contains(fromJSON('["all","pypi","mcp-registry"]'), inputs.channel)
-        ) ||
-        (
-          github.event_name == 'release' &&
-          startsWith(github.event.release.tag_name, 'fovux-mcp-v')
-        )
-      )
+      contains(fromJSON('["all","pypi","mcp-registry"]'), inputs.channel)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: build-python
-    environment: production
+    environment: pypi-production
     permissions:
       contents: read
       id-token: write
@@ -199,16 +178,7 @@ jobs:
   mcp-registry-publish:
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
-      (
-        (
-          github.event_name == 'workflow_dispatch' &&
-          contains(fromJSON('["all","mcp-registry"]'), inputs.channel)
-        ) ||
-        (
-          github.event_name == 'release' &&
-          startsWith(github.event.release.tag_name, 'fovux-mcp-v')
-        )
-      )
+      contains(fromJSON('["all","mcp-registry"]'), inputs.channel)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: production
@@ -283,16 +253,7 @@ jobs:
   package-extension:
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
-      (
-        (
-          github.event_name == 'workflow_dispatch' &&
-          contains(fromJSON('["all","studio"]'), inputs.channel)
-        ) ||
-        (
-          github.event_name == 'release' &&
-          startsWith(github.event.release.tag_name, 'fovux-studio-v')
-        )
-      )
+      contains(fromJSON('["all","studio"]'), inputs.channel)
     outputs:
       publish_ref: ${{ steps.ref.outputs.value }}
       package_name: ${{ steps.meta.outputs.name }}
@@ -362,7 +323,6 @@ jobs:
           const identifier = `${p.publisher}.${p.name}`;
           if (identifier !== "oaslananka.fovuxstudiokit") throw new Error(`EXTENSION_IDENTIFIER_INVALID ${identifier}`);
           if (p.displayName !== "Fovux Studio Kit") throw new Error(`EXTENSION_DISPLAY_NAME_INVALID ${p.displayName}`);
-          if (p.version !== "1.0.0") throw new Error(`EXTENSION_VERSION_INVALID ${p.version}`);
           if (!p.engines?.vscode) throw new Error("EXTENSION_MANIFEST_INVALID engines.vscode");
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `name=${p.name}\nversion=${p.version}\nidentifier=${identifier}\n`);
           NODE
@@ -384,16 +344,7 @@ jobs:
   studio-release-assets:
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
-      (
-        (
-          github.event_name == 'workflow_dispatch' &&
-          contains(fromJSON('["all","studio"]'), inputs.channel)
-        ) ||
-        (
-          github.event_name == 'release' &&
-          startsWith(github.event.release.tag_name, 'fovux-studio-v')
-        )
-      )
+      contains(fromJSON('["all","studio"]'), inputs.channel)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: package-extension
@@ -440,20 +391,11 @@ jobs:
   vscode-marketplace:
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
-      (
-        (
-          github.event_name == 'workflow_dispatch' &&
-          contains(fromJSON('["all","studio"]'), inputs.channel)
-        ) ||
-        (
-          github.event_name == 'release' &&
-          startsWith(github.event.release.tag_name, 'fovux-studio-v')
-        )
-      )
+      contains(fromJSON('["all","studio"]'), inputs.channel)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: package-extension
-    environment: production
+    environment: vsce-production
     permissions:
       contents: read
     steps:
@@ -527,20 +469,11 @@ jobs:
   open-vsx:
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
-      (
-        (
-          github.event_name == 'workflow_dispatch' &&
-          contains(fromJSON('["all","studio"]'), inputs.channel)
-        ) ||
-        (
-          github.event_name == 'release' &&
-          startsWith(github.event.release.tag_name, 'fovux-studio-v')
-        )
-      )
+      contains(fromJSON('["all","studio"]'), inputs.channel)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: package-extension
-    environment: production
+    environment: vsce-production
     permissions:
       contents: read
     steps:

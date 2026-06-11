@@ -88,11 +88,17 @@ jobs:
   scorecard-required:
     name: scorecard-required
     needs: analysis
-    if: github.repository == 'oaslananka/fovux-kit'
+    if: always() && github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Confirm Scorecard passed
+        env:
+          SCORECARD_RESULT: ${{ needs.analysis.result }}
         run: |
           set -euo pipefail
+          if [[ "$SCORECARD_RESULT" != "success" ]]; then
+            echo "::error::Scorecard analysis result was $SCORECARD_RESULT."
+            exit 1
+          fi
           echo "Scorecard analysis completed."

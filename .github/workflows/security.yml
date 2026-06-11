@@ -182,11 +182,30 @@ jobs:
     name: security-required
     needs:
       [gitleaks, trivy-fs, pip-audit, pnpm-audit, npm-wrapper-audit, osv-scan]
-    if: github.repository == 'oaslananka/fovux-kit'
+    if: always() && github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Confirm security scans passed
+        env:
+          GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          TRIVY_RESULT: ${{ needs.trivy-fs.result }}
+          PIP_AUDIT_RESULT: ${{ needs.pip-audit.result }}
+          PNPM_AUDIT_RESULT: ${{ needs.pnpm-audit.result }}
+          NPM_WRAPPER_AUDIT_RESULT: ${{ needs.npm-wrapper-audit.result }}
+          OSV_SCAN_RESULT: ${{ needs.osv-scan.result }}
         run: |
           set -euo pipefail
+          for result in \
+            "$GITLEAKS_RESULT" \
+            "$TRIVY_RESULT" \
+            "$PIP_AUDIT_RESULT" \
+            "$PNPM_AUDIT_RESULT" \
+            "$NPM_WRAPPER_AUDIT_RESULT" \
+            "$OSV_SCAN_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "::error::At least one security scan did not pass."
+              exit 1
+            fi
+          done
           echo "Security scans passed."

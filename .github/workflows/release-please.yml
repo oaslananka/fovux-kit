@@ -153,8 +153,14 @@ jobs:
 
       - name: Build Python package
         working-directory: fovux-mcp
+        env:
+          PACKAGE_VERSION: ${{ needs.release-please.outputs.mcp_version }}
         run: |
           set -euo pipefail
+          actual_version="$(
+            uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
+          )"
+          test "$actual_version" = "$PACKAGE_VERSION"
           uv build
 
       - name: Generate SBOM and checksums
@@ -205,7 +211,19 @@ jobs:
         run: |
           set -euo pipefail
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
-          test -n "$PACKAGE_VERSION"
+          for attempt in {1..20}; do
+            published="$(
+              curl -fsSL --retry 3 "https://pypi.org/pypi/fovux-mcp/json" \
+                | jq -r '.info.version' 2>/dev/null || true
+            )"
+            if [[ "$published" == "$PACKAGE_VERSION" ]]; then
+              exit 0
+            fi
+            echo "Waiting for PyPI fovux-mcp $PACKAGE_VERSION to become visible (attempt $attempt/20)."
+            sleep 10
+          done
+          echo "::error::PyPI fovux-mcp $PACKAGE_VERSION was not visible after publish."
+          exit 1
 
   publish-npm-wrapper:
     needs: release-please
@@ -285,6 +303,8 @@ jobs:
 
       - name: Build VSIX
         working-directory: fovux-studio
+        env:
+          PACKAGE_VERSION: ${{ needs.release-please.outputs.studio_version }}
         run: |
           set -euo pipefail
           corepack enable
@@ -293,7 +313,7 @@ jobs:
           pnpm build
           test "$(node -p "require('./package.json').publisher + '.' + require('./package.json').name")" = "oaslananka.fovuxstudiokit"
           test "$(node -p "require('./package.json').displayName")" = "Fovux Studio Kit"
-          test "$(node -p "require('./package.json').version")" = "1.0.0"
+          test "$(node -p "require('./package.json').version")" = "$PACKAGE_VERSION"
           node ../scripts/package_vscode_extension.mjs --extension-dir . --out fovuxstudiokit.vsix
 
       - name: Generate SBOM and checksums
@@ -327,9 +347,13 @@ jobs:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: |
           set -euo pipefail
-          if [[ -z "${VSCE_PAT:-}" || -z "${OVSX_PAT:-}" ]]; then
-            echo "::notice::Skipping VS Marketplace/Open VSX publish until VSCE_PAT and OVSX_PAT are configured."
-            exit 0
+          if [[ -z "${VSCE_PAT:-}" ]]; then
+            echo "::error::VSCE_PAT is required for a Studio release."
+            exit 1
+          fi
+          if [[ -z "${OVSX_PAT:-}" ]]; then
+            echo "::error::OVSX_PAT is required for a Studio release."
+            exit 1
           fi
           publish_status=0
 
@@ -337,22 +361,34 @@ jobs:
             --vsix fovuxstudiokit.vsix \
             --publisher oaslananka \
             --name fovuxstudiokit \
-            --version 1.0.0 || publish_status=1
+            --version "${{ needs.release-please.outputs.studio_version }}" || publish_status=1
 
           node ../scripts/publish_vscode_extension.mjs open-vsx \
             --vsix fovuxstudiokit.vsix \
             --publisher oaslananka \
             --name fovuxstudiokit \
-            --version 1.0.0 || publish_status=1
+            --version "${{ needs.release-please.outputs.studio_version }}" || publish_status=1
 
           exit "$publish_status"
 
       - name: Verify Studio release
+        working-directory: fovux-studio
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ needs.release-please.outputs.studio_tag_name }}
           PACKAGE_VERSION: ${{ needs.release-please.outputs.studio_version }}
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: |
           set -euo pipefail
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
-          test -n "$PACKAGE_VERSION"
+          node ../scripts/publish_vscode_extension.mjs marketplace \
+            --vsix fovuxstudiokit.vsix \
+            --publisher oaslananka \
+            --name fovuxstudiokit \
+            --version "$PACKAGE_VERSION"
+          node ../scripts/publish_vscode_extension.mjs open-vsx \
+            --vsix fovuxstudiokit.vsix \
+            --publisher oaslananka \
+            --name fovuxstudiokit \
+            --version "$PACKAGE_VERSION"
