@@ -4,6 +4,18 @@ import * as vscode from "vscode";
 
 import { resolveFovuxHome } from "./paths";
 
+export interface ChallengeResponse {
+  challenge_id: string;
+  tool: string;
+  risk_level: string;
+  summary: {
+    name: string;
+    args_hash: string;
+    params: Record<string, string>;
+  };
+  expires_at: number;
+}
+
 export interface RunSummary {
   id: string;
   status: string;
@@ -62,6 +74,20 @@ export class ExtensionFovuxClient {
     } catch {
       return false;
     }
+  }
+
+  async requestChallenge(
+    name: string,
+    payload: Record<string, unknown>,
+  ): Promise<ChallengeResponse> {
+    return this.requestJson<ChallengeResponse>(
+      `/tools/${encodeURIComponent(name)}/challenge`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      `Challenge for ${name} failed`
+    );
   }
 
   async invokeTool<T>(name: string, payload: Record<string, unknown>): Promise<T> {

@@ -372,13 +372,83 @@ def _prune_tool_operation_results(results: dict[str, dict[str, object]]) -> None
         results.pop(key, None)
 
 
+@router.post("/tools/{name}/challenge")
+async def request_challenge(
+    request: Request,
+    name: str,
+    payload: dict[str, object] = _EMPTY_PAYLOAD,
+) -> JSONResponse:
+    """Request a confirmation challenge for a risky tool call.
+
+    Returns a challenge_id that must be included when calling the tool
+    via POST /tools/{name}. Read-only tools do not require challenges.
+    """
+    from fovux.http.challenge import create_challenge, prune_expired_challenges
+    from fovux.http.tool_proxy import (
+        HttpToolPolicyError,
+        policy_for_tool,
+        payload_hash,
+    )
+
+    try:
+        policy = policy_for_tool(name)
+    except HttpToolPolicyError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": exc.code,
+                "message": exc.message,
+                "hint": exc.hint,
+            },
+        ) from exc
+    if not policy.requires_confirmation:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "FOVUX_HTTP_003",
+                "message": f"Tool '{name}' does not require a confirmation challenge.",
+                "hint": "Read-only tools can be called directly without a challenge.",
+            },
+        )
+
+    challenges = cast(dict, request.app.state.challenges)
+    prune_expired_challenges(challenges)
+    args_hash = payload_hash(payload)
+
+    record = create_challenge(
+        tool_name=name,
+        args_hash=args_hash,
+        risk_level=policy.category,
+    )
+    challenges[record.challenge_id] = record
+
+    return JSONResponse(
+        status_code=201,
+        content={
+            "challenge_id": record.challenge_id,
+            "tool": name,
+            "risk_level": policy.category,
+            "summary": {
+                "name": name,
+                "args_hash": args_hash,
+                "params": {str(k): v for k, v in payload.items() if str(k) not in ("confirm", "challenge_id")},
+            },
+            "expires_at": record.expires_at,
+        },
+    )
+
+
 @router.post("/tools/{name}")
 async def proxy_tool(
     request: Request,
     name: str,
     payload: dict[str, object] = _EMPTY_PAYLOAD,
 ) -> JSONResponse:
-    """Invoke a local Fovux tool through the HTTP transport."""
+    """Invoke a local Fovux tool through the HTTP transport.
+
+    Tools that require confirmation must include a valid challenge_id
+    obtained from POST /tools/{name}/challenge.
+    """
     from fovux.core.auth import token_fingerprint
     from fovux.http.tool_proxy import (
         HttpToolPolicyError,
@@ -395,9 +465,31 @@ async def proxy_tool(
     args_hash = payload_hash(payload)
     operation_id = _tool_operation_id(name, args_hash)
     operation_key = f"{name}:{args_hash}"
+    from fovux.http.challenge import verify_challenge, prune_expired_challenges
+
     started = time.monotonic()
     try:
         policy = policy_for_tool(name)
+        if policy.requires_confirmation:
+            challenges = cast(dict, request.app.state.challenges)
+            prune_expired_challenges(challenges)
+            challenge_id = payload.get("challenge_id")
+            if not isinstance(challenge_id, str) or not challenge_id.strip():
+                raise HttpToolPolicyError(
+                    f"Tool '{name}' requires a confirmation challenge.",
+                    hint=(
+                        "Call POST /tools/{name}/challenge first, then include the "
+                        "returned challenge_id in the tool payload."
+                    ),
+                )
+            challenge_payload = {k: v for k, v in payload.items() if k != "challenge_id"}
+            verify_challenge(
+                challenges,
+                challenge_id=challenge_id,
+                tool_name=name,
+                args_hash=payload_hash(challenge_payload),
+            )
+
         semaphores = cast(dict[str, asyncio.Semaphore], request.app.state.tool_semaphores)
         semaphore = semaphores[name]
         operations = cast(dict[str, asyncio.Future[Any]], request.app.state.tool_operations)

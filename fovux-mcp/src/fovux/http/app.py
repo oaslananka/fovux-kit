@@ -83,6 +83,8 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
     app.state.tool_body_max_bytes = MAX_TOOL_BODY_BYTES
     from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
 
+    app.state.challenges = {}
+
     app.state.tool_semaphores = {
         name: asyncio.Semaphore(policy.concurrency_limit)
         for name, policy in HTTP_TOOL_POLICIES.items()
@@ -120,10 +122,13 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
                         content={"detail": "Tool request body is too large."},
                     )
                 client_ip = request.client.host if request.client is not None else "unknown"
-                tool_name = request.url.path.removeprefix("/tools/").split("/", maxsplit=1)[0]
-                limit = TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
+                path_rest = request.url.path.removeprefix("/tools/")
+                tool_name = path_rest.split("/", maxsplit=1)[0]
+                is_challenge = path_rest.endswith("/challenge")
+                limit = DEFAULT_TOOL_RATE_LIMIT if is_challenge else TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
+                bucket_key = f"{client_ip}:{ 'challenge' if is_challenge else 'tool' }:{tool_name}"
                 limited, retry_after = request.app.state.rate_limiter.check(
-                    f"{client_ip}:tool:{tool_name}",
+                    bucket_key,
                     limit=limit,
                 )
                 if limited:

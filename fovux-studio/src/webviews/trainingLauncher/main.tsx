@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, JSX } from "react";
 import { createRoot } from "react-dom/client";
 
-import { getRun, invokeTool, type HttpClientConfig } from "../shared/api";
+import { getRun, invokeTool, requestChallenge, type HttpClientConfig } from "../shared/api";
 import { estimateTrainingMinutes, TRAINING_PRESETS, type TrainingPreset } from "./presets";
 import {
   postToExtension,
@@ -330,10 +330,11 @@ function TrainingLauncherApp(): JSX.Element {
         return;
       }
       setStatus("Launching training run...");
+      const challenge = await requestChallenge(clientConfig, "train_start", payload);
       const result = await invokeTool<{ run_id: string; run_path: string }>(
         clientConfig,
         "train_start",
-        payload
+        { ...payload, challenge_id: challenge.challenge_id }
       );
       const nextRecentDatasets = [
         datasetPath.trim(),
@@ -376,7 +377,6 @@ function TrainingLauncherApp(): JSX.Element {
       name: runName.trim() || undefined,
       force,
       max_concurrent_runs: Math.max(0, Math.floor(maxConcurrentRuns)),
-      confirm: true,
     };
   }
 

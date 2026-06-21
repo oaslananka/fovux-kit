@@ -20,6 +20,18 @@ export interface RunDetail extends RunSummary {
   finished_at?: string | null;
 }
 
+export interface ChallengeResponse {
+  challenge_id: string;
+  tool: string;
+  risk_level: string;
+  summary: {
+    name: string;
+    args_hash: string;
+    params: Record<string, string>;
+  };
+  expires_at: number;
+}
+
 export interface MetricPayload {
   runId: string;
   epoch: number;
@@ -47,6 +59,19 @@ export async function getRun(config: HttpClientConfig, runId: string): Promise<R
     headers: authHeaders(config.authToken),
   });
   return handleResponse<RunDetail>(response);
+}
+
+export async function requestChallenge(
+  config: HttpClientConfig,
+  name: string,
+  payload: Record<string, unknown>,
+): Promise<ChallengeResponse> {
+  const response = await fetch(`${config.baseUrl}/tools/${name}/challenge`, {
+    method: "POST",
+    headers: authHeaders(config.authToken),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<ChallengeResponse>(response);
 }
 
 export async function invokeTool<T>(

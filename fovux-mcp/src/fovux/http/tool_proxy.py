@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -98,15 +99,22 @@ def payload_hash(payload: Mapping[str, object]) -> str:
 def invoke_tool(name: str, payload: Mapping[str, object]) -> dict[str, Any]:
     """Invoke a local tool by name using a JSON-compatible payload."""
     policy = policy_for_tool(name)
-    confirmed = payload.get("confirm") is True
-    if policy.requires_confirmation and not confirmed:
-        raise HttpToolPolicyError(
-            f"Tool '{name}' requires explicit HTTP confirmation.",
-            hint="Pass confirm=true from a trusted local UI action.",
+
+    if "confirm" in payload:
+        warnings.warn(
+            "The 'confirm' field is deprecated. Use the challenge flow instead: "
+            "POST /tools/{name}/challenge",
+            DeprecationWarning,
+            stacklevel=2,
         )
+
     tool = resolve_tool(name)
 
-    kwargs = {str(key): value for key, value in payload.items() if str(key) != "confirm"}
+    kwargs = {
+        str(key): value
+        for key, value in payload.items()
+        if str(key) not in ("confirm", "challenge_id")
+    }
     try:
         return tool(**kwargs)
     except FovuxError:

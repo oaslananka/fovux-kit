@@ -326,12 +326,30 @@ def test_tool_proxy_fovux_error_returns_400(tmp_fovux_home: Path) -> None:
     assert detail["code"].startswith("FOVUX_DATASET_")
 
 
+def _seed_challenge(client: TestClient, payload: dict[str, object]) -> str:
+    """Create a challenge for the given payload and return the challenge_id."""
+    from fovux.http.tool_proxy import payload_hash
+
+    tool_name = "train_start"
+    challenge_resp = client.post(
+        f"/tools/{tool_name}/challenge",
+        json=payload,
+        headers=_auth_headers(client),
+    )
+    assert challenge_resp.status_code == 201
+    cid = challenge_resp.json()["challenge_id"]
+    assert isinstance(cid, str) and len(cid) > 0
+    return cid
+
+
 def test_tool_proxy_validation_error_returns_422(tmp_fovux_home: Path) -> None:
     """Tool schema validation errors should be returned as client errors."""
+    payload = {"dataset_path": ".", "name": "../x"}
     with TestClient(create_app()) as client:
+        cid = _seed_challenge(client, payload)
         response = client.post(
             "/tools/train_start",
-            json={"dataset_path": ".", "name": "../x", "confirm": True},
+            json={**payload, "challenge_id": cid},
             headers=_auth_headers(client),
         )
 
@@ -342,15 +360,17 @@ def test_tool_proxy_validation_error_returns_422(tmp_fovux_home: Path) -> None:
 
 def test_train_start_has_stricter_rate_limit_than_readonly_tools(tmp_fovux_home: Path) -> None:
     """Training launch attempts should be rate-limited more aggressively than read-only tools."""
+    payload = {"dataset_path": "/missing"}
     with TestClient(create_app()) as client:
         headers = _auth_headers(client)
+        cids = [_seed_challenge(client, payload) for _ in range(6)]
         responses = [
             client.post(
                 "/tools/train_start",
-                json={"dataset_path": "/missing", "confirm": True},
+                json={**payload, "challenge_id": cid},
                 headers=headers,
             )
-            for _ in range(6)
+            for cid in cids
         ]
         readonly = client.post("/tools/model_list", json={}, headers=headers)
 
