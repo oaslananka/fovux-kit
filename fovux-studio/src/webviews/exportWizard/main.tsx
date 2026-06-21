@@ -370,7 +370,11 @@ function ExportWizardApp(): JSX.Element {
 
   async function selectTool(): Promise<Record<string, unknown>> {
     if (format === "onnx" && quantize) {
-      const payload = { checkpoint, calibration_dataset: calibrationDataset, output_path: outputPath || undefined };
+      const payload = {
+        checkpoint,
+        calibration_dataset: calibrationDataset,
+        output_path: outputPath || undefined,
+      };
       const challenge = await requestChallenge(clientConfig, "quantize_int8", payload);
       return invokeTool<Record<string, unknown>>(clientConfig, "quantize_int8", {
         ...payload,
@@ -379,7 +383,11 @@ function ExportWizardApp(): JSX.Element {
     }
 
     if (format === "onnx") {
-      const payload = { checkpoint, output_path: outputPath || undefined, parity_check: verifyParity };
+      const payload = {
+        checkpoint,
+        output_path: outputPath || undefined,
+        parity_check: verifyParity,
+      };
       const challenge = await requestChallenge(clientConfig, "export_onnx", payload);
       return invokeTool<Record<string, unknown>>(clientConfig, "export_onnx", {
         ...payload,

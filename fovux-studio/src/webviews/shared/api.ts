@@ -64,7 +64,7 @@ export async function getRun(config: HttpClientConfig, runId: string): Promise<R
 export async function requestChallenge(
   config: HttpClientConfig,
   name: string,
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown>
 ): Promise<ChallengeResponse> {
   const response = await fetch(`${config.baseUrl}/tools/${name}/challenge`, {
     method: "POST",

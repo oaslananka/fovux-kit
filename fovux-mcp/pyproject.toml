@@ -179,14 +179,15 @@ omit = [
     "tests/*",
     # Entry points and integration-heavy adapters are validated by focused tests,
     # contract tests, or CI smoke paths; keep the gate on deterministic core code.
-    "src/fovux/__main__.py",
-    "src/fovux/core/dataset_utils.py",
-    "src/fovux/core/train_worker.py",
-    "src/fovux/core/ultralytics_adapter.py",
-    "src/fovux/tools/export_tflite.py",
-    "src/fovux/tools/infer_image.py",
-    "src/fovux/tools/infer_rtsp.py",
-    "src/fovux/tools/sync_to_mlflow.py",
+    "**/__main__.py",
+    "**/cli.py",
+    "**/core/dataset_utils.py",
+    "**/core/train_worker.py",
+    "**/core/ultralytics_adapter.py",
+    "**/tools/export_tflite.py",
+    "**/tools/infer_image.py",
+    "**/tools/infer_rtsp.py",
+    "**/tools/sync_to_mlflow.py",
 ]
 
 [tool.coverage.report]

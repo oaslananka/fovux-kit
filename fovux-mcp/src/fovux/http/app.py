@@ -47,6 +47,7 @@ _NON_LOCAL_BIND_ALLOWED: bool = False
 
 
 def set_nonlocal_bind_allowed(value: bool) -> None:
+    """Set whether non-local IP addresses are allowed to bind."""
     global _NON_LOCAL_BIND_ALLOWED
     _NON_LOCAL_BIND_ALLOWED = value
 
@@ -172,15 +173,36 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
                     except HttpToolPolicyError as exc:
                         return JSONResponse(
                             status_code=403,
-                            content={"detail": str(exc), "hint": exc.hint if exc.hint else None},
+                            content={
+                                "detail": {
+                                    "code": exc.code,
+                                    "message": exc.message,
+                                    "hint": exc.hint,
+                                }
+                            },
                         )
                     except HttpScopeError as exc:
                         return JSONResponse(
                             status_code=403,
-                            content={"detail": str(exc), "hint": exc.hint if exc.hint else None},
+                            content={
+                                "detail": {
+                                    "code": exc.code,
+                                    "message": exc.message,
+                                    "hint": exc.hint,
+                                }
+                            },
                         )
                     except FovuxError as exc:
-                        return JSONResponse(status_code=403, content={"detail": str(exc)})
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "detail": {
+                                    "code": exc.code,
+                                    "message": exc.message,
+                                    "hint": exc.hint,
+                                }
+                            },
+                        )
 
                 limit = (
                     DEFAULT_TOOL_RATE_LIMIT

@@ -9,15 +9,29 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from fovux.core.auth import Scope
 from fovux.core.errors import FovuxError
 from fovux.core.tool_registry import available_tools as registry_available_tools
 from fovux.core.tool_registry import resolve_tool
+
+_TOOL_CATEGORY_MIN_SCOPE: dict[str, set[Scope]] = {
+    "read_only": {Scope.READ},
+    "mutating": {Scope.DATASET_WRITE, Scope.RUN_START, Scope.EXPORT_WRITE},
+    "long_running": {Scope.RUN_START},
+    "destructive": {Scope.DESTRUCTIVE, Scope.ADMIN},
+}
 
 
 class HttpToolPolicyError(FovuxError):
     """Raised when an HTTP tool call violates the local policy."""
 
     code = "FOVUX_HTTP_001"
+
+
+class HttpScopeError(FovuxError):
+    """Raised when the bearer token lacks the required scope for a tool."""
+
+    code = "FOVUX_HTTP_004"
 
 
 @dataclass(frozen=True)
@@ -29,46 +43,65 @@ class HttpToolPolicy:
     concurrency_limit: int
     requires_confirmation: bool = False
     enabled: bool = True
+    required_scope: Scope = Scope.READ
 
+
+_S = Scope
 
 HTTP_TOOL_POLICIES: dict[str, HttpToolPolicy] = {
-    "active_learning_select": HttpToolPolicy("mutating", 30.0, 1, True),
-    "annotation_quality_check": HttpToolPolicy("read_only", 20.0, 2),
-    "benchmark_latency": HttpToolPolicy("long_running", 60.0, 1, True),
-    "dataset_augment": HttpToolPolicy("mutating", 60.0, 1, True),
-    "dataset_convert": HttpToolPolicy("mutating", 60.0, 1, True),
-    "dataset_find_duplicates": HttpToolPolicy("read_only", 30.0, 1),
-    "dataset_inspect": HttpToolPolicy("read_only", 20.0, 2),
-    "dataset_split": HttpToolPolicy("mutating", 60.0, 1, True),
-    "dataset_validate": HttpToolPolicy("read_only", 30.0, 2),
-    "distill_model": HttpToolPolicy("long_running", 120.0, 1, True),
-    "eval_compare": HttpToolPolicy("read_only", 20.0, 2),
-    "eval_error_analysis": HttpToolPolicy("read_only", 30.0, 1),
-    "eval_per_class": HttpToolPolicy("read_only", 30.0, 1),
-    "eval_run": HttpToolPolicy("long_running", 120.0, 1, True),
-    "export_onnx": HttpToolPolicy("mutating", 120.0, 1, True),
-    "export_tflite": HttpToolPolicy("mutating", 120.0, 1, True),
-    "fovux_doctor": HttpToolPolicy("read_only", 20.0, 2),
-    "infer_batch": HttpToolPolicy("mutating", 120.0, 1, True),
-    "infer_ensemble": HttpToolPolicy("read_only", 60.0, 1),
-    "infer_image": HttpToolPolicy("read_only", 60.0, 2),
-    "infer_rtsp": HttpToolPolicy("long_running", 120.0, 1, True),
-    "model_compare_visual": HttpToolPolicy("read_only", 30.0, 2),
-    "model_list": HttpToolPolicy("read_only", 20.0, 4),
-    "model_profile": HttpToolPolicy("read_only", 30.0, 2),
-    "quantize_int8": HttpToolPolicy("mutating", 120.0, 1, True),
-    "quantize_report": HttpToolPolicy("read_only", 30.0, 2),
-    "run_archive": HttpToolPolicy("destructive", 60.0, 1, True),
-    "run_compare": HttpToolPolicy("mutating", 30.0, 1, True),
-    "run_delete": HttpToolPolicy("destructive", 30.0, 1, True),
-    "run_tag": HttpToolPolicy("mutating", 20.0, 2, True),
-    "sync_to_mlflow": HttpToolPolicy("mutating", 60.0, 1, True),
-    "train_adjust": HttpToolPolicy("mutating", 30.0, 1, True),
-    "train_resume": HttpToolPolicy("mutating", 60.0, 1, True),
-    "train_start": HttpToolPolicy("long_running", 60.0, 1, True),
-    "train_status": HttpToolPolicy("read_only", 20.0, 4),
-    "train_stop": HttpToolPolicy("mutating", 30.0, 1, True),
+    "active_learning_select": HttpToolPolicy(
+        "mutating", 30.0, 1, True, required_scope=_S.RUN_START
+    ),
+    "annotation_quality_check": HttpToolPolicy("read_only", 20.0, 2, required_scope=_S.READ),
+    "benchmark_latency": HttpToolPolicy("long_running", 60.0, 1, True, required_scope=_S.RUN_START),
+    "dataset_augment": HttpToolPolicy("mutating", 60.0, 1, True, required_scope=_S.DATASET_WRITE),
+    "dataset_convert": HttpToolPolicy("mutating", 60.0, 1, True, required_scope=_S.DATASET_WRITE),
+    "dataset_find_duplicates": HttpToolPolicy("read_only", 30.0, 1, required_scope=_S.READ),
+    "dataset_inspect": HttpToolPolicy("read_only", 20.0, 2, required_scope=_S.READ),
+    "dataset_split": HttpToolPolicy("mutating", 60.0, 1, True, required_scope=_S.DATASET_WRITE),
+    "dataset_validate": HttpToolPolicy("read_only", 30.0, 2, required_scope=_S.READ),
+    "distill_model": HttpToolPolicy("long_running", 120.0, 1, True, required_scope=_S.RUN_START),
+    "eval_compare": HttpToolPolicy("read_only", 20.0, 2, required_scope=_S.READ),
+    "eval_error_analysis": HttpToolPolicy("read_only", 30.0, 1, required_scope=_S.READ),
+    "eval_per_class": HttpToolPolicy("read_only", 30.0, 1, required_scope=_S.READ),
+    "eval_run": HttpToolPolicy("long_running", 120.0, 1, True, required_scope=_S.RUN_START),
+    "export_onnx": HttpToolPolicy("mutating", 120.0, 1, True, required_scope=_S.EXPORT_WRITE),
+    "export_tflite": HttpToolPolicy("mutating", 120.0, 1, True, required_scope=_S.EXPORT_WRITE),
+    "fovux_doctor": HttpToolPolicy("read_only", 20.0, 2, required_scope=_S.READ),
+    "infer_batch": HttpToolPolicy("mutating", 120.0, 1, True, required_scope=_S.RUN_START),
+    "infer_ensemble": HttpToolPolicy("read_only", 60.0, 1, required_scope=_S.READ),
+    "infer_image": HttpToolPolicy("read_only", 60.0, 2, required_scope=_S.READ),
+    "infer_rtsp": HttpToolPolicy("long_running", 120.0, 1, True, required_scope=_S.RUN_START),
+    "model_compare_visual": HttpToolPolicy("read_only", 30.0, 2, required_scope=_S.READ),
+    "model_list": HttpToolPolicy("read_only", 20.0, 4, required_scope=_S.READ),
+    "model_profile": HttpToolPolicy("read_only", 30.0, 2, required_scope=_S.READ),
+    "quantize_int8": HttpToolPolicy("mutating", 120.0, 1, True, required_scope=_S.DATASET_WRITE),
+    "quantize_report": HttpToolPolicy("read_only", 30.0, 2, required_scope=_S.READ),
+    "run_archive": HttpToolPolicy("destructive", 60.0, 1, True, required_scope=_S.DESTRUCTIVE),
+    "run_compare": HttpToolPolicy("mutating", 30.0, 1, True, required_scope=_S.RUN_START),
+    "run_delete": HttpToolPolicy("destructive", 30.0, 1, True, required_scope=_S.DESTRUCTIVE),
+    "run_tag": HttpToolPolicy("mutating", 20.0, 2, True, required_scope=_S.RUN_START),
+    "sync_to_mlflow": HttpToolPolicy("mutating", 60.0, 1, True, required_scope=_S.EXPORT_WRITE),
+    "train_adjust": HttpToolPolicy("mutating", 30.0, 1, True, required_scope=_S.RUN_START),
+    "train_resume": HttpToolPolicy("mutating", 60.0, 1, True, required_scope=_S.RUN_START),
+    "train_start": HttpToolPolicy("long_running", 60.0, 1, True, required_scope=_S.RUN_START),
+    "train_status": HttpToolPolicy("read_only", 20.0, 4, required_scope=_S.READ),
+    "train_stop": HttpToolPolicy("mutating", 30.0, 1, True, required_scope=_S.RUN_START),
 }
+
+del _S
+
+
+def check_scope(policy: HttpToolPolicy, scopes: set[Scope]) -> None:
+    """Check that the provided scopes satisfy the tool policy requirement."""
+    if policy.required_scope not in scopes:
+        raise HttpScopeError(
+            f"Token lacks required scope '{policy.required_scope.value}' for tool.",
+            hint=(
+                f"Tool '{policy.category}' operations require {policy.required_scope.value} scope. "
+                "Use a session token with the required scope or rotate to a full-access token."
+            ),
+        )
 
 
 def available_tools() -> list[str]:

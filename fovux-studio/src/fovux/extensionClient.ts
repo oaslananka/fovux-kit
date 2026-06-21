@@ -78,7 +78,7 @@ export class ExtensionFovuxClient {
 
   async requestChallenge(
     name: string,
-    payload: Record<string, unknown>,
+    payload: Record<string, unknown>
   ): Promise<ChallengeResponse> {
     return this.requestJson<ChallengeResponse>(
       `/tools/${encodeURIComponent(name)}/challenge`,

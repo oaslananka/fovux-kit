@@ -411,7 +411,7 @@ async def request_challenge(
             },
         )
 
-    challenges = cast(dict, request.app.state.challenges)
+    challenges = cast(dict[str, Any], request.app.state.challenges)
     prune_expired_challenges(challenges)
     args_hash = payload_hash(payload)
 
@@ -475,7 +475,7 @@ async def proxy_tool(
     try:
         policy = policy_for_tool(name)
         if policy.requires_confirmation:
-            challenges = cast(dict, request.app.state.challenges)
+            challenges = cast(dict[str, Any], request.app.state.challenges)
             prune_expired_challenges(challenges)
             challenge_id = payload.get("challenge_id")
             if not isinstance(challenge_id, str) or not challenge_id.strip():

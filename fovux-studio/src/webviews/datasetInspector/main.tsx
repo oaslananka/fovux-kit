@@ -199,7 +199,11 @@ function DatasetInspectorApp(): JSX.Element {
 
   async function splitDataset(): Promise<void> {
     try {
-      const payload = { dataset_path: initial.datasetPath, output_path: splitOutputPath, overwrite: true };
+      const payload = {
+        dataset_path: initial.datasetPath,
+        output_path: splitOutputPath,
+        overwrite: true,
+      };
       const challenge = await requestChallenge(clientConfig, "dataset_split", payload);
       const result = await invokeTool<{ output_path: string }>(clientConfig, "dataset_split", {
         ...payload,

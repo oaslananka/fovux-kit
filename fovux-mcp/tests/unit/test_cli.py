@@ -162,11 +162,15 @@ def test_version_command_prints_version() -> None:
     assert "36 tools" in result.stdout
 
 
-def test_doctor_success_prints_table() -> None:
+def test_doctor_success_prints_table(tmp_path: Path) -> None:
     """A healthy environment should produce a successful doctor report."""
     with (
         patch("fovux.cli.configure_logging"),
         patch("fovux.cli.collect_doctor_report", return_value=_doctor_report()),
+        patch(
+            "fovux.cli.check_token_perms",
+            return_value=(True, "auth.token permissions are safe"),
+        ),
     ):
         result = runner.invoke(app, ["doctor"])
 
@@ -175,13 +179,17 @@ def test_doctor_success_prints_table() -> None:
     assert "FAIL" not in result.stdout
 
 
-def test_doctor_failure_exits_nonzero() -> None:
+def test_doctor_failure_exits_nonzero(tmp_path: Path) -> None:
     """A failing doctor check should exit with status code 1."""
     with (
         patch("fovux.cli.configure_logging"),
         patch(
             "fovux.cli.collect_doctor_report",
             return_value=_doctor_report(errors=["Ultralytics is unavailable"]),
+        ),
+        patch(
+            "fovux.cli.check_token_perms",
+            return_value=(True, "auth.token permissions are safe"),
         ),
     ):
         result = runner.invoke(app, ["doctor"])
@@ -218,6 +226,7 @@ def test_doctor_uses_shared_report() -> None:
     with (
         patch("fovux.cli.configure_logging"),
         patch("fovux.cli.collect_doctor_report", return_value=_doctor_report()) as collect,
+        patch("fovux.cli.check_token_perms", return_value=(True, "safe")),
     ):
         result = runner.invoke(app, ["doctor"])
 
@@ -253,3 +262,108 @@ def test_rotate_token_show_token_opt_in_reveals_raw_token(tmp_path: Path) -> Non
 
     assert result.exit_code == 0
     assert sample_value in result.stdout
+
+
+def test_session_create_default_scopes(tmp_path: Path) -> None:
+    """Creating a session token with default scopes should report fingerprint."""
+    raw = "unit-test-session-raw"
+    fp = token_fingerprint(raw)
+    with (
+        patch("fovux.cli.configure_logging"),
+        patch("fovux.cli.get_fovux_home", return_value=tmp_path),
+        patch("fovux.cli.create_session_token", return_value=raw),
+    ):
+        result = runner.invoke(app, ["session", "create"])
+
+    assert result.exit_code == 0
+    assert fp in result.stdout
+
+
+def test_session_create_custom_scopes(tmp_path: Path) -> None:
+    """Creating a session with custom scopes should show them in output."""
+    raw = "unit-test-session-raw"
+    fp = token_fingerprint(raw)
+    with (
+        patch("fovux.cli.configure_logging"),
+        patch("fovux.cli.get_fovux_home", return_value=tmp_path),
+        patch("fovux.cli.create_session_token", return_value=raw),
+    ):
+        result = runner.invoke(
+            app,
+            ["session", "create", "--scope", "read", "--scope", "run:start"],
+        )
+
+    assert result.exit_code == 0
+    assert fp in result.stdout
+    assert "read" in result.stdout
+    assert "run:start" in result.stdout
+
+
+def test_session_create_invalid_scope_fails(tmp_path: Path) -> None:
+    """Creating a session with an unknown scope should exit with error."""
+    with (
+        patch("fovux.cli.configure_logging"),
+        patch("fovux.cli.get_fovux_home", return_value=tmp_path),
+    ):
+        result = runner.invoke(app, ["session", "create", "--scope", "bogus"])
+
+    assert result.exit_code == 1
+    assert "Invalid scope" in result.stdout
+
+
+def test_session_list_empty(tmp_path: Path) -> None:
+    """Listing sessions with no tokens should print a message."""
+    with (
+        patch("fovux.cli.configure_logging"),
+        patch("fovux.cli.get_fovux_home", return_value=tmp_path),
+        patch("fovux.cli.list_session_fingerprints", return_value=[]),
+    ):
+        result = runner.invoke(app, ["session", "list"])
+
+    assert result.exit_code == 0
+    assert "No active session tokens" in result.stdout
+
+
+def test_session_list_populated(tmp_path: Path) -> None:
+    """Listing sessions with tokens should show a table."""
+    entries = [
+        {"fingerprint": "abc123", "scopes": ["read"]},
+        {"fingerprint": "def456", "scopes": ["read", "run:start"]},
+    ]
+    with (
+        patch("fovux.cli.configure_logging"),
+        patch("fovux.cli.get_fovux_home", return_value=tmp_path),
+        patch("fovux.cli.list_session_fingerprints", return_value=entries),
+    ):
+        result = runner.invoke(app, ["session", "list"])
+
+    assert result.exit_code == 0
+    assert "abc123" in result.stdout
+    assert "def456" in result.stdout
+    assert "Active Session Tokens" in result.stdout
+
+
+def test_session_revoke_success(tmp_path: Path) -> None:
+    """Revoking an existing token should print a success message."""
+    with (
+        patch("fovux.cli.configure_logging"),
+        patch("fovux.cli.get_fovux_home", return_value=tmp_path),
+        patch("fovux.cli.revoke_session_token", return_value=True),
+    ):
+        result = runner.invoke(app, ["session", "revoke", "some-token"])
+
+    assert result.exit_code == 0
+    assert "Session token revoked" in result.stdout
+
+
+def test_session_revoke_not_found(tmp_path: Path) -> None:
+    """Revoking a missing token should print a warning."""
+    with (
+        patch("fovux.cli.configure_logging"),
+        patch("fovux.cli.get_fovux_home", return_value=tmp_path),
+        patch("fovux.cli.revoke_session_token", return_value=False),
+    ):
+        result = runner.invoke(app, ["session", "revoke", "unknown-token"])
+
+    assert result.exit_code == 1
+    assert "not found" in result.stdout.lower()

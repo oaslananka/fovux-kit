@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from fovux.http.app import create_app
+from fovux.http.app import create_app as _create_app
 from fovux.http.challenge import (
     CHALLENGE_TTL_SECONDS,
     create_challenge,
@@ -19,6 +19,12 @@ from fovux.http.challenge import (
     verify_challenge,
 )
 from fovux.http.tool_proxy import HttpToolPolicyError
+
+
+def create_app(*args, **kwargs):
+    app = _create_app(*args, **kwargs)
+    app.state.nonlocal_bind_allowed = True
+    return app
 
 
 def _auth_headers(client: TestClient) -> dict[str, str]:

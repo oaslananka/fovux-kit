@@ -112,19 +112,8 @@ def _read_uv_lock_version(root: Path) -> str:
     return match.group(1)
 
 
-def _read_release_notes_version(release_notes_path: Path) -> str:
-    """Extract version from RELEASE_NOTES.md title."""
-    if not release_notes_path.exists():
-        return f"<{release_notes_path.name} not found>"
-    content = release_notes_path.read_text(encoding="utf-8")
-    match = re.search(r"^#\s+Fovux\s+([^\s]+)\s+Release", content, re.MULTILINE)
-    if not match:
-        return "<no version title in RELEASE_NOTES.md>"
-    return match.group(1)
-
-
-def _read_doc_release_note_version(path: Path) -> str:
-    """Extract version from docs/release-notes/<version>.md title."""
+def _read_title_version(path: Path) -> str:
+    """Extract version from a markdown file's title header."""
     if not path.exists():
         return f"<{path.name} not found>"
     content = path.read_text(encoding="utf-8")
@@ -168,13 +157,11 @@ def _version_sources(root: Path) -> dict[str, dict[str, str]]:
         },
         "Docs": {
             "CHANGELOG.md (root)": _read_changelog_top_version(root / "CHANGELOG.md"),
-            "RELEASE_NOTES.md": _read_release_notes_version(root / "RELEASE_NOTES.md"),
-            "docs/release-notes/1.0.0.md": _read_doc_release_note_version(
-                root / "docs" / "release-notes" / "1.0.0.md"
-            ),
-            "docs/release-notes/1.0.1.md": _read_doc_release_note_version(
-                root / "docs" / "release-notes" / "1.0.1.md"
-            ),
+            "RELEASE_NOTES.md": _read_title_version(root / "RELEASE_NOTES.md"),
+            **{
+                f"docs/release-notes/{p.name}": _read_title_version(p)
+                for p in sorted((root / "docs" / "release-notes").glob("*.md"))
+            }
         },
     }
 

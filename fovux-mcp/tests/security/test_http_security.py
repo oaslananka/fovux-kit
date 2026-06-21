@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from tests.path_helpers import find_package_root
 
-from fovux.core.auth import token_fingerprint
+from fovux.core.auth import Scope, token_fingerprint
 from fovux.http.app import (
     MAX_TOOL_BODY_BYTES,
     _parse_content_length,
@@ -57,6 +57,7 @@ def test_http_auth_token_creation_log_redacts_raw_token(tmp_path: Path) -> None:
 def test_http_tools_reject_oversized_body() -> None:
     """HTTP tools should reject request bodies before JSON parsing when too large."""
     with TestClient(create_app()) as client:
+        client.app.state.nonlocal_bind_allowed = True
         token = client.app.state.auth_token
         response = client.post(
             "/tools/model_list",
@@ -71,6 +72,7 @@ def test_http_tools_reject_oversized_body() -> None:
 def test_http_mutating_tool_requires_confirmation() -> None:
     """Filesystem-writing HTTP tools require an explicit trusted UI confirmation."""
     with TestClient(create_app()) as client:
+        client.app.state.nonlocal_bind_allowed = True
         token = client.app.state.auth_token
         response = client.post(
             "/tools/train_start",
@@ -246,3 +248,52 @@ async def test_tool_body_limit_middleware_replays_non_request_messages() -> None
     )
 
     assert received == [{"type": "http.disconnect"}]
+
+
+@pytest.mark.security
+def test_session_token_accepted_in_middleware() -> None:
+    """A valid session token should pass auth and reach the tool handler."""
+    with (
+        patch("fovux.http.app.is_known_session_token", return_value=True),
+        patch("fovux.http.app.resolve_session_scopes", return_value={Scope.READ}),
+        TestClient(create_app()) as client,
+    ):
+        client.app.state.nonlocal_bind_allowed = True
+        response = client.get(
+            "/runs",
+            headers={"Authorization": "Bearer valid-session-token"},
+        )
+    assert response.status_code != 401
+
+
+@pytest.mark.security
+def test_session_token_lacking_scope_rejected() -> None:
+    """A session token without the required scope (RUN_START) should get 403."""
+    with (
+        patch("fovux.http.app.is_known_session_token", return_value=True),
+        patch("fovux.http.app.resolve_session_scopes", return_value={Scope.READ}),
+        TestClient(create_app()) as client,
+    ):
+        client.app.state.nonlocal_bind_allowed = True
+        response = client.post(
+            "/tools/train_start",
+            json={"dataset_path": "fixtures/mini_yolo"},
+            headers={"Authorization": "Bearer read-only-session-token"},
+        )
+    assert response.status_code == 403
+    assert "scope" in response.text.lower()
+
+
+@pytest.mark.security
+def test_admin_token_bypasses_scope_check() -> None:
+    """The admin master token should not be subject to scope restrictions."""
+    with TestClient(create_app()) as client:
+        client.app.state.nonlocal_bind_allowed = True
+        token = client.app.state.auth_token
+        response = client.post(
+            "/tools/train_start",
+            json={"dataset_path": "fixtures/mini_yolo"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert response.status_code == 403
+    assert "confirm" in response.text.lower()

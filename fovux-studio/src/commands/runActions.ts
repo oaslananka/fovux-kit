@@ -6,7 +6,7 @@ import { RunItem } from "../views/runsTree";
 async function withChallenge<T>(
   client: ExtensionFovuxClient,
   toolName: string,
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown>
 ): Promise<T> {
   const challenge = await client.requestChallenge(toolName, payload);
   return client.invokeTool<T>(toolName, { ...payload, challenge_id: challenge.challenge_id });

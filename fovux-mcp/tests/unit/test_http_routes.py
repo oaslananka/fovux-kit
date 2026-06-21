@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from fovux.core.errors import FovuxDatasetNotFoundError
 from fovux.core.paths import ensure_fovux_dirs
 from fovux.core.runs import RunRegistry
-from fovux.http.app import create_app
+from fovux.http.app import create_app as _create_app
 from fovux.http.routes import (
     _load_metric_payload_delta,
     _load_metric_payloads,
@@ -29,6 +29,12 @@ from fovux.http.routes import (
     _tool_operation_id,
 )
 from fovux.http.tool_proxy import HTTP_TOOL_POLICIES, HttpToolPolicy
+
+
+def create_app(*args, **kwargs):
+    app = _create_app(*args, **kwargs)
+    app.state.nonlocal_bind_allowed = True
+    return app
 
 
 def _seed_run(tmp_fovux_home: Path, run_id: str = "run_stream") -> tuple[Path, RunRegistry]:
