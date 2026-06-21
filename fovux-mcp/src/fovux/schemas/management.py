@@ -75,6 +75,7 @@ class RunDeleteInput(BaseModel):
     run_id: RunId
     delete_files: bool = True
     force: bool = False
+    dry_run: bool = False
 
 
 class RunDeleteOutput(BaseModel):
@@ -83,6 +84,9 @@ class RunDeleteOutput(BaseModel):
     run_id: str
     deleted_registry: bool
     deleted_files: bool
+    dry_run: bool = False
+    run_path: str | None = None
+    affected_files_count: int = 0
 
 
 class RunTagInput(BaseModel):
@@ -104,6 +108,7 @@ class RunArchiveInput(BaseModel):
 
     run_id: RunId
     delete_original: bool = True
+    dry_run: bool = False
 
 
 class RunArchiveOutput(BaseModel):
@@ -113,3 +118,4 @@ class RunArchiveOutput(BaseModel):
     archive_path: Path
     archived_files: int
     deleted_original: bool
+    dry_run: bool = False

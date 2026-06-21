@@ -689,3 +689,184 @@ def test_metric_event_stream_stops_on_disconnect(tmp_path: Path) -> None:
             await anext(stream)
 
     asyncio.run(consume_stream())
+
+
+def test_operations_api_full_lifecycle(
+    tmp_fovux_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test the full lifecycle of the operations API.
+
+    Covers creation, status, result, cancel, and logs.
+    """
+    from fovux.http.tool_proxy import HTTP_TOOL_POLICIES, HttpToolPolicy
+
+    calls = 0
+
+    def mock_invoke_tool(name: str, payload: dict[str, object]) -> dict[str, object]:
+        nonlocal calls
+        calls += 1
+        if name == "model_list":
+            return {"models": ["yolov8n.pt"], "calls": calls}
+        raise RuntimeError("unexpected tool")
+
+    monkeypatch.setitem(
+        HTTP_TOOL_POLICIES,
+        "model_list",
+        HttpToolPolicy("read_only", 10.0, 4),
+    )
+    monkeypatch.setattr("fovux.http.tool_proxy.invoke_tool", mock_invoke_tool)
+
+    with TestClient(create_app()) as client:
+        headers = _auth_headers(client)
+
+        # 1. Create operation
+        create_resp = client.post(
+            "/operations",
+            json={
+                "tool": "model_list",
+                "arguments": {},
+                "idempotency_key": "idem-key-1",
+            },
+            headers=headers,
+        )
+        assert create_resp.status_code == 201
+        op_data = create_resp.json()
+        op_id = op_data["id"]
+        assert op_data["tool"] == "model_list"
+        assert op_data["idempotency_key"] == "idem-key-1"
+        assert op_data["status"] == "pending"
+
+        # Wait for background task execution
+        deadline = time.time() + 2.0
+        status = "pending"
+        while time.time() < deadline:
+            get_resp = client.get(f"/operations/{op_id}", headers=headers)
+            assert get_resp.status_code == 200
+            status = get_resp.json()["status"]
+            if status == "succeeded":
+                break
+            time.sleep(0.05)
+
+        assert status == "succeeded"
+
+        # 2. Test Idempotency
+        idem_resp = client.post(
+            "/operations",
+            json={
+                "tool": "model_list",
+                "arguments": {},
+                "idempotency_key": "idem-key-1",
+            },
+            headers=headers,
+        )
+        assert idem_resp.status_code == 200
+        assert idem_resp.json()["id"] == op_id
+
+        # 3. Fetch result
+        res_resp = client.get(f"/operations/{op_id}/result", headers=headers)
+        assert res_resp.status_code == 200
+        assert res_resp.json() == {"models": ["yolov8n.pt"], "calls": 1}
+
+        # 4. Fetch logs (non-blocking fetch/stream)
+        logs_resp = client.get(f"/operations/{op_id}/logs", headers=headers)
+        assert logs_resp.status_code == 200
+        assert "Operation" in logs_resp.text
+
+
+def test_cancel_active_operation(tmp_fovux_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test cancelling an active background operation."""
+    from fovux.http.tool_proxy import HTTP_TOOL_POLICIES, HttpToolPolicy
+
+    worker_started = threading.Event()
+    finish_worker = threading.Event()
+
+    def mock_invoke_tool(name: str, payload: dict[str, object]) -> dict[str, object]:
+        worker_started.set()
+        finish_worker.wait(timeout=5.0)
+        return {"ok": True}
+
+    monkeypatch.setitem(
+        HTTP_TOOL_POLICIES,
+        "model_list",
+        HttpToolPolicy("read_only", 10.0, 4),
+    )
+    monkeypatch.setattr("fovux.http.tool_proxy.invoke_tool", mock_invoke_tool)
+
+    with TestClient(create_app()) as client:
+        headers = _auth_headers(client)
+
+        create_resp = client.post(
+            "/operations",
+            json={"tool": "model_list", "arguments": {}},
+            headers=headers,
+        )
+        assert create_resp.status_code == 201
+        op_id = create_resp.json()["id"]
+
+        assert worker_started.wait(timeout=2.0)
+
+        # Cancel the operation
+        cancel_resp = client.post(f"/operations/{op_id}/cancel", headers=headers)
+        assert cancel_resp.status_code == 200
+        assert cancel_resp.json()["status"] == "cancelled"
+
+        finish_worker.set()
+
+
+def test_sse_events_stream_and_resume(tmp_fovux_home: Path) -> None:
+    """Test that the /events endpoint streams operation events and supports Last-Event-ID resume."""
+    from typing import cast
+
+    from fastapi import Request
+
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+    from fovux.http.routes import sse_events_route
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+
+    # Seed some events
+    registry.create_operation_event("op1", "status_change", {"status": "pending"})
+    registry.create_operation_event("op1", "status_change", {"status": "running"})
+    registry.create_operation_event("op1", "status_change", {"status": "succeeded"})
+
+    # Create a mock Request object
+    class MockApp:
+        class State:
+            shutdown_event = asyncio.Event()
+
+        state = State()
+
+    class MockRequest:
+        app = MockApp()
+        headers = {"Last-Event-ID": "1"}
+        query_params = {}
+
+        async def is_disconnected(self) -> bool:
+            return False
+
+    request = cast(Request, MockRequest())
+
+    async def consume_stream() -> list[str]:
+        resp = await sse_events_route(request)
+        stream = resp.body_iterator
+        lines = []
+        # Yield retry limit
+        retry = await anext(stream)
+        lines.append(retry)
+        # Yield historical events
+        first_event = await anext(stream)
+        lines.append(first_event)
+        second_event = await anext(stream)
+        lines.append(second_event)
+
+        # Stop
+        request.app.state.shutdown_event.set()
+        return lines
+
+    lines = asyncio.run(consume_stream())
+    content = "\n".join(lines)
+    assert "id: 2" in content
+    assert "id: 3" in content
+    assert "id: 1" not in content

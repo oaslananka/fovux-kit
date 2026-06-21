@@ -79,21 +79,42 @@ export async function deleteRun(target: RunItem | undefined): Promise<void> {
     return;
   }
 
-  const confirm = await vscode.window.showWarningMessage(
-    `Delete ${run.runId} from Fovux? This removes the run directory and registry entry.`,
-    { modal: true },
-    "Delete"
-  );
-  if (confirm !== "Delete") {
-    return;
-  }
-
   const client = await ExtensionFovuxClient.create();
   try {
+    const dryRunResult = await withChallenge<{
+      run_id: string;
+      deleted_registry: boolean;
+      deleted_files: boolean;
+      run_path?: string;
+      affected_files_count?: number;
+    }>(client, "run_delete", {
+      run_id: run.runId,
+      delete_files: true,
+      force: false,
+      dry_run: true,
+    });
+
+    const pathMsg = dryRunResult.run_path
+      ? `Resolved Path: ${dryRunResult.run_path}`
+      : "Registry entry only";
+    const filesMsg = dryRunResult.affected_files_count
+      ? `Estimated files to delete: ${dryRunResult.affected_files_count}`
+      : "No files will be deleted";
+
+    const confirm = await vscode.window.showWarningMessage(
+      `Delete ${run.runId} from Fovux? This removes the run directory and registry entry.\n\n${pathMsg}\n${filesMsg}`,
+      { modal: true },
+      "Delete"
+    );
+    if (confirm !== "Delete") {
+      return;
+    }
+
     await withChallenge(client, "run_delete", {
       run_id: run.runId,
       delete_files: true,
       force: false,
+      dry_run: false,
     });
     void vscode.window.showInformationMessage(`Deleted ${run.runId}.`);
     void vscode.commands.executeCommand("fovux.refreshViews");

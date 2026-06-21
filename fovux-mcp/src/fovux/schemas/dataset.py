@@ -47,6 +47,32 @@ class DatasetInspectInput(BaseModel):
     max_images_analyzed: int = 10_000
 
 
+class LabelAnomalySummary(BaseModel):
+    """Summary of label anomaly checks."""
+
+    tiny_boxes: int = 0
+    out_of_bounds: int = 0
+    empty_labels: int = 0
+    suspiciously_overlapping: int = 0
+
+
+class AutoFixItem(BaseModel):
+    """An auto-fix recommendation."""
+
+    action: str
+    description: str
+    estimated_impact: str
+
+
+class LeakageIssue(BaseModel):
+    """Details of a leaked image between splits."""
+
+    train_image: str
+    val_image: str | None = None
+    test_image: str | None = None
+    reason: str
+
+
 class DatasetInspectOutput(BaseModel):
     """Output from dataset_inspect tool."""
 
@@ -67,6 +93,15 @@ class DatasetInspectOutput(BaseModel):
     warnings: list[str]
     sample_paths: list[Path]
     analysis_duration_seconds: float
+
+    # Intelligence capabilities
+    quality_score: float = 100.0
+    label_anomalies: LabelAnomalySummary = Field(default_factory=LabelAnomalySummary)
+    duplicate_groups_count: int = 0
+    total_duplicates_found: int = 0
+    leaked_images: list[LeakageIssue] = Field(default_factory=list)
+    auto_fix_plan: list[AutoFixItem] = Field(default_factory=list)
+    dataset_card: str = ""
 
 
 class ValidationIssue(BaseModel):

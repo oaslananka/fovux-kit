@@ -47,6 +47,9 @@ def resolve_local_path(path: Path) -> Path:
 
 def ensure_within_root(path: Path, root: Path) -> Path:
     """Ensure a file stays within an expected root, even through symlinks."""
+    from fovux.core.path_policy import check_path_policy
+
+    check_path_policy(path, write=False, extra_roots=[root])
     resolved_path = resolve_local_path(path)
     resolved_root = resolve_local_path(root)
     try:
@@ -86,6 +89,9 @@ def ensure_writable_output(
     allowed_roots: Iterable[Path] | None = None,
 ) -> Path:
     """Ensure an output path resolves under one of the allowed roots."""
+    from fovux.core.path_policy import check_path_policy
+
+    check_path_policy(path, write=True, extra_roots=allowed_roots)
     resolved_path = resolve_local_path(path)
     roots = list(allowed_roots) if allowed_roots is not None else _default_allowed_roots()
     resolved_roots = [resolve_local_path(root) for root in roots]

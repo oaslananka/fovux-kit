@@ -30,7 +30,7 @@ from fovux.core.checkpoints import (
 )
 from fovux.core.errors import FovuxError
 from fovux.core.logging import get_logger
-from fovux.core.runs import RunRecord
+from fovux.core.runs import OperationRecord, RunRecord
 from fovux.schemas.errors import ErrorDetail
 
 router = APIRouter()
@@ -831,3 +831,620 @@ def _load_metric_payload_delta(
 def _is_terminal_run(run_dir: Path) -> bool:
     status = str(_read_status_payload(run_dir).get("status", "")).lower()
     return status in {"complete", "completed", "failed", "stopped"}
+
+
+# --- Operations Layer Endpoints and Background Logic ---
+
+
+class CreateOperationInput(BaseModel):
+    """Input parameters to create a background operation."""
+
+    tool: str
+    arguments: dict[str, Any] = {}
+    idempotency_key: str | None = None
+    challenge_id: str | None = None
+
+
+def _operation_summary(record: OperationRecord) -> dict[str, Any]:
+    return {
+        "id": record.id,
+        "idempotency_key": record.idempotency_key,
+        "tool": record.tool,
+        "status": record.status,
+        "progress": record.progress,
+        "error_type": record.error_type,
+        "error": record.error,
+        "created_at": record.created_at.isoformat() if record.created_at else None,
+        "started_at": record.started_at.isoformat() if record.started_at else None,
+        "finished_at": record.finished_at.isoformat() if record.finished_at else None,
+        "run_id": record.run_id,
+    }
+
+
+def _notify_sse_listeners(
+    app_state: Any,  # noqa: ANN401
+    op_id: str,
+    event_type: str,
+    data: dict[str, Any],
+) -> None:
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+
+    event_payload = {
+        "operation_id": op_id,
+        "event_type": event_type,
+        "data": data,
+    }
+    event_rec = registry.create_operation_event(op_id, event_type, event_payload)
+
+    listeners = getattr(app_state, "sse_listeners", [])
+    for queue in list(listeners):
+        try:
+            queue.put_nowait((event_rec.id, event_type, event_payload))
+        except Exception:  # noqa: S110
+            pass
+
+
+async def _run_operation_in_background(
+    op_id: str,
+    tool_name: str,
+    payload: dict[str, Any],
+    semaphore: asyncio.Semaphore,
+    app_state: Any,  # noqa: ANN401
+) -> None:
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+    from fovux.http.tool_proxy import invoke_tool
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+
+    registry.update_operation_status(op_id, "running")
+    registry.create_operation_event(op_id, "status_change", {"status": "running"})
+    _notify_sse_listeners(app_state, op_id, "status_change", {"status": "running"})
+
+    log_dir = paths.home / "operations"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / f"{op_id}.log"
+
+    await semaphore.acquire()
+
+    def target() -> dict[str, Any]:
+        from fovux.http.app import _thread_local
+
+        with open(log_file, "a", encoding="utf-8") as f:
+            _thread_local.stream = f
+            try:
+                f.write(
+                    f"--- Operation {op_id} started at {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n"
+                )
+                f.flush()
+                res = invoke_tool(tool_name, payload)
+                return res
+            finally:
+                f.write(f"--- Operation {op_id} finished ---\n")
+                f.flush()
+                _thread_local.stream = None
+
+    try:
+        worker_task = asyncio.create_task(asyncio.to_thread(target))
+        app_state.active_operation_tasks[op_id] = worker_task
+
+        result = await worker_task
+
+        run_id = None
+        if isinstance(result, dict) and "run_id" in result:
+            run_id = str(result["run_id"])
+
+        registry.update_operation_status(op_id, "succeeded", result=result, run_id=run_id)
+        registry.create_operation_event(
+            op_id,
+            "status_change",
+            {"status": "succeeded", "result": result, "run_id": run_id},
+        )
+        _notify_sse_listeners(
+            app_state,
+            op_id,
+            "status_change",
+            {"status": "succeeded", "result": result, "run_id": run_id},
+        )
+    except asyncio.CancelledError:
+        registry.update_operation_status(op_id, "cancelled")
+        registry.create_operation_event(op_id, "status_change", {"status": "cancelled"})
+        _notify_sse_listeners(app_state, op_id, "status_change", {"status": "cancelled"})
+        raise
+    except Exception as exc:
+        err_msg = str(exc)
+        err_type = type(exc).__name__
+        registry.update_operation_status(op_id, "failed", error_type=err_type, error=err_msg)
+        registry.create_operation_event(
+            op_id,
+            "status_change",
+            {"status": "failed", "error_type": err_type, "error": err_msg},
+        )
+        _notify_sse_listeners(
+            app_state,
+            op_id,
+            "status_change",
+            {"status": "failed", "error_type": err_type, "error": err_msg},
+        )
+    finally:
+        semaphore.release()
+        app_state.active_operation_tasks.pop(op_id, None)
+
+
+@router.post("/operations")
+async def create_operation_route(
+    request: Request,
+    body: CreateOperationInput,
+) -> JSONResponse:
+    """Create a persistent background operation with an optional idempotency key."""
+    import uuid
+
+    from fovux.core.auth import ALL_SCOPES, is_known_session_token, resolve_session_scopes
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+    from fovux.http.challenge import prune_expired_challenges, verify_challenge
+    from fovux.http.tool_proxy import check_scope, payload_hash, policy_for_tool
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+
+    auth_header = request.headers.get("Authorization", "")
+    raw_token = auth_header.removeprefix("Bearer ").strip()
+    scopes = ALL_SCOPES
+    if is_known_session_token(raw_token):
+        scopes = resolve_session_scopes(raw_token)
+
+    policy = policy_for_tool(body.tool)
+    check_scope(policy, scopes)
+
+    if policy.requires_confirmation:
+        challenges = cast(dict[str, Any], request.app.state.challenges)
+        prune_expired_challenges(challenges)
+        challenge_id = body.challenge_id or body.arguments.get("challenge_id")
+        if not isinstance(challenge_id, str) or not challenge_id.strip():
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "FOVUX_HTTP_001",
+                    "message": f"Tool '{body.tool}' requires a confirmation challenge.",
+                    "hint": (
+                        "Call POST /tools/{name}/challenge first, then include the challenge_id."
+                    ),
+                },
+            )
+        verify_challenge(
+            challenges,
+            challenge_id=challenge_id,
+            tool_name=body.tool,
+            args_hash=payload_hash(
+                {k: v for k, v in body.arguments.items() if k != "challenge_id"}
+            ),
+        )
+
+    if body.idempotency_key:
+        existing = registry.get_operation_by_idempotency_key(body.idempotency_key)
+        if existing is not None:
+            return JSONResponse(
+                status_code=200,
+                content=_operation_summary(existing),
+            )
+
+    op_id = f"op_{uuid.uuid4().hex[:12]}"
+    record = registry.create_operation(
+        op_id=op_id,
+        tool=body.tool,
+        arguments=body.arguments,
+        idempotency_key=body.idempotency_key,
+    )
+
+    semaphores = cast(dict[str, asyncio.Semaphore], request.app.state.tool_semaphores)
+    semaphore = semaphores[body.tool]
+
+    if not hasattr(request.app.state, "active_operation_tasks"):
+        request.app.state.active_operation_tasks = {}
+
+    task = asyncio.create_task(
+        _run_operation_in_background(
+            op_id=op_id,
+            tool_name=body.tool,
+            payload=body.arguments,
+            semaphore=semaphore,
+            app_state=request.app.state,
+        )
+    )
+    request.app.state.active_operation_tasks[op_id] = task
+
+    registry.create_operation_event(op_id, "status_change", {"status": "pending"})
+
+    return JSONResponse(
+        status_code=201,
+        content=_operation_summary(record),
+    )
+
+
+@router.get("/operations/{id}")
+async def get_operation_route(id: str) -> JSONResponse:
+    """Get status and metadata for a background operation."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+
+    record = registry.get_operation(id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Operation {id} not found.")
+
+    return JSONResponse(_operation_summary(record))
+
+
+@router.post("/operations/{id}/cancel")
+async def cancel_operation_route(id: str, request: Request) -> JSONResponse:
+    """Request cancellation of a background operation."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+
+    record = registry.get_operation(id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Operation {id} not found.")
+
+    if record.status in ("succeeded", "failed", "cancelled"):
+        return JSONResponse(
+            status_code=200,
+            content=_operation_summary(record),
+        )
+
+    tasks = getattr(request.app.state, "active_operation_tasks", {})
+    task = tasks.get(id)
+    if task is not None:
+        task.cancel()
+
+    if record.run_id:
+        from fovux.tools.train_stop import train_stop
+
+        try:
+            train_stop(run_id=str(record.run_id))
+        except Exception:  # noqa: S110
+            pass
+
+    registry.update_operation_status(id, "cancelled")
+    registry.create_operation_event(id, "status_change", {"status": "cancelled"})
+    _notify_sse_listeners(request.app.state, id, "status_change", {"status": "cancelled"})
+
+    record = registry.get_operation(id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Operation {id} not found.")
+    return JSONResponse(
+        status_code=200,
+        content=_operation_summary(record),
+    )
+
+
+@router.get("/operations/{id}/logs")
+async def get_operation_logs_route(id: str) -> StreamingResponse:
+    """Fetch or stream execution logs for a background operation."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+
+    record = registry.get_operation(id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Operation {id} not found.")
+
+    log_file = paths.home / "operations" / f"{id}.log"
+    if record.run_id:
+        run_log = paths.home / "runs" / record.run_id / "stdout.log"
+        if run_log.exists():
+            log_file = run_log
+
+    async def log_generator() -> AsyncIterator[str]:
+        for _ in range(20):
+            if log_file.exists():
+                break
+            await asyncio.sleep(0.1)
+
+        if not log_file.exists():
+            yield "Log file not found.\n"
+            return
+
+        with open(log_file, encoding="utf-8", errors="replace") as f:
+            while True:
+                line = f.readline()
+                if line:
+                    yield line
+                else:
+                    op = registry.get_operation(id)
+                    if op is None or op.status in ("succeeded", "failed", "cancelled"):
+                        remaining = f.read()
+                        if remaining:
+                            yield remaining
+                        break
+                    await asyncio.sleep(0.5)
+
+    return StreamingResponse(
+        log_generator(),
+        media_type="text/plain",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/operations/{id}/result")
+async def get_operation_result_route(id: str) -> JSONResponse:
+    """Fetch the final result of a background operation."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+
+    record = registry.get_operation(id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Operation {id} not found.")
+
+    if record.status == "succeeded":
+        res = {}
+        if record.result_json:
+            res = json.loads(str(record.result_json))
+        return JSONResponse(res)
+    elif record.status == "failed":
+        return JSONResponse(
+            status_code=500,
+            content={
+                "operation_id": record.id,
+                "status": record.status,
+                "error_type": record.error_type,
+                "error": record.error,
+            },
+        )
+    elif record.status == "cancelled":
+        return JSONResponse(
+            status_code=400,
+            content={
+                "operation_id": record.id,
+                "status": record.status,
+                "message": "Operation was cancelled.",
+            },
+        )
+    else:
+        return JSONResponse(
+            status_code=202,
+            content={
+                "operation_id": record.id,
+                "status": record.status,
+                "message": "Operation is still running.",
+            },
+        )
+
+
+@router.get("/events")
+async def sse_events_route(request: Request) -> StreamingResponse:
+    """Server-Sent Events (SSE) stream of all operations events with resume support."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+
+    last_event_id_str = request.headers.get("Last-Event-ID") or request.query_params.get(
+        "last_event_id"
+    )
+    last_event_id = None
+    if last_event_id_str:
+        try:
+            last_event_id = int(last_event_id_str)
+        except ValueError:
+            pass
+
+    shutdown_event = cast(asyncio.Event, request.app.state.shutdown_event)
+
+    async def event_generator() -> AsyncIterator[str]:
+        yield "retry: 5000\n\n"
+
+        if last_event_id is not None:
+            hist_events = registry.list_operation_events(last_event_id=last_event_id)
+            for event in hist_events:
+                yield f"id: {event.id}\nevent: {event.event_type}\ndata: {event.data_json}\n\n"
+
+        queue: asyncio.Queue[tuple[int, str, dict[str, Any]]] = asyncio.Queue()
+        if not hasattr(request.app.state, "sse_listeners"):
+            request.app.state.sse_listeners = []
+        request.app.state.sse_listeners.append(queue)
+
+        try:
+            while not shutdown_event.is_set():
+                if await request.is_disconnected():
+                    break
+                try:
+                    ev_id, ev_type, ev_data = await asyncio.wait_for(queue.get(), timeout=15.0)
+                    yield f"id: {ev_id}\nevent: {ev_type}\ndata: {json.dumps(ev_data)}\n\n"
+                except TimeoutError:
+                    yield ": keep-alive\n\n"
+        finally:
+            if (
+                hasattr(request.app.state, "sse_listeners")
+                and queue in request.app.state.sse_listeners
+            ):
+                request.app.state.sse_listeners.remove(queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/runs/{run_id}/lineage")
+async def get_run_lineage(run_id: str) -> JSONResponse:
+    """Fetch experiment lineage information for a run."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    record = registry.get_run(run_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found.")
+
+    artifacts = registry.list_artifacts(run_id)
+    exports = registry.list_exports(run_id)
+    events = registry.list_run_events(run_id)
+
+    return JSONResponse(
+        {
+            "run_id": record.id,
+            "dataset_path": record.dataset_path,
+            "dataset_fingerprint": record.dataset_fingerprint,
+            "config_hash": record.config_hash,
+            "code_version": record.code_version,
+            "env_summary": (
+                json.loads(cast(str, record.env_summary)) if record.env_summary else None
+            ),
+            "parent_run_id": record.parent_run_id,
+            "artifacts": [
+                {
+                    "id": a.id,
+                    "type": a.type,
+                    "path": a.path,
+                    "sha256": a.sha256,
+                    "size": a.size,
+                    "created_at": a.created_at.isoformat() if a.created_at else None,
+                }
+                for a in artifacts
+            ],
+            "exports": [
+                {
+                    "id": e.id,
+                    "source_checkpoint": e.source_checkpoint,
+                    "artifact_path": e.artifact_path,
+                    "format": e.format,
+                    "duration_s": e.duration_s,
+                    "validation_result": json.loads(cast(str, e.validation_result_json))
+                    if e.validation_result_json
+                    else None,
+                    "created_at": e.created_at.isoformat() if e.created_at else None,
+                }
+                for e in exports
+            ],
+            "events": [
+                {
+                    "id": ev.id,
+                    "event_type": ev.event_type,
+                    "from_status": ev.from_status,
+                    "to_status": ev.to_status,
+                    "message": ev.message,
+                    "created_at": ev.created_at.isoformat() if ev.created_at else None,
+                }
+                for ev in events
+            ],
+        }
+    )
+
+
+@router.get("/runs/{run_id}/events")
+async def get_run_events(run_id: str) -> JSONResponse:
+    """Fetch all lifecycle and audit events for a single run."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    record = registry.get_run(run_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found.")
+
+    events = registry.list_run_events(run_id)
+    return JSONResponse(
+        [
+            {
+                "id": ev.id,
+                "event_type": ev.event_type,
+                "from_status": ev.from_status,
+                "to_status": ev.to_status,
+                "message": ev.message,
+                "created_at": ev.created_at.isoformat() if ev.created_at else None,
+                "extra": json.loads(cast(str, ev.extra_json)) if ev.extra_json else None,
+            }
+            for ev in events
+        ]
+    )
+
+
+@router.get("/datasets")
+async def list_datasets() -> JSONResponse:
+    """List all registered datasets in the ledger."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    datasets = registry.list_datasets()
+    return JSONResponse(
+        [
+            {
+                "fingerprint": d.fingerprint,
+                "path": d.path,
+                "class_map": json.loads(cast(str, d.class_map_json)) if d.class_map_json else {},
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+            }
+            for d in datasets
+        ]
+    )
+
+
+@router.get("/datasets/{fingerprint}")
+async def get_dataset(fingerprint: str) -> JSONResponse:
+    """Fetch single dataset record by fingerprint."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    d = registry.get_dataset(fingerprint)
+    if d is None:
+        raise HTTPException(status_code=404, detail=f"Dataset {fingerprint} not found.")
+    return JSONResponse(
+        {
+            "fingerprint": d.fingerprint,
+            "path": d.path,
+            "class_map": json.loads(cast(str, d.class_map_json)) if d.class_map_json else {},
+            "created_at": d.created_at.isoformat() if d.created_at else None,
+        }
+    )
+
+
+@router.get("/exports")
+async def list_exports() -> JSONResponse:
+    """List all model exports recorded in the ledger."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    exports = registry.list_exports()
+    return JSONResponse(
+        [
+            {
+                "id": e.id,
+                "run_id": e.run_id,
+                "source_checkpoint": e.source_checkpoint,
+                "artifact_path": e.artifact_path,
+                "format": e.format,
+                "duration_s": e.duration_s,
+                "validation_result": json.loads(cast(str, e.validation_result_json))
+                if e.validation_result_json
+                else None,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in exports
+        ]
+    )
