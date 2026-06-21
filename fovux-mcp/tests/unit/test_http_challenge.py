@@ -238,6 +238,7 @@ class TestChallengeAPI:
 
         try:
             import fovux.http.challenge as ch
+
             ch.CHALLENGE_TTL_SECONDS = -1
             record.expires_at = time.monotonic() + ch.CHALLENGE_TTL_SECONDS
             time.sleep(0.01)

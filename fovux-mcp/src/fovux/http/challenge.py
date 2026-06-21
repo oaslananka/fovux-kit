@@ -99,8 +99,7 @@ def verify_challenge(
 
     if record.args_hash != args_hash:
         raise HttpToolPolicyError(
-            f"Confirmation challenge '{challenge_id}' does not match the "
-            f"current tool arguments.",
+            f"Confirmation challenge '{challenge_id}' does not match the current tool arguments.",
             hint="The tool arguments changed after the challenge was issued. "
             "Request a new challenge with the updated arguments.",
         )
