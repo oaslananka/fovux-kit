@@ -104,6 +104,7 @@ def _run_train_preflight(inp: TrainPreflightInput) -> TrainPreflightOutput:
         has_cuda = torch.cuda.is_available()
     except ImportError:
         has_cuda = shutil.which("nvidia-smi") is not None
+        warnings.append("PyTorch (torch) is not installed. Training will fail.")
 
     if device_lower == "cpu":
         resolved_device = "cpu"
@@ -154,7 +155,9 @@ def _run_train_preflight(inp: TrainPreflightInput) -> TrainPreflightOutput:
 
     # 6. Concurrency Check
     registry = get_registry(paths.runs_db)
-    active_count = len(registry.list_runs(status="running", limit=10_000))
+    active_runs = registry.list_runs(status="running", limit=10_000)
+    pending_runs = registry.list_runs(status="pending", limit=10_000)
+    active_count = len(active_runs) + len(pending_runs)
     concurrency_valid = True
     if inp.max_concurrent_runs > 0 and active_count >= inp.max_concurrent_runs:
         concurrency_valid = False

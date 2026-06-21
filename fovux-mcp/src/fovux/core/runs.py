@@ -150,7 +150,9 @@ class RunRegistry:
             with session.begin():
                 if max_concurrent_runs > 0:
                     active_count = (
-                        session.query(RunRecord).filter(RunRecord.status == "running").count()
+                        session.query(RunRecord)
+                        .filter(RunRecord.status.in_(["running", "pending"]))
+                        .count()
                     )
                     if active_count >= max_concurrent_runs:
                         from fovux.core.errors import FovuxTrainingAlreadyRunningError
