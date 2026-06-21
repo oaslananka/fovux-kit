@@ -4,7 +4,7 @@ This document outlines the planned evolution of Fovux. Themes and dates are
 targets, not commitments, and are subject to change based on community feedback
 and resource availability.
 
-## 4.2.0 — Q3 2026
+## 1.2.0 — Q3 2026
 
 **Theme: Multi-GPU and distributed training.**
 
@@ -14,7 +14,7 @@ and resource availability.
 
 **DRI:** @oaslananka
 
-## 4.3.0 — Q4 2026
+## 1.3.0 — Q4 2026
 
 **Theme: Apple Silicon and extended hub integrations.**
 
@@ -24,7 +24,7 @@ and resource availability.
 
 **DRI:** @oaslananka
 
-## 5.0.0 — Q1 2027
+## 2.0.0 — Q1 2027
 
 **Theme: Breaking changes and API stabilization.**
 

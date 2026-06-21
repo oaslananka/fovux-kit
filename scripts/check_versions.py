@@ -112,6 +112,28 @@ def _read_uv_lock_version(root: Path) -> str:
     return match.group(1)
 
 
+def _read_release_notes_version(release_notes_path: Path) -> str:
+    """Extract version from RELEASE_NOTES.md title."""
+    if not release_notes_path.exists():
+        return f"<{release_notes_path.name} not found>"
+    content = release_notes_path.read_text(encoding="utf-8")
+    match = re.search(r"^#\s+Fovux\s+([^\s]+)\s+Release", content, re.MULTILINE)
+    if not match:
+        return "<no version title in RELEASE_NOTES.md>"
+    return match.group(1)
+
+
+def _read_doc_release_note_version(path: Path) -> str:
+    """Extract version from docs/release-notes/<version>.md title."""
+    if not path.exists():
+        return f"<{path.name} not found>"
+    content = path.read_text(encoding="utf-8")
+    match = re.search(r"^#\s+Fovux\s+([^\s]+)\s+Release", content, re.MULTILINE)
+    if not match:
+        return f"<no version title in {path.name}>"
+    return match.group(1)
+
+
 def _version_sources(root: Path) -> dict[str, dict[str, str]]:
     """Build version source groups by independently versioned artifact."""
     return {
@@ -142,6 +164,16 @@ def _version_sources(root: Path) -> dict[str, dict[str, str]]:
             "fovux-studio/package.json": _read_package_json_version(root),
             "fovux-studio/CHANGELOG.md": _read_changelog_top_version(
                 root / "fovux-studio" / "CHANGELOG.md"
+            ),
+        },
+        "Docs": {
+            "CHANGELOG.md (root)": _read_changelog_top_version(root / "CHANGELOG.md"),
+            "RELEASE_NOTES.md": _read_release_notes_version(root / "RELEASE_NOTES.md"),
+            "docs/release-notes/1.0.0.md": _read_doc_release_note_version(
+                root / "docs" / "release-notes" / "1.0.0.md"
+            ),
+            "docs/release-notes/1.0.1.md": _read_doc_release_note_version(
+                root / "docs" / "release-notes" / "1.0.1.md"
             ),
         },
     }
@@ -176,14 +208,55 @@ def _check_group(group_name: str, sources: dict[str, str]) -> bool:
     return False
 
 
+def _check_docs_group(sources: dict[str, str]) -> bool:
+    """Check docs version surfaces against manifest versions."""
+    manifest_version = _read_pyproject_version(_repo_root())
+    ok = True
+
+    # Root CHANGELOG top version must match the current package version.
+    changelog_v = sources.get("CHANGELOG.md (root)", "")
+    if changelog_v != manifest_version:
+        print(f"  !! CHANGELOG.md (root) top version is {changelog_v}, expected {manifest_version}")
+        ok = False
+
+    # RELEASE_NOTES.md must match the current package version.
+    rn_v = sources.get("RELEASE_NOTES.md", "")
+    if rn_v != manifest_version:
+        print(f"  !! RELEASE_NOTES.md version is {rn_v}, expected {manifest_version}")
+        ok = False
+
+    # Each docs/release-notes/<version>.md must have a matching title version.
+    for key, version in sources.items():
+        if not key.startswith("docs/release-notes/"):
+            continue
+        expected = key.removeprefix("docs/release-notes/").removesuffix(".md")
+        fn_match = re.match(r"^\d+\.\d+\.\d+$", expected)
+        if not fn_match:
+            print(f"  !! {key}: unexpected filename pattern")
+            ok = False
+            continue
+        if version != expected:
+            print(f"  !! {key}: title version is {version}, expected {expected} (filename)")
+            ok = False
+
+    if ok:
+        print(f"Docs version sources are coherent: {manifest_version}")
+    return ok
+
+
 def check_versions() -> int:
     """Check version source groups and return 0 if all are coherent."""
-    groups = _version_sources(_repo_root())
-    failed_groups = [
-        group_name
-        for group_name, sources in groups.items()
-        if not _check_group(group_name, sources)
-    ]
+    root = _repo_root()
+    groups = _version_sources(root)
+
+    # Standard groups use internal consistency check.
+    failed_groups = []
+    for group_name, sources in groups.items():
+        if group_name == "Docs":
+            if not _check_docs_group(sources):
+                failed_groups.append(group_name)
+        elif not _check_group(group_name, sources):
+            failed_groups.append(group_name)
 
     if not failed_groups:
         return 0

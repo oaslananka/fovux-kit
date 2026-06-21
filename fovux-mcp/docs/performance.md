@@ -1,6 +1,6 @@
 # Performance Guide
 
-Fovux v2.0.0 focuses on predictable local performance for long-running YOLO workflows.
+Fovux v1.0.0 focuses on predictable local performance for long-running YOLO workflows.
 
 ## Metric streaming
 

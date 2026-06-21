@@ -4,8 +4,8 @@
 
 | Version | Supported            |
 | ------- | -------------------- |
-| 4.x     | Active               |
-| < 4.0   | No longer maintained |
+| 1.x     | Active               |
+| < 1.0   | No longer maintained |
 
 ## Security Model
 
@@ -82,5 +82,5 @@ Include:
 You can expect an acknowledgement within **72 hours** and a status update within
 **7 days**.
 
-Patches are released as patch versions (e.g. `2.0.1`) and announced in the
+Patches are released as patch versions (e.g. `1.0.2`) and announced in the
 [CHANGELOG](CHANGELOG.md) with a `Security` section.
