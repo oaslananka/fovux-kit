@@ -61,6 +61,46 @@ class RunRecord(Base):
     extra_json = Column(Text, nullable=False, default="{}")
 
 
+class OperationRecord(Base):
+    """ORM model for a background operation."""
+
+    __tablename__ = "operations"
+
+    id = Column(String, primary_key=True)
+    idempotency_key = Column(String, nullable=True, unique=True, index=True)
+    tool = Column(String, nullable=False)
+    arguments_json = Column(Text, nullable=False)
+    status = Column(String, nullable=False, default="pending")
+    progress = Column(Integer, nullable=True)
+    result_json = Column(Text, nullable=True)
+    error_type = Column(String, nullable=True)
+    error = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
+    run_id = Column(String, nullable=True)
+
+
+class OperationEventRecord(Base):
+    """ORM model for operation lifecycle events (for SSE resume)."""
+
+    __tablename__ = "operation_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    operation_id = Column(String, nullable=False, index=True)
+    event_type = Column(String, nullable=False)  # status_change, progress, etc.
+    data_json = Column(Text, nullable=False)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+
 class RunRegistry:
     """CRUD interface for the SQLite runs registry.
 
@@ -291,6 +331,117 @@ class RunRegistry:
             record.extra_json = json.dumps(current)  # type: ignore[assignment]
             session.commit()
             return True
+
+    def create_operation(
+        self,
+        op_id: str,
+        tool: str,
+        arguments: dict[str, Any],
+        idempotency_key: str | None = None,
+    ) -> OperationRecord:
+        """Insert a new operation record."""
+        with self._Session() as session:
+            record = OperationRecord(
+                id=op_id,
+                tool=tool,
+                arguments_json=json.dumps(arguments),
+                idempotency_key=idempotency_key,
+                status="pending",
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+            )
+            session.add(record)
+            session.commit()
+            session.refresh(record)
+            return record
+
+    def get_operation(self, op_id: str) -> OperationRecord | None:
+        """Fetch an operation by ID."""
+        with self._Session() as session:
+            stmt = select(OperationRecord).where(OperationRecord.id == op_id)
+            return session.execute(stmt).scalar_one_or_none()
+
+    def get_operation_by_idempotency_key(self, idempotency_key: str) -> OperationRecord | None:
+        """Fetch an operation by idempotency key."""
+        with self._Session() as session:
+            stmt = select(OperationRecord).where(OperationRecord.idempotency_key == idempotency_key)
+            return session.execute(stmt).scalar_one_or_none()
+
+    def update_operation_status(
+        self,
+        op_id: str,
+        status: str,
+        error_type: str | None = None,
+        error: str | None = None,
+        result: dict[str, Any] | None = None,
+        run_id: str | None = None,
+    ) -> None:
+        """Update operation status, timestamps, results/errors."""
+        with self._Session() as session:
+            stmt = select(OperationRecord).where(OperationRecord.id == op_id)
+            record = session.execute(stmt).scalar_one_or_none()
+            if record is None:
+                return
+            record.status = status  # type: ignore[assignment]
+            if status == "running" and record.started_at is None:
+                record.started_at = datetime.now(UTC).replace(tzinfo=None)
+            elif status in ("succeeded", "failed", "cancelled"):
+                record.finished_at = datetime.now(UTC).replace(tzinfo=None)  # type: ignore[assignment]
+            if error_type is not None:
+                record.error_type = error_type  # type: ignore[assignment]
+            if error is not None:
+                record.error = error  # type: ignore[assignment]
+            if result is not None:
+                record.result_json = json.dumps(result)  # type: ignore[assignment]
+            if run_id is not None:
+                record.run_id = run_id  # type: ignore[assignment]
+            session.commit()
+
+    def update_operation_progress(self, op_id: str, progress: int) -> None:
+        """Update progress percentage of an operation."""
+        with self._Session() as session:
+            stmt = select(OperationRecord).where(OperationRecord.id == op_id)
+            record = session.execute(stmt).scalar_one_or_none()
+            if record is None:
+                return
+            record.progress = progress  # type: ignore[assignment]
+            session.commit()
+
+    def list_operations(self, limit: int = 100) -> list[OperationRecord]:
+        """List operations ordered by created_at desc."""
+        with self._Session() as session:
+            stmt = select(OperationRecord).order_by(OperationRecord.created_at.desc()).limit(limit)
+            return list(session.execute(stmt).scalars().all())
+
+    def create_operation_event(
+        self,
+        op_id: str,
+        event_type: str,
+        data: dict[str, Any],
+    ) -> OperationEventRecord:
+        """Create and persist a lifecycle event for an operation."""
+        with self._Session() as session:
+            event_rec = OperationEventRecord(
+                operation_id=op_id,
+                event_type=event_type,
+                data_json=json.dumps(data),
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+            )
+            session.add(event_rec)
+            session.commit()
+            session.refresh(event_rec)
+            return event_rec
+
+    def list_operation_events(
+        self,
+        last_event_id: int | None = None,
+        limit: int = 1000,
+    ) -> list[OperationEventRecord]:
+        """List operation events newer than last_event_id."""
+        with self._Session() as session:
+            stmt = select(OperationEventRecord).order_by(OperationEventRecord.id.asc()).limit(limit)
+            if last_event_id is not None:
+                stmt = stmt.where(OperationEventRecord.id > last_event_id)
+            return list(session.execute(stmt).scalars().all())
 
 
 def get_registry(db_path: Path) -> RunRegistry:
