@@ -1307,9 +1307,7 @@ async def get_run_lineage(run_id: str) -> JSONResponse:
             "config_hash": record.config_hash,
             "code_version": record.code_version,
             "env_summary": (
-                json.loads(cast(str, record.env_summary))
-                if record.env_summary
-                else None
+                json.loads(cast(str, record.env_summary)) if record.env_summary else None
             ),
             "parent_run_id": record.parent_run_id,
             "artifacts": [

@@ -159,6 +159,7 @@ def test_inspect_quality_intelligence(tmp_path: Path):
 
     # Save a normal image
     from PIL import ImageDraw
+
     img_data2 = Image.new("RGB", (64, 64), color=(100, 100, 100))
     draw = ImageDraw.Draw(img_data2)
     draw.line((0, 0, 64, 64), fill=(0, 255, 0), width=3)
@@ -173,10 +174,7 @@ def test_inspect_quality_intelligence(tmp_path: Path):
     # 2: tiny w=0.001, h=0.001 (w*h < 0.0005)
     # 3: overlapping with class 0 (duplicate box)
     val_box_content = (
-        "0 0.5 0.5 0.2 0.2\n"
-        "0 1.2 0.5 0.2 0.2\n"
-        "0 0.5 0.5 0.001 0.001\n"
-        "0 0.5 0.5 0.2 0.2\n"
+        "0 0.5 0.5 0.2 0.2\n0 1.2 0.5 0.2 0.2\n0 0.5 0.5 0.001 0.001\n0 0.5 0.5 0.2 0.2\n"
     )
     (val_labels / "img1.txt").write_text(val_box_content, encoding="utf-8")
 
@@ -184,9 +182,7 @@ def test_inspect_quality_intelligence(tmp_path: Path):
     (train_labels / "img2.txt").write_text("", encoding="utf-8")
 
     # data.yaml
-    (tmp_path / "data.yaml").write_text(
-        "names: ['object']\n", encoding="utf-8"
-    )
+    (tmp_path / "data.yaml").write_text("names: ['object']\n", encoding="utf-8")
 
     out = _run_inspect(DatasetInspectInput(dataset_path=tmp_path))
 
@@ -214,4 +210,3 @@ def test_inspect_quality_intelligence(tmp_path: Path):
     assert "# Dataset Card" in out.dataset_card
     assert "Quality Score" in out.dataset_card
     assert "Tiny Boxes:" in out.dataset_card
-

@@ -277,23 +277,21 @@ def _inspect_yolo(
                         )
                     )
 
-    quality_score, auto_fix_plan, dataset_card, class_balance_gini = (
-        _compute_quality_intelligence(
-            path=path,
-            fmt=fmt,
-            total_images=total_images,
-            total_annotations=total_annotations,
-            classes=classes,
-            class_ids=class_ids,
-            class_counts=class_counts,
-            duplicate_groups=duplicate_groups,
-            leaked_issues=leaked_issues,
-            unreadable_count=unreadable_count,
-            tiny_count=tiny_count,
-            oob_count=oob_count,
-            empty_labels_count=empty_labels_count,
-            overlapping_count=overlapping_count,
-        )
+    quality_score, auto_fix_plan, dataset_card, class_balance_gini = _compute_quality_intelligence(
+        path=path,
+        fmt=fmt,
+        total_images=total_images,
+        total_annotations=total_annotations,
+        classes=classes,
+        class_ids=class_ids,
+        class_counts=class_counts,
+        duplicate_groups=duplicate_groups,
+        leaked_issues=leaked_issues,
+        unreadable_count=unreadable_count,
+        tiny_count=tiny_count,
+        oob_count=oob_count,
+        empty_labels_count=empty_labels_count,
+        overlapping_count=overlapping_count,
     )
 
     wl, wc = bucket_distribution([float(s[0]) for s in image_sizes])
@@ -407,8 +405,7 @@ def _compute_quality_intelligence(
             AutoFixItem(
                 action="Filter tiny bounding boxes",
                 description=(
-                    f"Identified {tiny_count} bounding boxes smaller than 0.05% of the "
-                    "image size."
+                    f"Identified {tiny_count} bounding boxes smaller than 0.05% of the image size."
                 ),
                 estimated_impact=(
                     "Removes potential background noise or labelling mistakes, "
@@ -684,23 +681,21 @@ def _inspect_coco(
                         )
                     )
 
-    quality_score, auto_fix_plan, dataset_card, class_balance_gini = (
-        _compute_quality_intelligence(
-            path=path,
-            fmt=fmt,
-            total_images=total_images,
-            total_annotations=total_annotations,
-            classes=classes,
-            class_ids=class_ids,
-            class_counts=class_counts,
-            duplicate_groups=duplicate_groups,
-            leaked_issues=leaked_issues,
-            unreadable_count=unreadable_count,
-            tiny_count=tiny_count,
-            oob_count=oob_count,
-            empty_labels_count=empty_labels_count,
-            overlapping_count=overlapping_count,
-        )
+    quality_score, auto_fix_plan, dataset_card, class_balance_gini = _compute_quality_intelligence(
+        path=path,
+        fmt=fmt,
+        total_images=total_images,
+        total_annotations=total_annotations,
+        classes=classes,
+        class_ids=class_ids,
+        class_counts=class_counts,
+        duplicate_groups=duplicate_groups,
+        leaked_issues=leaked_issues,
+        unreadable_count=unreadable_count,
+        tiny_count=tiny_count,
+        oob_count=oob_count,
+        empty_labels_count=empty_labels_count,
+        overlapping_count=overlapping_count,
     )
 
     bal, bac = bucket_distribution(bbox_areas)
