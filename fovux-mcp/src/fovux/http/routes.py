@@ -386,8 +386,8 @@ async def request_challenge(
     from fovux.http.challenge import create_challenge, prune_expired_challenges
     from fovux.http.tool_proxy import (
         HttpToolPolicyError,
-        policy_for_tool,
         payload_hash,
+        policy_for_tool,
     )
 
     try:
@@ -431,7 +431,11 @@ async def request_challenge(
             "summary": {
                 "name": name,
                 "args_hash": args_hash,
-                "params": {str(k): v for k, v in payload.items() if str(k) not in ("confirm", "challenge_id")},
+                "params": {
+                    str(k): v
+                    for k, v in payload.items()
+                    if str(k) not in ("confirm", "challenge_id")
+                },
             },
             "expires_at": record.expires_at,
         },
@@ -465,7 +469,7 @@ async def proxy_tool(
     args_hash = payload_hash(payload)
     operation_id = _tool_operation_id(name, args_hash)
     operation_key = f"{name}:{args_hash}"
-    from fovux.http.challenge import verify_challenge, prune_expired_challenges
+    from fovux.http.challenge import prune_expired_challenges, verify_challenge
 
     started = time.monotonic()
     try:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
 import time
 from unittest.mock import patch
 
@@ -11,13 +13,12 @@ from fastapi.testclient import TestClient
 from fovux.http.app import create_app
 from fovux.http.challenge import (
     CHALLENGE_TTL_SECONDS,
-    ChallengeRecord,
     create_challenge,
     make_challenge_id,
     prune_expired_challenges,
     verify_challenge,
 )
-from fovux.http.tool_proxy import HttpToolPolicyError, payload_hash
+from fovux.http.tool_proxy import HttpToolPolicyError
 
 
 def _auth_headers(client: TestClient) -> dict[str, str]:
@@ -34,16 +35,17 @@ class TestChallengeUnit:
         int(cid, 16)
 
     def test_create_challenge_sets_expected_fields(self) -> None:
+        path = os.path.join(tempfile.gettempdir(), "dataset")
         record = create_challenge(
             tool_name="train_start",
             args_hash="abc123",
             risk_level="long_running",
-            resolved_paths=["/tmp/dataset"],
+            resolved_paths=[path],
         )
         assert record.tool_name == "train_start"
         assert record.args_hash == "abc123"
         assert record.risk_level == "long_running"
-        assert record.resolved_paths == ["/tmp/dataset"]
+        assert record.resolved_paths == [path]
         assert record.used is False
         assert record.expires_at > record.created_at
         assert record.expires_at - record.created_at == pytest.approx(CHALLENGE_TTL_SECONDS, abs=1)
@@ -51,7 +53,12 @@ class TestChallengeUnit:
     def test_verify_challenge_succeeds(self) -> None:
         record = create_challenge(tool_name="echo", args_hash="hash1", risk_level="mutating")
         challenges = {record.challenge_id: record}
-        verify_challenge(challenges, challenge_id=record.challenge_id, tool_name="echo", args_hash="hash1")
+        verify_challenge(
+            challenges,
+            challenge_id=record.challenge_id,
+            tool_name="echo",
+            args_hash="hash1",
+        )
         assert record.used is True
 
     def test_verify_missing_challenge(self) -> None:

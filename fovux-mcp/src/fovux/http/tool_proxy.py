@@ -98,7 +98,7 @@ def payload_hash(payload: Mapping[str, object]) -> str:
 
 def invoke_tool(name: str, payload: Mapping[str, object]) -> dict[str, Any]:
     """Invoke a local tool by name using a JSON-compatible payload."""
-    policy = policy_for_tool(name)
+    policy_for_tool(name)
 
     if "confirm" in payload:
         warnings.warn(

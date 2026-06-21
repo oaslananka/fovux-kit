@@ -125,7 +125,11 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
                 path_rest = request.url.path.removeprefix("/tools/")
                 tool_name = path_rest.split("/", maxsplit=1)[0]
                 is_challenge = path_rest.endswith("/challenge")
-                limit = DEFAULT_TOOL_RATE_LIMIT if is_challenge else TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
+                limit = (
+                    DEFAULT_TOOL_RATE_LIMIT
+                    if is_challenge
+                    else TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
+                )
                 bucket_key = f"{client_ip}:{ 'challenge' if is_challenge else 'tool' }:{tool_name}"
                 limited, retry_after = request.app.state.rate_limiter.check(
                     bucket_key,

@@ -328,8 +328,6 @@ def test_tool_proxy_fovux_error_returns_400(tmp_fovux_home: Path) -> None:
 
 def _seed_challenge(client: TestClient, payload: dict[str, object]) -> str:
     """Create a challenge for the given payload and return the challenge_id."""
-    from fovux.http.tool_proxy import payload_hash
-
     tool_name = "train_start"
     challenge_resp = client.post(
         f"/tools/{tool_name}/challenge",

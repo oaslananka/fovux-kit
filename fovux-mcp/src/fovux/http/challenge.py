@@ -16,7 +16,6 @@ from __future__ import annotations
 import secrets
 import time
 from dataclasses import dataclass, field
-from typing import Any
 
 CHALLENGE_TTL_SECONDS = 120
 
