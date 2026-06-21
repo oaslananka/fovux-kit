@@ -17,16 +17,39 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from starlette.types import ASGIApp, Message, Receive, Send
+from starlette.types import Scope as ASGIScope
 
 from fovux import __version__
-from fovux.core.auth import auth_token_path, ensure_auth_token, token_fingerprint
+from fovux.core.auth import (
+    ALL_SCOPES,
+    Scope,
+    auth_token_path,
+    ensure_auth_token,
+    is_known_session_token,
+    resolve_session_scopes,
+    token_fingerprint,
+)
+from fovux.core.errors import FovuxError
 from fovux.core.logging import get_logger
+from fovux.http.tool_proxy import (
+    HttpScopeError,
+    HttpToolPolicyError,
+    check_scope,
+    policy_for_tool,
+)
 
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 DEFAULT_TOOL_RATE_LIMIT = 100
 TOOL_RATE_LIMITS = {"train_start": 5}
 MAX_TOOL_BODY_BYTES = 1024 * 1024
+_NON_LOCAL_BIND_ALLOWED: bool = False
+
+
+def set_nonlocal_bind_allowed(value: bool) -> None:
+    """Set whether non-local IP addresses are allowed to bind."""
+    global _NON_LOCAL_BIND_ALLOWED
+    _NON_LOCAL_BIND_ALLOWED = value
 
 
 @asynccontextmanager
@@ -83,6 +106,8 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
     app.state.tool_body_max_bytes = MAX_TOOL_BODY_BYTES
     from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
 
+    app.state.challenges = {}
+
     app.state.tool_semaphores = {
         name: asyncio.Semaphore(policy.concurrency_limit)
         for name, policy in HTTP_TOOL_POLICIES.items()
@@ -104,13 +129,31 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
             return await call_next(request)
 
         if request.url.path != "/health":
-            token = request.app.state.auth_token
             auth_header = request.headers.get("Authorization", "")
-            if auth_header != f"Bearer {token}":
+            raw_token = auth_header.removeprefix("Bearer ").strip()
+            full_token = request.app.state.auth_token
+
+            scopes: set[Scope] = ALL_SCOPES
+            if raw_token == full_token:
+                scopes = ALL_SCOPES
+            elif is_known_session_token(raw_token):
+                scopes = resolve_session_scopes(raw_token)
+            else:
                 return JSONResponse(
                     status_code=401,
                     content={"detail": "Missing or invalid bearer token."},
                 )
+
+            client_ip = request.client.host if request.client is not None else "unknown"
+            if not request.app.state.nonlocal_bind_allowed:
+                if client_ip not in _LOCAL_HOSTS:
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "detail": "Non-local requests are not allowed. "
+                            "Restart with --allow-nonlocal-bind to accept external connections."
+                        },
+                    )
 
             if request.method.upper() == "POST" and request.url.path.startswith("/tools/"):
                 content_length = _parse_content_length(request.headers.get("content-length"))
@@ -119,11 +162,56 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
                         status_code=413,
                         content={"detail": "Tool request body is too large."},
                     )
-                client_ip = request.client.host if request.client is not None else "unknown"
-                tool_name = request.url.path.removeprefix("/tools/").split("/", maxsplit=1)[0]
-                limit = TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
+                path_rest = request.url.path.removeprefix("/tools/")
+                tool_name = path_rest.split("/", maxsplit=1)[0]
+                is_challenge = path_rest.endswith("/challenge")
+
+                if not is_challenge:
+                    try:
+                        policy = policy_for_tool(tool_name)
+                        check_scope(policy, scopes)
+                    except HttpToolPolicyError as exc:
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "detail": {
+                                    "code": exc.code,
+                                    "message": exc.message,
+                                    "hint": exc.hint,
+                                }
+                            },
+                        )
+                    except HttpScopeError as exc:
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "detail": {
+                                    "code": exc.code,
+                                    "message": exc.message,
+                                    "hint": exc.hint,
+                                }
+                            },
+                        )
+                    except FovuxError as exc:
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "detail": {
+                                    "code": exc.code,
+                                    "message": exc.message,
+                                    "hint": exc.hint,
+                                }
+                            },
+                        )
+
+                limit = (
+                    DEFAULT_TOOL_RATE_LIMIT
+                    if is_challenge
+                    else TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
+                )
+                bucket_key = f"{client_ip}:{'challenge' if is_challenge else 'tool'}:{tool_name}"
                 limited, retry_after = request.app.state.rate_limiter.check(
-                    f"{client_ip}:tool:{tool_name}",
+                    bucket_key,
                     limit=limit,
                 )
                 if limited:
@@ -138,6 +226,7 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
     from fovux.http.routes import router
 
     app.include_router(router)
+    app.state.nonlocal_bind_allowed = _NON_LOCAL_BIND_ALLOWED
     return app
 
 
@@ -188,7 +277,7 @@ class _ToolBodyLimitMiddleware:
         self.app = app
         self.max_body_bytes = max_body_bytes
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+    async def __call__(self, scope: ASGIScope, receive: Receive, send: Send) -> None:
         if (
             scope["type"] != "http"
             or scope.get("method") != "POST"

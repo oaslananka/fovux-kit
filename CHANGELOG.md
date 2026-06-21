@@ -2,41 +2,10 @@
 
 All notable changes to Fovux are documented in this file.
 
-The format follows Keep a Changelog, and this project uses semantic versioning.
+The format follows Keep a Changelog, and this project uses semantic versioning
+for individual packages (`fovux-mcp`, `fovux-mcp-npm`, `fovux-studio`).
 
-## [4.1.4] - 2026-04-29
-
-### Changed
-
-- Republish Fovux Studio with the current Marketplace README screenshot URLs pointing at the
-  tracked `fovux-studio/resources/screenshots/` assets on `main`.
-
-## [4.1.3] - 2026-04-29
-
-### Security
-
-- Pin GitHub Actions dependencies and the Python runtime container base image to immutable commit
-  and digest references for a fully reproducible supply-chain surface.
-- Move Scorecard results out of code-scanning SARIF so policy/advisory checks no longer mask the
-  actionable CodeQL and Trivy vulnerability queues.
-- Revalidated the authoritative repository after hardening: Dependabot, CodeQL, Trivy, and code
-  scanning open alerts are clean.
-
-## [4.1.2] - 2026-04-29
-
-### Fixed
-
-- Avoid recursive filesystem-root scans during dataset format auto-detection, preventing adversarial
-  `dataset_inspect("/")` inputs from traversing an entire drive.
-- Replace GitHub Actions Corepack pnpm activation with pinned `pnpm@10.33.0` provisioning to
-  remove Windows runner hangs while keeping CI installs deterministic.
-
-### Security
-
-- Revalidated the release image/security surface after the root-scan fix: Dependabot, Trivy, and
-  CodeQL actionable alerts are clean for the authoritative repository.
-
-## [4.1.1] - 2026-04-28
+## [1.0.1] - 2026-06-11
 
 ### Added
 
@@ -63,6 +32,16 @@ The format follows Keep a Changelog, and this project uses semantic versioning.
   HTTP route modules covered by focused tests.
 - `fovux-mcp` and `fovux` CLI aliases are documented as intentional entry points.
 - Release verification now treats `[Unreleased]` as a release-cut blocker rather than a PR blocker.
+- Republished Fovux Studio with the current Marketplace README screenshot URLs pointing at the
+  tracked `fovux-studio/resources/screenshots/` assets on `main`.
+- Dataset format auto-detection no longer recursively scans arbitrary filesystem roots for VOC
+  XML files.
+- GitHub Actions install pinned `pnpm@10.33.0` via npm instead of Corepack activation, avoiding
+  Windows runner hangs in the Node 22/24 matrix.
+- Pin GitHub Actions dependencies and the Python runtime container base image to immutable commit
+  and digest references for a fully reproducible supply-chain surface.
+- Move Scorecard results out of code-scanning SARIF so policy/advisory checks no longer mask the
+  actionable CodeQL and Trivy vulnerability queues.
 
 ### Fixed
 
@@ -82,8 +61,10 @@ The format follows Keep a Changelog, and this project uses semantic versioning.
 - The `fovux-mcp` container image no longer installs GUI OpenGL/Mesa packages and the Trivy
   workflow now fails on actionable fixed CRITICAL/HIGH findings while ignoring upstream-unfixed
   Debian CVEs that have no patched package available.
+- Revalidated the release image/security surface: Dependabot, Trivy, CodeQL, and code scanning
+  actionable alerts are clean for the authoritative repository.
 
-## [4.1.0] - 2026-04-27
+## [1.0.0] - 2026-06-02
 
 ### Added
 
@@ -101,33 +82,22 @@ The format follows Keep a Changelog, and this project uses semantic versioning.
 - Fuzzing and explicit path-traversal tests for tool inputs.
 - ROADMAP, SUPPORT, GOVERNANCE, MAINTAINERS, CITATION.cff, threat-model, release-process, api-stability, troubleshooting docs.
 - Canonical label schema, stale/lock workflows, VSIX bundle-size regression check.
-
-### Changed
-
-- All packages share a single source-of-truth version (4.1.0). A pre-commit and CI guard enforces consistency.
-- fovux-studio language model tool catalog: granular tools first, generic dispatcher kept as fallback.
-
-### Fixed
-
-- Removed accidentally tracked build artifacts (htmlcov, coverage.xml, junit.xml).
-- Eliminated version drift (2.0.0 / 3.0.0 / 4.0.0) across the monorepo.
-
-### Security
-
-- Wheels are signed via Sigstore and carry SLSA Level 3 provenance.
-- LLM-driven tool inputs covered by Hypothesis fuzzing and explicit traversal tests.
-
-## [2.0.0] - 2026-04-25
-
-### Added
-
-- Local-first authenticated HTTP transport for Studio and MCP-adjacent workflows.
+- 9 new tools: `dataset_augment`, `distill_model`, `infer_ensemble`, `model_compare_visual`,
+  `run_archive`, `sync_to_mlflow`, `train_adjust`, `train_resume`, `active_learning_select`.
+- Expanded doctor diagnostics: CUDA/CuDNN detection, disk capacity check, AGPL notice
+  verification, active run summary, CPU/RAM snapshot.
+- Studio enhancements: SSE reconnect resilience, training launcher presets, run timeline
+  and annotation editor webviews, embedded MCP client scaffold.
+- Secure local HTTP transport: every endpoint except `/health` now requires a bearer token in
+  `FOVUX_HOME/auth.token`, tool calls are rate-limited, and the server can run UNIX-socket-first on
+  Unix systems.
 - Fovux Studio webviews for dashboards, dataset inspection, training launch, run comparison, and export.
 - New MCP tools for doctor diagnostics, model profiling, batch inference, and annotation quality checks.
 - Structured logging, audit-friendly errors, richer run metadata, and source-first release automation.
 
 ### Changed
 
+- All package version sources aligned and guarded by `scripts/check_versions.py`.
 - Device defaults now prefer automatic accelerator selection instead of forcing CPU.
 - Training writes structured metrics for live dashboards and deterministic run status.
 - GitHub org CI validates backend, docs, Studio, and release artifacts.
@@ -137,9 +107,23 @@ The format follows Keep a Changelog, and this project uses semantic versioning.
 - ONNX export parity now reports failures instead of silently passing runtime errors.
 - Dataset validation, conversion, RTSP reconnect, run registry, and Studio webview startup paths were hardened.
 - Dependabot-reported `pip` and `uuid` advisories were removed from locked dependency graphs.
+- Removed accidentally tracked build artifacts (htmlcov, coverage.xml, junit.xml).
+- Eliminated version drift (2.0.0 / 3.0.0 / 4.0.0) across the monorepo.
 
 ### Security
 
 - HTTP endpoints except `/health` require a local bearer token.
 - Tool calls are rate-limited.
 - Registry publication remains maintainer-gated.
+- Wheels are signed via Sigstore and carry SLSA Level 3 provenance.
+- LLM-driven tool inputs covered by Hypothesis fuzzing and explicit traversal tests.
+
+### Breaking Changes
+
+- HTTP clients must send the bearer token:
+  ```bash
+  curl -H "Authorization: Bearer $(cat ~/.fovux/auth.token)" http://127.0.0.1:7823/runs
+  ```
+- `train_start` now rejects unsafe duplicate runs by default; use `force=true` to override.
+- HTTP tool invocation applies per-tool rate limits.
+- Training metadata now stores runtime PID in `pid.txt`; do not depend on `params.json.pid`.

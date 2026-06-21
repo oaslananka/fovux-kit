@@ -12,6 +12,7 @@ from fovux.http.app import create_app
 def test_openapi_exposes_studio_http_contract() -> None:
     """OpenAPI should keep the Studio-facing route surface stable."""
     with TestClient(create_app()) as client:
+        client.app.state.nonlocal_bind_allowed = True
         headers = {"Authorization": f"Bearer {client.app.state.auth_token}"}
         schema = client.get("/openapi.json", headers=headers).json()
 

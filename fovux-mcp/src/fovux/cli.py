@@ -4,14 +4,23 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from fovux import __version__
-from fovux.core.auth import auth_token_path, rotate_auth_token, token_fingerprint
+from fovux.core.auth import (
+    Scope,
+    auth_token_path,
+    check_token_perms,
+    create_session_token,
+    list_session_fingerprints,
+    revoke_session_token,
+    rotate_auth_token,
+    token_fingerprint,
+)
 from fovux.core.doctor import collect_doctor_report
 from fovux.core.logging import configure_logging, get_logger
 from fovux.core.paths import get_fovux_home
@@ -66,14 +75,25 @@ def serve(
     port: int = typer.Option(7823, "--port", help="HTTP bind port."),
     tcp: bool = typer.Option(False, "--tcp", help="Force TCP instead of a Unix domain socket."),
     metrics: bool = typer.Option(False, "--metrics", help="Enable local Prometheus /metrics."),
+    allow_nonlocal_bind: bool = typer.Option(
+        False,
+        "--allow-nonlocal-bind",
+        help="Allow binding to non-local hosts (unsafe, opt-in).",
+    ),
 ) -> None:
     """Start the MCP server (stdio by default, or HTTP with --http)."""
     _configure_from_context(ctx.obj)
     if http:
         import uvicorn
 
-        from fovux.http.app import create_app, warn_if_nonlocal_host
+        from fovux.http.app import (
+            create_app,
+            set_nonlocal_bind_allowed,
+            warn_if_nonlocal_host,
+        )
 
+        if allow_nonlocal_bind:
+            set_nonlocal_bind_allowed(True)
         warn_if_nonlocal_host(host)
         web_app = create_app(enable_metrics=metrics)
         if sys.platform != "win32" and not tcp:
@@ -108,6 +128,7 @@ def doctor(ctx: typer.Context) -> None:
     table.add_column("Status")
     table.add_column("Detail")
 
+    auth_ok, auth_detail = check_token_perms()
     rows = [
         ("Python version", True, report.python),
         ("GPU", report.gpu.available, f"{report.gpu.accelerator} · {report.gpu.detail}"),
@@ -129,6 +150,7 @@ def doctor(ctx: typer.Context) -> None:
             f"{report.fovux_home.path} · {report.fovux_home.disk_free_gb:.1f} GB free",
         ),
         ("HTTP transport", report.http.reachable, report.http.detail),
+        ("auth token", auth_ok, auth_detail),
     ]
     all_ok = not report.errors
     for name, ok, detail in rows:
@@ -171,6 +193,75 @@ def rotate_token_command(
 
 telemetry_app = typer.Typer(help="Manage local-first telemetry settings.")
 app.add_typer(telemetry_app, name="telemetry")
+
+session_app = typer.Typer(help="Create and manage scoped session tokens for HTTP transport.")
+app.add_typer(session_app, name="session")
+
+
+@session_app.command("create")
+def session_create_command(
+    ctx: typer.Context,
+    scope: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--scope",
+            help=(
+                "Scope(s) for the session token (repeatable). Choices: read, "
+                "dataset:write, run:start, export:write, destructive, admin."
+            ),
+        ),
+    ] = None,
+) -> None:
+    """Create a scoped bearer session token."""
+    _configure_from_context(ctx.obj)
+    scopes_list = scope or ["read"]
+    invalid = [s for s in scopes_list if s not in {e.value for e in Scope}]
+    if invalid:
+        console.print(f"[red]Invalid scope(s):[/red] {', '.join(invalid)}")
+        console.print(f"Valid scopes: {', '.join(sorted(e.value for e in Scope))}")
+        raise typer.Exit(1)
+    scopes = {Scope(s) for s in scopes_list}
+    raw = create_session_token(scopes=scopes)
+    console.print(f"Session token fingerprint: {token_fingerprint(raw)}")
+    console.print(f"Scopes: {', '.join(sorted(s.value for s in scopes))}")
+    console.print(raw)
+    console.print("[yellow]Store this token securely. It cannot be retrieved again.[/yellow]")
+
+
+@session_app.command("list")
+def session_list_command(ctx: typer.Context) -> None:
+    """List active session tokens (fingerprints and scopes)."""
+    _configure_from_context(ctx.obj)
+    entries = list_session_fingerprints()
+    if not entries:
+        console.print("No active session tokens.")
+        return
+    table = Table(title="Active Session Tokens")
+    table.add_column("Fingerprint", style="bold")
+    table.add_column("Scopes")
+    for entry in entries:
+        fp = str(entry.get("fingerprint", "?"))
+        scopes_raw = entry.get("scopes", [])
+        if isinstance(scopes_raw, list):
+            scopes_str = ", ".join(str(s) for s in scopes_raw)
+        else:
+            scopes_str = str(scopes_raw)
+        table.add_row(fp, scopes_str)
+    console.print(table)
+
+
+@session_app.command("revoke")
+def session_revoke_command(
+    ctx: typer.Context,
+    token: str = typer.Argument(..., help="The raw session token to revoke."),
+) -> None:
+    """Revoke a session token."""
+    _configure_from_context(ctx.obj)
+    if revoke_session_token(token):
+        console.print("Session token revoked.")
+    else:
+        console.print("[yellow]Token not found or already revoked.[/yellow]")
+        raise typer.Exit(1)
 
 
 @telemetry_app.command("status")

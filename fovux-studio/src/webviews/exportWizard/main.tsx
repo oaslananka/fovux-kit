@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, JSX } from "react";
 import { createRoot } from "react-dom/client";
 
-import { invokeTool, type HttpClientConfig } from "../shared/api";
+import { invokeTool, requestChallenge, type HttpClientConfig } from "../shared/api";
 import {
   EXPORT_TARGETS,
   recommendExportTarget,
@@ -370,39 +370,51 @@ function ExportWizardApp(): JSX.Element {
 
   async function selectTool(): Promise<Record<string, unknown>> {
     if (format === "onnx" && quantize) {
-      return invokeTool<Record<string, unknown>>(clientConfig, "quantize_int8", {
+      const payload = {
         checkpoint,
         calibration_dataset: calibrationDataset,
         output_path: outputPath || undefined,
-        confirm: true,
+      };
+      const challenge = await requestChallenge(clientConfig, "quantize_int8", payload);
+      return invokeTool<Record<string, unknown>>(clientConfig, "quantize_int8", {
+        ...payload,
+        challenge_id: challenge.challenge_id,
       });
     }
 
     if (format === "onnx") {
-      return invokeTool<Record<string, unknown>>(clientConfig, "export_onnx", {
+      const payload = {
         checkpoint,
         output_path: outputPath || undefined,
         parity_check: verifyParity,
-        confirm: true,
+      };
+      const challenge = await requestChallenge(clientConfig, "export_onnx", payload);
+      return invokeTool<Record<string, unknown>>(clientConfig, "export_onnx", {
+        ...payload,
+        challenge_id: challenge.challenge_id,
       });
     }
 
+    const payload = { checkpoint, output_path: outputPath || undefined, int8: quantize };
+    const challenge = await requestChallenge(clientConfig, "export_tflite", payload);
     return invokeTool<Record<string, unknown>>(clientConfig, "export_tflite", {
-      checkpoint,
-      output_path: outputPath || undefined,
-      int8: quantize,
-      confirm: true,
+      ...payload,
+      challenge_id: challenge.challenge_id,
     });
   }
 
   async function benchmarkRecommendation(artifactPath: string): Promise<boolean> {
     try {
-      const benchmark = await invokeTool<BenchmarkSummary>(clientConfig, "benchmark_latency", {
+      const payload = {
         model_path: artifactPath,
         backend: targetProfile.benchmarkBackend ?? (format === "tflite" ? "tflite" : "onnxruntime"),
         num_warmup: 2,
         num_iterations: 5,
-        confirm: true,
+      };
+      const challenge = await requestChallenge(clientConfig, "benchmark_latency", payload);
+      const benchmark = await invokeTool<BenchmarkSummary>(clientConfig, "benchmark_latency", {
+        ...payload,
+        challenge_id: challenge.challenge_id,
       });
       setRecommendation(recommendExportTarget(benchmark));
       return true;

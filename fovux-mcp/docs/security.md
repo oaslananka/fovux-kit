@@ -1,6 +1,6 @@
 # Security Model
 
-Fovux v2.0.0 keeps `stdio` as the MCP transport and treats the optional Studio HTTP server as a local, authenticated control plane.
+Fovux v1.0.0 keeps `stdio` as the MCP transport and treats the optional Studio HTTP server as a local, authenticated control plane.
 
 ## HTTP auth
 

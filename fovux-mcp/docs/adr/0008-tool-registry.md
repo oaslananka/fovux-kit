@@ -10,7 +10,7 @@ v1.0.0 kept HTTP tool exposure and MCP registration logic in separate import pat
 
 ## Decision
 
-Fovux v2.0.0 introduces `fovux.core.tool_registry` as the canonical map from tool name to callable. MCP registration and HTTP proxy resolution now share this registry.
+Fovux v1.0.0 introduces `fovux.core.tool_registry` as the canonical map from tool name to callable. MCP registration and HTTP proxy resolution now share this registry.
 
 ## Consequences
 

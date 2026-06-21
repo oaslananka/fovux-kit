@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 
 import { ClassDistribution } from "./components/ClassDistribution";
 import { SamplePreview } from "./components/SamplePreview";
-import { invokeTool, type HttpClientConfig } from "../shared/api";
+import { invokeTool, requestChallenge, type HttpClientConfig } from "../shared/api";
 import { DatasetInspectorInitialState, postToExtension, readInitialState } from "../shared/types";
 
 function DatasetInspectorApp(): JSX.Element {
@@ -199,11 +199,15 @@ function DatasetInspectorApp(): JSX.Element {
 
   async function splitDataset(): Promise<void> {
     try {
-      const result = await invokeTool<{ output_path: string }>(clientConfig, "dataset_split", {
+      const payload = {
         dataset_path: initial.datasetPath,
         output_path: splitOutputPath,
         overwrite: true,
-        confirm: true,
+      };
+      const challenge = await requestChallenge(clientConfig, "dataset_split", payload);
+      const result = await invokeTool<{ output_path: string }>(clientConfig, "dataset_split", {
+        ...payload,
+        challenge_id: challenge.challenge_id,
       });
       setStatusMessage(`Split dataset written to ${result.output_path}.`);
       setError(null);

@@ -117,6 +117,7 @@ def test_studio_http_bridge_is_not_mcp_streamable_http_contract(tmp_fovux_home: 
     from fovux.http.app import create_app
 
     with TestClient(create_app()) as client:
+        client.app.state.nonlocal_bind_allowed = True
         token = str(client.app.state.auth_token)
         headers = {"Authorization": f"Bearer {token}"}
         health = client.get("/health")
