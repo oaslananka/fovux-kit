@@ -25,8 +25,9 @@ def record_export_history(
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Append one export or quantization history entry."""
+    export_id = f"export_{uuid4().hex[:12]}"
     entry: dict[str, Any] = {
-        "id": f"export_{uuid4().hex[:12]}",
+        "id": export_id,
         "source_checkpoint": str(source_checkpoint),
         "artifact_path": str(artifact_path),
         "format": format,
@@ -40,6 +41,38 @@ def record_export_history(
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, sort_keys=True) + "\n")
+
+    # Also log to SQLite database ledger if available
+    try:
+        from fovux.core.paths import FovuxPaths
+        from fovux.core.runs import get_registry
+
+        paths = FovuxPaths(get_fovux_home())
+        registry = get_registry(paths.runs_db)
+
+        # Try to resolve run_id from source_checkpoint
+        run_id = None
+        try:
+            resolved_cp = source_checkpoint.resolve()
+            resolved_runs = paths.runs.resolve()
+            if resolved_cp.is_relative_to(resolved_runs):
+                rel = resolved_cp.relative_to(resolved_runs)
+                run_id = rel.parts[0]
+        except Exception:  # noqa: S110
+            pass
+
+        registry.record_export(
+            export_id=export_id,
+            run_id=run_id,
+            source_checkpoint=source_checkpoint,
+            artifact_path=artifact_path,
+            format=format,
+            duration_s=duration_s,
+            validation_result=metadata,
+        )
+    except Exception:  # noqa: S110
+        pass
+
     return entry
 
 

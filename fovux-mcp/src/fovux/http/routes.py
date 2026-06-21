@@ -1281,3 +1281,172 @@ async def sse_events_route(request: Request) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.get("/runs/{run_id}/lineage")
+async def get_run_lineage(run_id: str) -> JSONResponse:
+    """Fetch experiment lineage information for a run."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    record = registry.get_run(run_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found.")
+
+    artifacts = registry.list_artifacts(run_id)
+    exports = registry.list_exports(run_id)
+    events = registry.list_run_events(run_id)
+
+    return JSONResponse(
+        {
+            "run_id": record.id,
+            "dataset_path": record.dataset_path,
+            "dataset_fingerprint": record.dataset_fingerprint,
+            "config_hash": record.config_hash,
+            "code_version": record.code_version,
+            "env_summary": (
+                json.loads(cast(str, record.env_summary))
+                if record.env_summary
+                else None
+            ),
+            "parent_run_id": record.parent_run_id,
+            "artifacts": [
+                {
+                    "id": a.id,
+                    "type": a.type,
+                    "path": a.path,
+                    "sha256": a.sha256,
+                    "size": a.size,
+                    "created_at": a.created_at.isoformat() if a.created_at else None,
+                }
+                for a in artifacts
+            ],
+            "exports": [
+                {
+                    "id": e.id,
+                    "source_checkpoint": e.source_checkpoint,
+                    "artifact_path": e.artifact_path,
+                    "format": e.format,
+                    "duration_s": e.duration_s,
+                    "validation_result": json.loads(cast(str, e.validation_result_json))
+                    if e.validation_result_json
+                    else None,
+                    "created_at": e.created_at.isoformat() if e.created_at else None,
+                }
+                for e in exports
+            ],
+            "events": [
+                {
+                    "id": ev.id,
+                    "event_type": ev.event_type,
+                    "from_status": ev.from_status,
+                    "to_status": ev.to_status,
+                    "message": ev.message,
+                    "created_at": ev.created_at.isoformat() if ev.created_at else None,
+                }
+                for ev in events
+            ],
+        }
+    )
+
+
+@router.get("/runs/{run_id}/events")
+async def get_run_events(run_id: str) -> JSONResponse:
+    """Fetch all lifecycle and audit events for a single run."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    record = registry.get_run(run_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found.")
+
+    events = registry.list_run_events(run_id)
+    return JSONResponse(
+        [
+            {
+                "id": ev.id,
+                "event_type": ev.event_type,
+                "from_status": ev.from_status,
+                "to_status": ev.to_status,
+                "message": ev.message,
+                "created_at": ev.created_at.isoformat() if ev.created_at else None,
+                "extra": json.loads(cast(str, ev.extra_json)) if ev.extra_json else None,
+            }
+            for ev in events
+        ]
+    )
+
+
+@router.get("/datasets")
+async def list_datasets() -> JSONResponse:
+    """List all registered datasets in the ledger."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    datasets = registry.list_datasets()
+    return JSONResponse(
+        [
+            {
+                "fingerprint": d.fingerprint,
+                "path": d.path,
+                "class_map": json.loads(cast(str, d.class_map_json)) if d.class_map_json else {},
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+            }
+            for d in datasets
+        ]
+    )
+
+
+@router.get("/datasets/{fingerprint}")
+async def get_dataset(fingerprint: str) -> JSONResponse:
+    """Fetch single dataset record by fingerprint."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    d = registry.get_dataset(fingerprint)
+    if d is None:
+        raise HTTPException(status_code=404, detail=f"Dataset {fingerprint} not found.")
+    return JSONResponse(
+        {
+            "fingerprint": d.fingerprint,
+            "path": d.path,
+            "class_map": json.loads(cast(str, d.class_map_json)) if d.class_map_json else {},
+            "created_at": d.created_at.isoformat() if d.created_at else None,
+        }
+    )
+
+
+@router.get("/exports")
+async def list_exports() -> JSONResponse:
+    """List all model exports recorded in the ledger."""
+    from fovux.core.paths import ensure_fovux_dirs
+    from fovux.core.runs import get_registry
+
+    paths = ensure_fovux_dirs()
+    registry = get_registry(paths.runs_db)
+    exports = registry.list_exports()
+    return JSONResponse(
+        [
+            {
+                "id": e.id,
+                "run_id": e.run_id,
+                "source_checkpoint": e.source_checkpoint,
+                "artifact_path": e.artifact_path,
+                "format": e.format,
+                "duration_s": e.duration_s,
+                "validation_result": json.loads(cast(str, e.validation_result_json))
+                if e.validation_result_json
+                else None,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in exports
+        ]
+    )

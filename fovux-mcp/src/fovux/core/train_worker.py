@@ -162,6 +162,12 @@ def _append_metric_rows(
     rows: list[dict[str, str]],
     seen_epochs: set[int],
 ) -> None:
+    # Try to load registry for metric logging
+    try:
+        registry = get_registry(FovuxPaths(get_fovux_home()).runs_db)
+    except Exception:
+        registry = None
+
     lines: list[str] = []
     for row in rows:
         epoch_raw = row.get("epoch")
@@ -179,6 +185,15 @@ def _append_metric_rows(
                 metrics[key] = float(value)
             except ValueError:
                 continue
+
+        # Log to SQLite metrics table
+        if registry is not None:
+            for key, val in metrics.items():
+                try:
+                    registry.add_metric(run_dir.name, epoch, key, val)
+                except Exception:  # noqa: S110
+                    pass
+
         lines.append(
             json.dumps(
                 {

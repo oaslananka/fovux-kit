@@ -15,16 +15,18 @@ from typing import Any, Literal
 from sqlalchemy import (
     Column,
     DateTime,
+    Float,
     Integer,
     String,
     Text,
     create_engine,
     select,
+    text,
 )
 from sqlalchemy import (
     event as sa_event,
 )
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
 _REGISTRIES: dict[Path, RunRegistry] = {}
@@ -59,6 +61,13 @@ class RunRecord(Base):
     run_path = Column(String, nullable=False)
     tags_json = Column(Text, nullable=False, default="[]")
     extra_json = Column(Text, nullable=False, default="{}")
+
+    # Experiment intelligence / lineage tracking metadata
+    dataset_fingerprint = Column(String, nullable=True)
+    config_hash = Column(String, nullable=True)
+    code_version = Column(String, nullable=True)
+    env_summary = Column(Text, nullable=True)
+    parent_run_id = Column(String, nullable=True)
 
 
 class OperationRecord(Base):
@@ -101,6 +110,155 @@ class OperationEventRecord(Base):
     )
 
 
+class SchemaMigrationRecord(Base):
+    """ORM model for schema migrations."""
+
+    __tablename__ = "schema_migrations"
+
+    version = Column(Integer, primary_key=True)
+    applied_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+
+class RunEventRecord(Base):
+    """ORM model for run lifecycle events (status transition, artifact creation, etc.)."""
+
+    __tablename__ = "run_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    run_id = Column(String, nullable=True, index=True)
+    event_type = Column(String, nullable=False)  # status_transition, artifact_created, audit, etc.
+    from_status = Column(String, nullable=True)
+    to_status = Column(String, nullable=True)
+    message = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    extra_json = Column(Text, nullable=False, default="{}")
+
+
+class DatasetRecord(Base):
+    """ORM model for datasets."""
+
+    __tablename__ = "datasets"
+
+    fingerprint = Column(String, primary_key=True)
+    path = Column(String, nullable=False)
+    class_map_json = Column(Text, nullable=False, default="{}")
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    extra_json = Column(Text, nullable=False, default="{}")
+
+
+class ArtifactRecord(Base):
+    """ORM model for artifacts (e.g. checkpoints, exports, datasets)."""
+
+    __tablename__ = "artifacts"
+
+    id = Column(String, primary_key=True)
+    run_id = Column(String, nullable=True, index=True)
+    type = Column(String, nullable=False)  # e.g., checkpoint, dataset, export
+    path = Column(String, nullable=False)
+    sha256 = Column(String, nullable=True)
+    size = Column(Integer, nullable=True)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    extra_json = Column(Text, nullable=False, default="{}")
+
+
+class ModelRecord(Base):
+    """ORM model for registered or downloaded models."""
+
+    __tablename__ = "models"
+
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    task = Column(String, nullable=False)
+    path = Column(String, nullable=True)
+    sha256 = Column(String, nullable=True)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+
+class ExportRecord(Base):
+    """ORM model for model exports."""
+
+    __tablename__ = "exports"
+
+    id = Column(String, primary_key=True)
+    run_id = Column(String, nullable=True, index=True)
+    source_checkpoint = Column(String, nullable=False)
+    artifact_path = Column(String, nullable=False)
+    format = Column(String, nullable=False)
+    duration_s = Column(Float, nullable=True)
+    validation_result_json = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+
+class MetricRecord(Base):
+    """ORM model for step or epoch-level metrics."""
+
+    __tablename__ = "metrics"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    run_id = Column(String, nullable=False, index=True)
+    epoch = Column(Integer, nullable=False)
+    metric_key = Column(String, nullable=False)
+    metric_value = Column(Float, nullable=False)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+
+class TagRecord(Base):
+    """ORM model for entity tags."""
+
+    __tablename__ = "tags"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    entity_type = Column(String, nullable=False)  # run, artifact, dataset
+    entity_id = Column(String, nullable=False)
+    tag = Column(String, nullable=False)
+
+
+class AuditEventRecord(Base):
+    """ORM model for security/system audit events."""
+
+    __tablename__ = "audit_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    actor = Column(String, nullable=False)
+    action = Column(String, nullable=False)
+    entity_type = Column(String, nullable=False)
+    entity_id = Column(String, nullable=False)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    details_json = Column(Text, nullable=False, default="{}")
+
+
 class RunRegistry:
     """CRUD interface for the SQLite runs registry.
 
@@ -127,11 +285,164 @@ class RunRegistry:
             dbapi_conn.execute("PRAGMA foreign_keys=ON")
 
         Base.metadata.create_all(self._engine)
+        self._run_migrations()
         self._Session = sessionmaker(bind=self._engine, expire_on_commit=False)
+
+    def _run_migrations(self) -> None:
+        """Ensure schema migrations are executed, adding columns if needed."""
+        with self._engine.begin() as conn:
+            conn.execute(
+                text(
+                    "CREATE TABLE IF NOT EXISTS schema_migrations ("
+                    "version INTEGER PRIMARY KEY,"
+                    "applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                    ")"
+                )
+            )
+            row = conn.execute(text("SELECT MAX(version) FROM schema_migrations")).fetchone()
+            current_version = row[0] if row and row[0] is not None else 0
+
+        if current_version < 1:
+            self._apply_migration_1()
+
+    def _apply_migration_1(self) -> None:
+        """Add columns to runs table for dataset/config tracking."""
+        with self._engine.begin() as conn:
+            res = conn.execute(text("PRAGMA table_info(runs)")).fetchall()
+            existing_cols = {r[1] for r in res}
+
+            new_cols = {
+                "dataset_fingerprint": "TEXT",
+                "config_hash": "TEXT",
+                "code_version": "TEXT",
+                "env_summary": "TEXT",
+                "parent_run_id": "TEXT",
+            }
+
+            for col_name, col_type in new_cols.items():
+                if col_name not in existing_cols:
+                    conn.execute(text(f"ALTER TABLE runs ADD COLUMN {col_name} {col_type}"))
+
+            conn.execute(
+                text(
+                    "INSERT OR IGNORE INTO schema_migrations (version, applied_at) "
+                    "VALUES (1, :applied_at)"
+                ),
+                {"applied_at": datetime.now(UTC).replace(tzinfo=None)},
+            )
 
     def close(self) -> None:
         """Dispose the SQLite engine and release pooled connections."""
         self._engine.dispose()
+
+    def _auto_metadata(
+        self,
+        model: str,
+        dataset_path: Path,
+        task: str,
+        epochs: int,
+        extra: dict[str, Any] | None = None,
+    ) -> tuple[str, str, str, str]:
+        """Automatically calculate metadata fields if they are None."""
+        import hashlib
+
+        from fovux import __version__ as fovux_version
+
+        # 1. Dataset Fingerprint
+        try:
+            from fovux.core.dataset_config import _find_yolo_yaml
+
+            yaml_path = _find_yolo_yaml(dataset_path)
+            content = yaml_path.read_bytes()
+            dataset_fingerprint = hashlib.sha256(content).hexdigest()
+        except Exception:
+            dataset_fingerprint = hashlib.sha256(
+                str(dataset_path.resolve()).encode("utf-8")
+            ).hexdigest()
+
+        # 2. Config Hash
+        payload = {
+            "model": model,
+            "dataset_path": str(dataset_path.resolve()),
+            "epochs": epochs,
+            "task": task,
+            "extra": extra or {},
+        }
+        encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
+        config_hash = hashlib.sha256(encoded).hexdigest()
+
+        # 3. Code Version
+        code_version = fovux_version
+
+        # 4. Env Summary
+        import platform
+        import sys
+
+        summary: dict[str, Any] = {
+            "python_version": sys.version.split()[0],
+            "platform": platform.platform(),
+        }
+        try:
+            import torch  # type: ignore[import-not-found]
+
+            summary["torch_version"] = torch.__version__
+            summary["cuda_available"] = torch.cuda.is_available()
+        except ImportError:
+            summary["torch_version"] = "not_installed"
+            summary["cuda_available"] = False
+        env_summary = json.dumps(summary)
+
+        return dataset_fingerprint, config_hash, code_version, env_summary
+
+    def _register_lineage(
+        self,
+        session: Session,
+        run_id: str,
+        model: str,
+        dataset_path: Path,
+        task: str,
+        dataset_fingerprint: str,
+    ) -> None:
+        """Internal helper to populate datasets and models tables for lineage tracking."""
+        # 1. Dataset Registration
+        try:
+            from fovux.core.dataset_utils import read_yolo_data_yaml
+
+            data = read_yolo_data_yaml(dataset_path)
+            class_map = data.get("names", {})
+        except Exception:
+            class_map = {}
+
+        db_dataset = session.get(DatasetRecord, dataset_fingerprint)
+        if db_dataset is None:
+            db_dataset = DatasetRecord(
+                fingerprint=dataset_fingerprint,
+                path=str(dataset_path.resolve()),
+                class_map_json=json.dumps(class_map),
+            )
+            session.merge(db_dataset)
+
+        # 2. Model Registration
+        model_name = Path(model).name
+        db_model = session.get(ModelRecord, model_name)
+        if db_model is None:
+            db_model = ModelRecord(
+                id=model_name,
+                name=model_name,
+                task=task,
+                path=model,
+            )
+            session.merge(db_model)
+
+        # 3. Status Transition Event to Pending
+        event = RunEventRecord(
+            run_id=run_id,
+            event_type="status_transition",
+            from_status=None,
+            to_status="pending",
+            message="Run reserved and initialized in pending state",
+        )
+        session.add(event)
 
     def reserve_run_slot(
         self,
@@ -144,8 +455,21 @@ class RunRegistry:
         max_concurrent_runs: int,
         tags: list[str] | None = None,
         extra: dict[str, Any] | None = None,
+        dataset_fingerprint: str | None = None,
+        config_hash: str | None = None,
+        code_version: str | None = None,
+        env_summary: str | None = None,
+        parent_run_id: str | None = None,
     ) -> RunRecord:
         """Reserve a run slot atomically, locking the DB if concurrent limit is set."""
+        auto_fp, auto_ch, auto_cv, auto_env = self._auto_metadata(
+            model, dataset_path, task, epochs, extra
+        )
+        dataset_fingerprint = dataset_fingerprint or auto_fp
+        config_hash = config_hash or auto_ch
+        code_version = code_version or auto_cv
+        env_summary = env_summary or auto_env
+
         with self._Session() as session:
             with session.begin():
                 if max_concurrent_runs > 0:
@@ -174,8 +498,16 @@ class RunRegistry:
                     created_at=datetime.now(UTC).replace(tzinfo=None),
                     tags_json=json.dumps(tags or []),
                     extra_json=json.dumps(extra or {}),
+                    dataset_fingerprint=dataset_fingerprint,
+                    config_hash=config_hash,
+                    code_version=code_version,
+                    env_summary=env_summary,
+                    parent_run_id=parent_run_id,
                 )
                 session.add(record)
+                self._register_lineage(
+                    session, run_id, model, dataset_path, task, dataset_fingerprint
+                )
             session.refresh(record)
             return record
 
@@ -189,6 +521,11 @@ class RunRegistry:
         epochs: int,
         tags: list[str] | None = None,
         extra: dict[str, Any] | None = None,
+        dataset_fingerprint: str | None = None,
+        config_hash: str | None = None,
+        code_version: str | None = None,
+        env_summary: str | None = None,
+        parent_run_id: str | None = None,
     ) -> RunRecord:
         """Insert a new run record.
 
@@ -201,25 +538,46 @@ class RunRegistry:
             epochs: Total training epochs.
             tags: Optional list of user tags.
             extra: Optional extra metadata dict.
+            dataset_fingerprint: Optional fingerprint of dataset.
+            config_hash: Optional hash of config.
+            code_version: Optional code version.
+            env_summary: Optional system environment summary.
+            parent_run_id: Optional parent run/checkpoint reference.
 
         Returns:
             The newly created RunRecord.
         """
+        auto_fp, auto_ch, auto_cv, auto_env = self._auto_metadata(
+            model, dataset_path, task, epochs, extra
+        )
+        dataset_fingerprint = dataset_fingerprint or auto_fp
+        config_hash = config_hash or auto_ch
+        code_version = code_version or auto_cv
+        env_summary = env_summary or auto_env
+
         with self._Session() as session:
-            record = RunRecord(
-                id=run_id,
-                run_path=str(run_path),
-                model=model,
-                dataset_path=str(dataset_path),
-                task=task,
-                epochs=epochs,
-                status="pending",
-                created_at=datetime.now(UTC).replace(tzinfo=None),
-                tags_json=json.dumps(tags or []),
-                extra_json=json.dumps(extra or {}),
-            )
-            session.add(record)
-            session.commit()
+            with session.begin():
+                record = RunRecord(
+                    id=run_id,
+                    run_path=str(run_path),
+                    model=model,
+                    dataset_path=str(dataset_path),
+                    task=task,
+                    epochs=epochs,
+                    status="pending",
+                    created_at=datetime.now(UTC).replace(tzinfo=None),
+                    tags_json=json.dumps(tags or []),
+                    extra_json=json.dumps(extra or {}),
+                    dataset_fingerprint=dataset_fingerprint,
+                    config_hash=config_hash,
+                    code_version=code_version,
+                    env_summary=env_summary,
+                    parent_run_id=parent_run_id,
+                )
+                session.add(record)
+                self._register_lineage(
+                    session, run_id, model, dataset_path, task, dataset_fingerprint
+                )
             session.refresh(record)
             return record
 
@@ -254,6 +612,42 @@ class RunRegistry:
             record = session.execute(stmt).scalar_one_or_none()
             if record is None:
                 return
+
+            current_status = str(record.status)
+            if current_status != status:
+                valid_targets = {
+                    "pending": {"running", "complete", "failed", "stopped", "archived"},
+                    "running": {"complete", "failed", "stopped", "archived"},
+                    "complete": {"running", "archived"},
+                    "failed": {"running", "archived"},
+                    "stopped": {"running", "archived"},
+                    "archived": {"pending", "running"},
+                }
+                if status not in valid_targets.get(current_status, set()):
+                    raise ValueError(
+                        f"Invalid run status transition from '{current_status}' to '{status}'"
+                    )
+
+                # Log status transition event
+                event = RunEventRecord(
+                    run_id=run_id,
+                    event_type="status_transition",
+                    from_status=current_status,
+                    to_status=status,
+                    message=f"Run status transitioned from '{current_status}' to '{status}'",
+                )
+                session.add(event)
+
+                # Log audit event
+                audit = AuditEventRecord(
+                    actor="system",
+                    action="status_transition",
+                    entity_type="run",
+                    entity_id=run_id,
+                    details_json=json.dumps({"from": current_status, "to": status}),
+                )
+                session.add(audit)
+
             record.status = status  # type: ignore[assignment]
             if pid is not None:
                 record.pid = pid  # type: ignore[assignment]
@@ -443,6 +837,153 @@ class RunRegistry:
             stmt = select(OperationEventRecord).order_by(OperationEventRecord.id.asc()).limit(limit)
             if last_event_id is not None:
                 stmt = stmt.where(OperationEventRecord.id > last_event_id)
+            return list(session.execute(stmt).scalars().all())
+
+    def add_artifact(
+        self,
+        artifact_id: str,
+        run_id: str | None,
+        artifact_type: str,
+        path: Path,
+        sha256: str | None = None,
+        size: int | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> ArtifactRecord:
+        """Register or merge a new artifact record."""
+        import hashlib
+
+        path_str = str(path.resolve())
+        if path.exists() and path.is_file():
+            if size is None:
+                size = path.stat().st_size
+            if sha256 is None:
+                h = hashlib.sha256()
+                try:
+                    with path.open("rb") as f:
+                        for chunk in iter(lambda: f.read(65536), b""):
+                            h.update(chunk)
+                    sha256 = h.hexdigest()
+                except Exception:
+                    sha256 = None
+
+        with self._Session() as session:
+            record = ArtifactRecord(
+                id=artifact_id,
+                run_id=run_id,
+                type=artifact_type,
+                path=path_str,
+                sha256=sha256,
+                size=size,
+                extra_json=json.dumps(extra or {}),
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+            )
+            session.merge(record)
+
+            # Log audit event
+            audit = AuditEventRecord(
+                actor="system",
+                action="add_artifact",
+                entity_type="artifact",
+                entity_id=artifact_id,
+                details_json=json.dumps({"type": artifact_type, "path": path_str}),
+            )
+            session.add(audit)
+            session.commit()
+            return record
+
+    def record_export(
+        self,
+        export_id: str,
+        run_id: str | None,
+        source_checkpoint: Path,
+        artifact_path: Path,
+        format: str,
+        duration_s: float | None = None,
+        validation_result: dict[str, Any] | None = None,
+    ) -> ExportRecord:
+        """Record a model export and associate it with a corresponding artifact."""
+        with self._Session() as session:
+            record = ExportRecord(
+                id=export_id,
+                run_id=run_id,
+                source_checkpoint=str(source_checkpoint.resolve()),
+                artifact_path=str(artifact_path.resolve()),
+                format=format,
+                duration_s=duration_s,
+                validation_result_json=json.dumps(validation_result or {}),
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+            )
+            session.add(record)
+            session.commit()
+
+        # Also register the export file as an artifact
+        self.add_artifact(
+            artifact_id=f"art_{export_id}",
+            run_id=run_id,
+            artifact_type="export",
+            path=artifact_path,
+            extra={"format": format, "duration_s": duration_s},
+        )
+        return record
+
+    def list_run_events(self, run_id: str | None = None, limit: int = 1000) -> list[RunEventRecord]:
+        """List run lifecycle and audit events."""
+        with self._Session() as session:
+            stmt = select(RunEventRecord).order_by(RunEventRecord.created_at.desc()).limit(limit)
+            if run_id is not None:
+                stmt = stmt.where(RunEventRecord.run_id == run_id)
+            return list(session.execute(stmt).scalars().all())
+
+    def list_artifacts(self, run_id: str | None = None, limit: int = 1000) -> list[ArtifactRecord]:
+        """List registered artifacts."""
+        with self._Session() as session:
+            stmt = select(ArtifactRecord).order_by(ArtifactRecord.created_at.desc()).limit(limit)
+            if run_id is not None:
+                stmt = stmt.where(ArtifactRecord.run_id == run_id)
+            return list(session.execute(stmt).scalars().all())
+
+    def get_dataset(self, fingerprint: str) -> DatasetRecord | None:
+        """Fetch a dataset record by fingerprint."""
+        with self._Session() as session:
+            return session.get(DatasetRecord, fingerprint)
+
+    def list_datasets(self, limit: int = 100) -> list[DatasetRecord]:
+        """List registered datasets."""
+        with self._Session() as session:
+            stmt = select(DatasetRecord).order_by(DatasetRecord.created_at.desc()).limit(limit)
+            return list(session.execute(stmt).scalars().all())
+
+    def list_exports(self, run_id: str | None = None, limit: int = 100) -> list[ExportRecord]:
+        """List recorded exports."""
+        with self._Session() as session:
+            stmt = select(ExportRecord).order_by(ExportRecord.created_at.desc()).limit(limit)
+            if run_id is not None:
+                stmt = stmt.where(ExportRecord.run_id == run_id)
+            return list(session.execute(stmt).scalars().all())
+
+    def add_metric(self, run_id: str, epoch: int, key: str, value: float) -> MetricRecord:
+        """Record an epoch-level training metric."""
+        with self._Session() as session:
+            record = MetricRecord(
+                run_id=run_id,
+                epoch=epoch,
+                metric_key=key,
+                metric_value=value,
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+            )
+            session.add(record)
+            session.commit()
+            return record
+
+    def list_metrics(self, run_id: str, limit: int = 1000) -> list[MetricRecord]:
+        """List metrics for a run."""
+        with self._Session() as session:
+            stmt = (
+                select(MetricRecord)
+                .where(MetricRecord.run_id == run_id)
+                .order_by(MetricRecord.epoch.asc(), MetricRecord.created_at.asc())
+                .limit(limit)
+            )
             return list(session.execute(stmt).scalars().all())
 
 
