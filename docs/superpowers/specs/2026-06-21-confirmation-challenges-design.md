@@ -117,3 +117,58 @@ New test file: `tests/unit/test_http_challenge.py`
 - Read-only tool does not require challenge
 - Expired challenges are pruned
 - Concurrent challenge creation and verification
+
+## Implementation Deviations
+
+The following deviations from the initial design were made during implementation:
+
+### 1. `resolved_paths` not populated
+
+`ChallengeRecord.resolved_paths` exists as a field but is never populated — the `request_challenge` endpoint does not resolve target paths from the payload. This was deferred because path resolution requires tool-specific logic that belongs in each tool's handler rather than the challenge module.
+
+### 2. `create_challenge()` signature simplified
+
+Spec: `create_challenge(policy, tool_name, payload)`
+Actual: `create_challenge(*, tool_name, args_hash, risk_level)`
+
+The actual signature accepts pre-computed values rather than a policy object + raw payload, keeping the challenge module decoupled from `HttpToolPolicy`.
+
+### 3. `verify_challenge()` signature takes challenge_id explicitly
+
+Spec: `verify_challenge(state, tool_name, payload)`
+Actual: `verify_challenge(challenges, *, challenge_id, tool_name, args_hash)`
+
+The final interface passes `app.state.challenges` directly, the explicit `challenge_id` string, and the pre-computed `args_hash`.
+
+### 4. `prune_expired_challenges` is public (not private)
+
+The function is public because it is called from both `routes.py` and tests. Making it private would require a separate test-only accessor.
+
+### 5. Studio `invokeTool` unchanged
+
+Spec said to modify `invokeTool` to accept optional `challengeId`. Instead, `invokeTool` was kept as-is and a separate `requestChallenge()` method was added. Call sites combine them by spreading `challenge_id` into the payload:
+
+```typescript
+const challenge = await requestChallenge(config, "tool_name", payload);
+const result = await invokeTool(config, "tool_name", { ...payload, challenge_id: challenge.challenge_id });
+```
+
+This is more explicit and avoids backward-compatibility concerns.
+
+### 6. No client-side confirmation dialog
+
+The spec described showing a confirmation summary dialog before submitting the challenge. The actual implementation silently requests a challenge and submits it inline. A confirmation modal can be added later without server changes.
+
+### 7. Route ordering matters
+
+`/tools/{name}/challenge` must be registered **before** `/tools/{name}` in FastAPI, otherwise the string `challenge` matches `{name}`. This was handled by placing the challenge route above `proxy_tool` in `routes.py`.
+
+### 8. Separate rate limit buckets
+
+Challenge requests use their own rate limit bucket (`challenge:{tool_name}`) separate from tool invocation (`tool:{tool_name}`). Both default to `DEFAULT_TOOL_RATE_LIMIT` (100/min).
+
+### 9. Error code mapping
+
+Spec said `FOVUX_HTTP_003` for all challenge failures. In practice:
+- `FOVUX_HTTP_001` (via `HttpToolPolicyError`): missing/expired/used/wrong challenge during `proxy_tool`
+- `FOVUX_HTTP_003`: tool does not require a challenge (returned by `request_challenge` for read-only tools)
