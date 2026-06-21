@@ -16,10 +16,14 @@ from fovux.server import mcp
 
 
 @mcp.tool()
-def run_archive(run_id: str, delete_original: bool = True) -> dict[str, Any]:
+def run_archive(
+    run_id: str,
+    delete_original: bool = True,
+    dry_run: bool = False,
+) -> dict[str, Any]:
     """Archive a terminal run under FOVUX_HOME/archive."""
-    inp = RunArchiveInput(run_id=run_id, delete_original=delete_original)
-    with tool_event("run_archive", run_id=run_id):
+    inp = RunArchiveInput(run_id=run_id, delete_original=delete_original, dry_run=dry_run)
+    with tool_event("run_archive", run_id=run_id, delete_original=delete_original, dry_run=dry_run):
         return _run_run_archive(inp).model_dump(mode="json")
 
 
@@ -38,21 +42,25 @@ def _run_run_archive(inp: RunArchiveInput) -> RunArchiveOutput:
     archive_path = ensure_within_root(archive_dir / f"{inp.run_id}.tar.gz", archive_dir)
     archived_files = sum(1 for path in run_dir.rglob("*") if path.is_file())
 
-    with tarfile.open(archive_path, "w:gz") as archive:
-        archive.add(run_dir, arcname=inp.run_id)
+    if not inp.dry_run:
+        with tarfile.open(archive_path, "w:gz") as archive:
+            archive.add(run_dir, arcname=inp.run_id)
 
     deleted = False
     if inp.delete_original:
-        import shutil
+        if not inp.dry_run:
+            import shutil
 
-        shutil.rmtree(run_dir)
+            shutil.rmtree(run_dir)
         deleted = True
 
-    registry.update_status(inp.run_id, "archived")
-    registry.update_extra(inp.run_id, {"archive_path": str(archive_path)})
+    if not inp.dry_run:
+        registry.update_status(inp.run_id, "archived")
+        registry.update_extra(inp.run_id, {"archive_path": str(archive_path)})
     return RunArchiveOutput(
         run_id=inp.run_id,
         archive_path=archive_path,
         archived_files=archived_files,
         deleted_original=deleted,
+        dry_run=inp.dry_run,
     )

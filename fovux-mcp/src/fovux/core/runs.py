@@ -93,6 +93,50 @@ class RunRegistry:
         """Dispose the SQLite engine and release pooled connections."""
         self._engine.dispose()
 
+    def reserve_run_slot(
+        self,
+        run_id: str,
+        run_path: Path,
+        model: str,
+        dataset_path: Path,
+        task: str,
+        epochs: int,
+        max_concurrent_runs: int,
+        tags: list[str] | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> RunRecord:
+        """Reserve a run slot atomically, locking the DB if concurrent limit is set."""
+        with self._Session() as session:
+            with session.begin():
+                if max_concurrent_runs > 0:
+                    active_count = (
+                        session.query(RunRecord).filter(RunRecord.status == "running").count()
+                    )
+                    if active_count >= max_concurrent_runs:
+                        from fovux.core.errors import FovuxTrainingAlreadyRunningError
+
+                        raise FovuxTrainingAlreadyRunningError(
+                            f"Cannot start run '{run_id}': {active_count} "
+                            f"concurrent training run(s) already active and "
+                            f"max_concurrent_runs={max_concurrent_runs}."
+                        )
+
+                record = RunRecord(
+                    id=run_id,
+                    run_path=str(run_path),
+                    model=model,
+                    dataset_path=str(dataset_path),
+                    task=task,
+                    epochs=epochs,
+                    status="pending",
+                    created_at=datetime.now(UTC).replace(tzinfo=None),
+                    tags_json=json.dumps(tags or []),
+                    extra_json=json.dumps(extra or {}),
+                )
+                session.add(record)
+            session.refresh(record)
+            return record
+
     def create_run(
         self,
         run_id: str,

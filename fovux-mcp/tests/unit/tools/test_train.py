@@ -868,3 +868,108 @@ def test_kill_pid_handles_missing_process(monkeypatch):
         message = _kill_pid(999, force=True)
 
     assert "no longer exists" in message
+
+
+def test_train_validation_failures():
+    """Verify training input validation failures."""
+    from pydantic import ValidationError
+
+    # Invalid epochs
+    with pytest.raises(ValidationError, match="epochs"):
+        TrainStartInput(dataset_path=Path("."), epochs=0)
+
+    # Invalid batch
+    with pytest.raises(ValidationError, match="batch"):
+        TrainStartInput(dataset_path=Path("."), batch=-1)
+
+    # Invalid imgsz
+    with pytest.raises(ValidationError, match="imgsz"):
+        TrainStartInput(dataset_path=Path("."), imgsz=0)
+
+    # Invalid device
+    with pytest.raises(ValidationError, match="device"):
+        TrainStartInput(dataset_path=Path("."), device="invalid_device_name")
+
+    # Invalid model (doesn't end with .pt / .yaml)
+    with pytest.raises(ValidationError, match="model"):
+        TrainStartInput(dataset_path=Path("."), model="yolov8n")
+
+    # Device policy violation: cpu with gpu_only policy
+    with pytest.raises(
+        ValidationError, match="Device cannot be 'cpu' when device_policy is 'gpu_only'"
+    ):
+        TrainStartInput(dataset_path=Path("."), device="cpu", device_policy="gpu_only")
+
+    # Device policy violation: cuda with cpu_only policy
+    with pytest.raises(
+        ValidationError, match="Device cannot be 'cuda' when device_policy is 'cpu_only'"
+    ):
+        TrainStartInput(dataset_path=Path("."), device="cuda", device_policy="cpu_only")
+
+    # Forbidden extra training options
+    with pytest.raises(ValidationError, match="extra"):
+        TrainStartInput(dataset_path=Path("."), extra_args={"invalid_extra_option": True})
+
+
+def test_train_preflight_tool(fake_fovux_home, tmp_path):
+    """The train_preflight tool must check dataset, disk space, concurrency and resolve device."""
+    from fovux.tools.train_preflight import train_preflight
+
+    # 1. Non-existent dataset
+    result = train_preflight(
+        dataset_path=str(tmp_path / "nonexistent"),
+        name="test_preflight_run",
+    )
+    assert result["dataset_valid"] is False
+    assert "Dataset path does not exist" in result["warnings"][0]
+
+    # 2. Valid path but invalid format
+    bad_dataset = tmp_path / "bad_dataset"
+    bad_dataset.mkdir()
+    (bad_dataset / "data.yaml").write_text("invalid_yaml: [abc", encoding="utf-8")
+    result = train_preflight(
+        dataset_path=str(bad_dataset),
+        name="test_preflight_run_bad",
+    )
+    assert result["dataset_valid"] is False
+    assert any("Dataset YAML format invalid" in w for w in result["warnings"])
+
+    # 3. Model format warning
+    result = train_preflight(
+        dataset_path=str(bad_dataset),
+        model="invalid_model",
+    )
+    assert result["model_valid"] is False
+    assert any("Model name/path must end with .pt" in w for w in result["warnings"])
+
+
+def test_train_preflight_resource_limits(fake_fovux_home, tmp_path):
+    """train_preflight should respect resource limits like disk space and device policies."""
+    from fovux.tools.train_preflight import train_preflight
+
+    bad_dataset = tmp_path / "bad_dataset"
+    bad_dataset.mkdir()
+    (bad_dataset / "data.yaml").write_text("nc: 2\nnames: ['a', 'b']", encoding="utf-8")
+
+    # Low disk space preflight warning
+    result = train_preflight(
+        dataset_path=str(bad_dataset),
+        max_disk_usage_gb=999999.0,  # Ask for impossible amount of space
+    )
+    assert result["disk_space_valid"] is False
+    assert any("Available disk space" in w for w in result["warnings"])
+
+
+def test_train_start_atomic_concurrency_lock(fake_fovux_home, tmp_path):
+    """Concurrent starts should serialize on reserve_run_slot SQLite transactions."""
+    from fovux.tools.train_start import _run_train_start
+
+    dataset = FIXTURES / "mini_yolo"
+
+    # Set limit to 1. Second run must fail even if we try concurrently
+    with patch("fovux.tools.train_start.subprocess.Popen", return_value=_fake_popen(pid=100)):
+        _run_train_start(TrainStartInput(dataset_path=dataset, name="run_1", max_concurrent_runs=1))
+
+    # Attempting to start second run must fail because of concurrency limit
+    with pytest.raises(FovuxTrainingAlreadyRunningError, match="concurrent"):
+        _run_train_start(TrainStartInput(dataset_path=dataset, name="run_2", max_concurrent_runs=1))

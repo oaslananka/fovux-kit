@@ -49,43 +49,49 @@ def tool_event(
         run_id=run_id,
         **{key: _safe_value(value) for key, value in context.items()},
     )
+    from fovux.core.path_policy import reset_active_tool, set_active_tool
+
     started_at = perf_counter()
     bound.info("tool_start")
+    active_token, roots_token = set_active_tool(tool_name, context)
     try:
-        yield bound
-    except FovuxError as exc:
-        bound.error(
-            "tool_error",
-            duration_seconds=round(perf_counter() - started_at, 6),
-            error_code=exc.code,
-            error_message=exc.message,
-        )
-        raise
-    except FileNotFoundError as exc:
-        checkpoint_error = FovuxCheckpointNotFoundError(str(exc))
-        bound.error(
-            "tool_error",
-            duration_seconds=round(perf_counter() - started_at, 6),
-            error_code=checkpoint_error.code,
-            error_message=checkpoint_error.message,
-        )
-        raise checkpoint_error from exc
-    except (RuntimeError, AssertionError) as exc:
-        library_error = FovuxError(f"Underlying library error in {tool_name}: {exc}")
-        bound.error(
-            "tool_error",
-            duration_seconds=round(perf_counter() - started_at, 6),
-            error_code=library_error.code,
-            error_message=library_error.message,
-        )
-        raise library_error from exc
-    except Exception as exc:
-        bound.error(
-            "tool_error",
-            duration_seconds=round(perf_counter() - started_at, 6),
-            error_type=type(exc).__name__,
-            error_message=str(exc),
-        )
-        raise FovuxError(f"Unexpected error in {tool_name}: {exc}") from exc
-    else:
-        bound.info("tool_end", duration_seconds=round(perf_counter() - started_at, 6))
+        try:
+            yield bound
+        except FovuxError as exc:
+            bound.error(
+                "tool_error",
+                duration_seconds=round(perf_counter() - started_at, 6),
+                error_code=exc.code,
+                error_message=exc.message,
+            )
+            raise
+        except FileNotFoundError as exc:
+            checkpoint_error = FovuxCheckpointNotFoundError(str(exc))
+            bound.error(
+                "tool_error",
+                duration_seconds=round(perf_counter() - started_at, 6),
+                error_code=checkpoint_error.code,
+                error_message=checkpoint_error.message,
+            )
+            raise checkpoint_error from exc
+        except (RuntimeError, AssertionError) as exc:
+            library_error = FovuxError(f"Underlying library error in {tool_name}: {exc}")
+            bound.error(
+                "tool_error",
+                duration_seconds=round(perf_counter() - started_at, 6),
+                error_code=library_error.code,
+                error_message=library_error.message,
+            )
+            raise library_error from exc
+        except Exception as exc:
+            bound.error(
+                "tool_error",
+                duration_seconds=round(perf_counter() - started_at, 6),
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+            )
+            raise FovuxError(f"Unexpected error in {tool_name}: {exc}") from exc
+        else:
+            bound.info("tool_end", duration_seconds=round(perf_counter() - started_at, 6))
+    finally:
+        reset_active_tool(active_token, roots_token)

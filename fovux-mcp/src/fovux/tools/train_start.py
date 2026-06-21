@@ -28,7 +28,7 @@ from fovux.core.processes import (
 from fovux.core.runs import get_registry
 from fovux.core.tooling import tool_event
 from fovux.core.validation import ensure_within_root, validate_run_id
-from fovux.schemas.training import TrainStartInput, TrainStartOutput
+from fovux.schemas.training import TrainingOptions, TrainStartInput, TrainStartOutput
 from fovux.server import mcp
 
 
@@ -46,6 +46,10 @@ def train_start(
     max_concurrent_runs: int = 1,
     tags: list[str] | None = None,
     extra_args: dict[str, Any] | None = None,
+    options: dict[str, Any] | None = None,
+    max_runtime_seconds: int | None = None,
+    max_disk_usage_gb: float | None = None,
+    device_policy: str = "any",
 ) -> dict[str, Any]:
     """Launch a YOLO training run as a non-blocking background subprocess.
 
@@ -64,6 +68,10 @@ def train_start(
         max_concurrent_runs=max_concurrent_runs,
         tags=tags or [],
         extra_args=extra_args or {},
+        options=TrainingOptions(**(options or {})),
+        max_runtime_seconds=max_runtime_seconds,
+        max_disk_usage_gb=max_disk_usage_gb,
+        device_policy=device_policy,  # type: ignore[arg-type]
     )
     with tool_event(
         "train_start",
@@ -103,14 +111,6 @@ def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
                 "Use a different name or pass force=True to overwrite."
             )
 
-    if inp.max_concurrent_runs > 0:
-        active_count = len(registry.list_runs(status="running", limit=10_000))
-        if active_count >= inp.max_concurrent_runs:
-            raise FovuxTrainingAlreadyRunningError(
-                f"Cannot start run '{run_id}': {active_count} concurrent training run(s) "
-                f"already active and max_concurrent_runs={inp.max_concurrent_runs}."
-            )
-
     if existing is not None and inp.force:
         shutil.rmtree(run_dir, ignore_errors=True)
         registry.delete_run(run_id)
@@ -129,13 +129,14 @@ def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
     }
     write_json_atomically(run_dir / "params.json", params)
 
-    registry.create_run(
+    registry.reserve_run_slot(
         run_id=run_id,
         run_path=run_dir,
         model=inp.model,
         dataset_path=dataset_path,
         task=inp.task,
         epochs=inp.epochs,
+        max_concurrent_runs=inp.max_concurrent_runs,
         tags=inp.tags,
     )
 

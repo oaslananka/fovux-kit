@@ -20,10 +20,17 @@ def run_delete(
     run_id: str,
     delete_files: bool = True,
     force: bool = False,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
     """Delete a non-running training run and optionally remove its run directory."""
-    inp = RunDeleteInput(run_id=run_id, delete_files=delete_files, force=force)
-    with tool_event("run_delete", run_id=run_id, delete_files=delete_files, force=force):
+    inp = RunDeleteInput(run_id=run_id, delete_files=delete_files, force=force, dry_run=dry_run)
+    with tool_event(
+        "run_delete",
+        run_id=run_id,
+        delete_files=delete_files,
+        force=force,
+        dry_run=dry_run,
+    ):
         return _run_delete(inp).model_dump(mode="json")
 
 
@@ -41,15 +48,28 @@ def _run_delete(inp: RunDeleteInput) -> RunDeleteOutput:
         )
 
     deleted_files = False
+    run_path_str = None
+    affected_files_count = 0
     if inp.delete_files:
         run_path = ensure_within_root(Path(record.run_path), paths.runs)
+        run_path_str = str(run_path)
         if run_path.exists():
-            shutil.rmtree(run_path)
+            affected_files_count = sum(1 for p in run_path.rglob("*") if p.is_file())
+            if not inp.dry_run:
+                shutil.rmtree(run_path)
             deleted_files = True
 
-    deleted_registry = registry.delete_run(inp.run_id)
+    deleted_registry = False
+    if not inp.dry_run:
+        deleted_registry = registry.delete_run(inp.run_id)
+    else:
+        deleted_registry = True
+
     return RunDeleteOutput(
         run_id=inp.run_id,
         deleted_registry=deleted_registry,
         deleted_files=deleted_files,
+        dry_run=inp.dry_run,
+        run_path=run_path_str,
+        affected_files_count=affected_files_count,
     )

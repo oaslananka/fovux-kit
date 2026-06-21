@@ -43,6 +43,7 @@ _TOOL_SPECS: dict[str, str] = {
     "run_tag": "fovux.tools.run_tag:run_tag",
     "sync_to_mlflow": "fovux.tools.sync_to_mlflow:sync_to_mlflow",
     "train_adjust": "fovux.tools.train_adjust:train_adjust",
+    "train_preflight": "fovux.tools.train_preflight:train_preflight",
     "train_resume": "fovux.tools.train_resume:train_resume",
     "train_start": "fovux.tools.train_start:train_start",
     "train_status": "fovux.tools.train_status:train_status",
