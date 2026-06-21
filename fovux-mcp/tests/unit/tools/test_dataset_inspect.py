@@ -136,3 +136,82 @@ def test_inspect_yolo_reports_missing_labels_and_bbox_buckets(tmp_path: Path):
     assert out.orphan_images == 1
     assert [path.name for path in out.missing_label_images] == ["missing.jpg"]
     assert out.bbox_size_buckets == {"small": 1, "medium": 1, "large": 1}
+
+
+def test_inspect_quality_intelligence(tmp_path: Path):
+    """Test computation of dataset quality metrics, leakage, duplicates, and fix plan."""
+    # Create directories for training split
+    train_images = tmp_path / "images" / "train"
+    train_labels = tmp_path / "labels" / "train"
+    train_images.mkdir(parents=True)
+    train_labels.mkdir(parents=True)
+
+    # Create directories for validation split (to test leakage)
+    val_images = tmp_path / "images" / "val"
+    val_labels = tmp_path / "labels" / "val"
+    val_images.mkdir(parents=True)
+    val_labels.mkdir(parents=True)
+
+    # Save identical images to train and val (to trigger duplication/leakage)
+    img_data = Image.new("RGB", (64, 64), color=(50, 50, 50))
+    img_data.save(train_images / "img1.jpg")
+    img_data.save(val_images / "img1.jpg")  # duplicate of img1
+
+    # Save a normal image
+    from PIL import ImageDraw
+    img_data2 = Image.new("RGB", (64, 64), color=(100, 100, 100))
+    draw = ImageDraw.Draw(img_data2)
+    draw.line((0, 0, 64, 64), fill=(0, 255, 0), width=3)
+    img_data2.save(train_images / "img2.jpg")
+
+    # Bounding boxes for train/img1 (normal)
+    (train_labels / "img1.txt").write_text("0 0.5 0.5 0.2 0.2\n", encoding="utf-8")
+
+    # Bounding boxes for val/img1 (has anomalies: out-of-bounds, tiny, overlapping)
+    # 0: normal
+    # 1: out-of-bounds cx=1.2 (escaping limits)
+    # 2: tiny w=0.001, h=0.001 (w*h < 0.0005)
+    # 3: overlapping with class 0 (duplicate box)
+    val_box_content = (
+        "0 0.5 0.5 0.2 0.2\n"
+        "0 1.2 0.5 0.2 0.2\n"
+        "0 0.5 0.5 0.001 0.001\n"
+        "0 0.5 0.5 0.2 0.2\n"
+    )
+    (val_labels / "img1.txt").write_text(val_box_content, encoding="utf-8")
+
+    # Empty annotation file for img2
+    (train_labels / "img2.txt").write_text("", encoding="utf-8")
+
+    # data.yaml
+    (tmp_path / "data.yaml").write_text(
+        "names: ['object']\n", encoding="utf-8"
+    )
+
+    out = _run_inspect(DatasetInspectInput(dataset_path=tmp_path))
+
+    # Assertions on quality intelligence
+    assert out.quality_score < 100.0
+    assert out.label_anomalies.out_of_bounds == 1
+    assert out.label_anomalies.tiny_boxes == 1
+    assert out.label_anomalies.empty_labels == 1
+    assert out.label_anomalies.suspiciously_overlapping == 1
+    assert out.duplicate_groups_count == 1
+    assert out.total_duplicates_found == 2
+    assert len(out.leaked_images) == 1
+    normalized_leak_path = out.leaked_images[0].train_image.replace("\\", "/")
+    assert normalized_leak_path == "images/train/img1.jpg"
+
+    # Confirm auto fix items
+    actions = [item.action for item in out.auto_fix_plan]
+    assert "Remove duplicate images" in actions
+    assert "Remove train-val/test leakage" in actions
+    assert "Clip out-of-bounds bounding boxes" in actions
+    assert "Filter tiny bounding boxes" in actions
+    assert "Merge overlapping bounding boxes" in actions
+
+    # Confirm dataset card contains details
+    assert "# Dataset Card" in out.dataset_card
+    assert "Quality Score" in out.dataset_card
+    assert "Tiny Boxes:" in out.dataset_card
+
