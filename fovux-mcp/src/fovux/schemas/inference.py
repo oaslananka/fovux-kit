@@ -282,7 +282,9 @@ class ActiveLearningQueueRankInput(BaseModel):
     checkpoint: str
     unlabeled_pool: Path
     dataset_path: Path
-    strategy: Literal["entropy", "margin", "least_confident"] = "entropy"
+    strategy: Literal["entropy", "margin", "least_confident", "diversity", "error_likelihood"] = (
+        "entropy"
+    )
     limit: int = 50
     imgsz: int = 640
     conf: float = 0.25
@@ -315,7 +317,7 @@ class ActiveLearningQueueSubmitInput(BaseModel):
 
     entry_id: str
     corrected_labels: list[Detection] = Field(default_factory=list)
-    dataset_split: Literal["train", "val"] = "train"
+    dataset_split: Literal["train", "val", "test"] = "train"
 
 
 class ActiveLearningQueueSubmitOutput(BaseModel):

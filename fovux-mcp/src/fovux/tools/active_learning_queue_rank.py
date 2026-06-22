@@ -52,6 +52,46 @@ def active_learning_queue_rank(
         return output.model_dump(mode="json")
 
 
+def _get_dataset_class_counts(dataset_path: Path) -> dict[int, int]:
+    counts: dict[int, int] = {}
+    labels_dir = dataset_path / "labels"
+    if not labels_dir.exists():
+        return counts
+    for txt_file in labels_dir.rglob("*.txt"):
+        try:
+            content = txt_file.read_text(encoding="utf-8")
+            for line in content.splitlines():
+                parts = line.strip().split()
+                if parts:
+                    class_id = int(parts[0])
+                    counts[class_id] = counts.get(class_id, 0) + 1
+        except Exception:  # noqa: S112
+            continue
+    return counts
+
+
+def _get_existing_labels(image_path: Path) -> list[tuple[int, list[float]]] | None:
+    txt_path = image_path.with_suffix(".txt")
+    if not txt_path.exists():
+        path_str = str(image_path)
+        if "images" in path_str:
+            txt_path = Path(path_str.replace("images", "labels")).with_suffix(".txt")
+    if txt_path.exists():
+        labels = []
+        try:
+            content = txt_path.read_text(encoding="utf-8")
+            for line in content.splitlines():
+                parts = line.strip().split()
+                if len(parts) >= 5:
+                    class_id = int(parts[0])
+                    coords = [float(x) for x in parts[1:5]]
+                    labels.append((class_id, coords))
+            return labels
+        except Exception:  # noqa: S110
+            pass
+    return None
+
+
 def _run_active_learning_queue_rank(
     inp: ActiveLearningQueueRankInput,
 ) -> ActiveLearningQueueRankOutput:
@@ -70,6 +110,9 @@ def _run_active_learning_queue_rank(
 
     # 2. Load model
     model = load_yolo_model(resolve_checkpoint(inp.checkpoint))
+
+    # 3. Get dataset class counts for underrepresented check & diversity strategy
+    counts = _get_dataset_class_counts(inp.dataset_path)
 
     queue_entries: list[ActiveLearningQueueItem] = []
 
@@ -106,7 +149,6 @@ def _run_active_learning_queue_rank(
                     class_name = names.get(class_id, f"class_{class_id}")
                     # YOLO webviews expect relative coordinates or normalized xyxy for visual
                     # preview
-                    # Let's save xyxy normalized to [0,1] or absolute
                     orig_shape = getattr(result, "orig_shape", (640, 640))
                     w, h = orig_shape[1], orig_shape[0]
                     norm_xyxy = [
@@ -130,21 +172,88 @@ def _run_active_learning_queue_rank(
                         )
                     )
 
-        # Compute uncertainty score
+        # 4. Check conditions for reason tags
+        # Check disagreement with existing labels (weak labels)
+        existing_labels = _get_existing_labels(image)
+        disagreement = False
+        if existing_labels is not None:
+            pred_classes = [d.class_id for d in detections]
+            exist_classes = [label[0] for label in existing_labels]
+            if len(pred_classes) != len(exist_classes) or set(pred_classes) != set(exist_classes):
+                disagreement = True
+
+        # Check outlier conditions
+        outlier = False
+        if len(detections) > 10:
+            outlier = True
+        else:
+            for d in detections:
+                if len(d.bbox_xyxy) >= 4:
+                    box_w, box_h = d.bbox_xyxy[2], d.bbox_xyxy[3]
+                    area = box_w * box_h
+                    if area < 0.002 or area > 0.8:
+                        outlier = True
+                        break
+
+        # Check underrepresented classes
+        underrepresented = False
+        if counts:
+            all_counts = list(counts.values())
+            threshold = max(5.0, sum(all_counts) / len(all_counts) * 0.5) if all_counts else 5.0
+            for d in detections:
+                if counts.get(d.class_id, 0) < threshold:
+                    underrepresented = True
+                    break
+
+        # 5. Compute strategy-based uncertainty score
         if not confidences:
-            score = 1.0
-            reason = "no_detections"
+            uncertainty_score = 1.0
         else:
             best = max(confidences)
             if inp.strategy == "least_confident":
-                score = 1.0 - best
+                uncertainty_score = 1.0 - best
             elif inp.strategy == "margin" and len(confidences) > 1:
                 ordered = sorted(confidences, reverse=True)
-                score = 1.0 - (ordered[0] - ordered[1])
+                uncertainty_score = 1.0 - (ordered[0] - ordered[1])
             else:  # entropy-like closeness to 0.5
-                score = sum(1.0 - abs(c - 0.5) * 2.0 for c in confidences) / len(confidences)
+                uncertainty_score = sum(1.0 - abs(c - 0.5) * 2.0 for c in confidences) / len(
+                    confidences
+                )
 
-            reason = "low_confidence" if score > 0.5 else "underrepresented_class"
+        # Apply strategy choice to main score
+        if inp.strategy == "diversity":
+            if not counts:
+                score = uncertainty_score
+            else:
+                max_count = max(counts.values()) if counts.values() else 1
+                pred_counts = [counts.get(d.class_id, 0) for d in detections]
+                if pred_counts:
+                    score = 1.0 - (sum(pred_counts) / len(pred_counts)) / max_count
+                else:
+                    score = 0.0
+        elif inp.strategy == "error_likelihood":
+            if disagreement:
+                score = 1.0
+            elif outlier:
+                score = 0.9
+            elif underrepresented:
+                score = 0.8
+            else:
+                score = min(0.7, uncertainty_score)
+        else:
+            score = uncertainty_score
+
+        # Determine best reason code
+        if disagreement:
+            reason = "disagreement"
+        elif outlier:
+            reason = "outlier"
+        elif underrepresented:
+            reason = "underrepresented_class"
+        elif not confidences:
+            reason = "no_detections"
+        else:
+            reason = "low_confidence"
 
         entry_id = hashlib.md5(  # nosec
             str(image.resolve()).encode("utf-8"),
