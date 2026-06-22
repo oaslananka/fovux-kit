@@ -1,9 +1,17 @@
-import { describe, expect, it } from "vitest";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import "./helpers/vscodeMock";
+import { createdPanels, resetVscodeMockState } from "./helpers/vscodeMock";
+
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   annotationEditorReducer,
   createAnnotationEditorState,
 } from "../../src/webviews/annotationEditor/main";
+import { openAnnotationEditor } from "../../src/commands/openAnnotationEditor";
 
 describe("annotation editor reducer", () => {
   it("draws boxes and supports undo", () => {
@@ -101,5 +109,63 @@ describe("annotation editor reducer", () => {
     expect(state.boxes).toHaveLength(1);
     expect(state.boxes[0]?.className).toBe("person");
     expect(state.status).toBe("Reset status");
+  });
+
+  it("opens the queue mode editor and loads queue items", async () => {
+    resetVscodeMockState();
+
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "fovux-home-test-"));
+    process.env["FOVUX_HOME"] = home;
+    fs.writeFileSync(path.join(home, "auth.token"), "token\n");
+
+    const mockQueueItem = {
+      id: "entry_123",
+      image_path: "/path/to/img.jpg",
+      dataset_path: "/path/to/dataset",
+      score: 0.95,
+      reason: "low_confidence",
+      status: "pending",
+      predictions: [
+        {
+          class_id: 0,
+          class_name: "cat",
+          confidence: 0.45,
+          bbox_xyxy: [0.1, 0.2, 0.3, 0.4],
+        },
+      ],
+    };
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("active_learning_queue_list")) {
+        return {
+          ok: true,
+          json: async () => ({ queue_entries: [mockQueueItem] }),
+        };
+      }
+      if (url.includes("dataset_inspect")) {
+        return {
+          ok: true,
+          json: async () => ({ classes: [{ name: "cat" }] }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const context = {
+      extensionUri: { fsPath: "/dummy/ext", path: "/dummy/ext" },
+    };
+
+    await openAnnotationEditor(context as any, {
+      isQueueMode: true,
+      datasetPath: "/path/to/dataset",
+    });
+
+    expect(createdPanels).toHaveLength(1);
+    expect(createdPanels[0].title).toBe("Fovux Annotation Editor Queue");
+
+    fs.rmSync(home, { recursive: true, force: true });
+    delete process.env["FOVUX_HOME"];
+    vi.restoreAllMocks();
   });
 });

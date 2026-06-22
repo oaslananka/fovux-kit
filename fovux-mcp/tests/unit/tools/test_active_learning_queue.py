@@ -174,3 +174,163 @@ def test_active_learning_queue_submit_writes_labels_and_copies_image(
     db_entry = registry.get_review_queue_entry("entry_abc")
     assert db_entry is not None
     assert db_entry.status == "reviewed"
+
+
+def test_active_learning_queue_rank_underrepresented_and_diversity(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Test underrepresented class detection and diversity strategy."""
+    monkeypatch.setenv("FOVUX_HOME", str(tmp_path))
+    pool = _make_pool(tmp_path)
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+
+    # Create existing class distribution: class 0 has 50 labels, class 1 has 1 label
+    labels_dir = dataset / "labels" / "train"
+    labels_dir.mkdir(parents=True)
+    # 50 labels for class 0
+    lines_c0 = "\n".join("0 0.5 0.5 0.2 0.2" for _ in range(50))
+    (labels_dir / "existing_labels.txt").write_text(lines_c0, encoding="utf-8")
+    # 1 label for class 1
+    (labels_dir / "existing_labels_rare.txt").write_text("1 0.5 0.5 0.2 0.2", encoding="utf-8")
+
+    # Predict class 1 (underrepresented class)
+    fake_model = SimpleNamespace(
+        predict=lambda **_kwargs: [
+            SimpleNamespace(
+                orig_shape=(64, 64),
+                boxes=SimpleNamespace(
+                    conf=SimpleNamespace(tolist=lambda: [0.9]),
+                    cls=SimpleNamespace(tolist=lambda: [1]),
+                    xyxy=SimpleNamespace(tolist=lambda: [[10.0, 10.0, 30.0, 30.0]]),
+                ),
+                names={0: "cat", 1: "dog"},
+            )
+        ]
+    )
+
+    with (
+        patch(
+            "fovux.tools.active_learning_queue_rank.resolve_checkpoint",
+            return_value="ckpt.pt",
+        ),
+        patch(
+            "fovux.tools.active_learning_queue_rank.load_yolo_model",
+            return_value=fake_model,
+        ),
+    ):
+        out = _run_active_learning_queue_rank(
+            ActiveLearningQueueRankInput(
+                checkpoint="ckpt.pt",
+                unlabeled_pool=pool,
+                dataset_path=dataset,
+                strategy="diversity",
+                limit=10,
+            )
+        )
+
+    assert out.ranked_count == 2
+    # Verify dog (class 1) is underrepresented, so reason is underrepresented_class
+    assert out.queue_entries[0].reason == "underrepresented_class"
+    # Diversity score should be high since class 1 has low count (1/50)
+    assert out.queue_entries[0].score > 0.5
+
+
+def test_active_learning_queue_rank_disagreement_and_error_likelihood(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Test disagreement detection and error_likelihood strategy."""
+    monkeypatch.setenv("FOVUX_HOME", str(tmp_path))
+    pool = _make_pool(tmp_path)
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+
+    # Create a weak label in the unlabeled pool that disagrees with prediction
+    # Prediction will be class 0, but weak label is class 2
+    (pool / "001.txt").write_text("2 0.5 0.5 0.2 0.2", encoding="utf-8")
+
+    fake_model = SimpleNamespace(
+        predict=lambda **_kwargs: [
+            SimpleNamespace(
+                orig_shape=(64, 64),
+                boxes=SimpleNamespace(
+                    conf=SimpleNamespace(tolist=lambda: [0.95]),
+                    cls=SimpleNamespace(tolist=lambda: [0]),
+                    xyxy=SimpleNamespace(tolist=lambda: [[10.0, 10.0, 30.0, 30.0]]),
+                ),
+                names={0: "cat"},
+            )
+        ]
+    )
+
+    with (
+        patch(
+            "fovux.tools.active_learning_queue_rank.resolve_checkpoint",
+            return_value="ckpt.pt",
+        ),
+        patch(
+            "fovux.tools.active_learning_queue_rank.load_yolo_model",
+            return_value=fake_model,
+        ),
+    ):
+        out = _run_active_learning_queue_rank(
+            ActiveLearningQueueRankInput(
+                checkpoint="ckpt.pt",
+                unlabeled_pool=pool,
+                dataset_path=dataset,
+                strategy="error_likelihood",
+                limit=1,
+            )
+        )
+
+    # Only 001.jpg has the corresponding .txt label file causing disagreement
+    # 001.jpg should be ranked first due to error_likelihood score = 1.0
+    assert out.ranked_count == 1
+    assert out.queue_entries[0].reason == "disagreement"
+    assert out.queue_entries[0].score == pytest.approx(1.0)
+
+
+def test_active_learning_queue_rank_outliers(tmp_path: Path, monkeypatch) -> None:
+    """Test outlier detection based on box sizes and counts."""
+    monkeypatch.setenv("FOVUX_HOME", str(tmp_path))
+    pool = _make_pool(tmp_path)
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+
+    # Case 1: Extremely tiny bounding box (area < 0.002)
+    fake_model = SimpleNamespace(
+        predict=lambda **_kwargs: [
+            SimpleNamespace(
+                orig_shape=(1000, 1000),
+                boxes=SimpleNamespace(
+                    conf=SimpleNamespace(tolist=lambda: [0.9]),
+                    cls=SimpleNamespace(tolist=lambda: [0]),
+                    xyxy=SimpleNamespace(tolist=lambda: [[10.0, 10.0, 11.0, 11.0]]),
+                ),
+                names={0: "cat"},
+            )
+        ]
+    )
+
+    with (
+        patch(
+            "fovux.tools.active_learning_queue_rank.resolve_checkpoint",
+            return_value="ckpt.pt",
+        ),
+        patch(
+            "fovux.tools.active_learning_queue_rank.load_yolo_model",
+            return_value=fake_model,
+        ),
+    ):
+        out = _run_active_learning_queue_rank(
+            ActiveLearningQueueRankInput(
+                checkpoint="ckpt.pt",
+                unlabeled_pool=pool,
+                dataset_path=dataset,
+                strategy="least_confident",
+                limit=1,
+            )
+        )
+
+    assert out.ranked_count == 1
+    assert out.queue_entries[0].reason == "outlier"
