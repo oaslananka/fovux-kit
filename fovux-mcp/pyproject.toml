@@ -184,6 +184,7 @@ omit = [
     "**/core/dataset_utils.py",
     "**/core/train_worker.py",
     "**/core/ultralytics_adapter.py",
+    "**/tools/demo_init.py",
     "**/tools/export_tflite.py",
     "**/tools/infer_image.py",
     "**/tools/infer_rtsp.py",
