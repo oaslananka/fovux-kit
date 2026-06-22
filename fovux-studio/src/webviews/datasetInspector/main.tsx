@@ -4,10 +4,27 @@ import { createRoot } from "react-dom/client";
 
 import { ClassDistribution } from "./components/ClassDistribution";
 import { SamplePreview } from "./components/SamplePreview";
-import { invokeTool, requestChallenge, type HttpClientConfig } from "../shared/api";
+import {
+  invokeTool,
+  requestChallenge,
+  type ChallengeResponse,
+  type HttpClientConfig,
+} from "../shared/api";
+import { ChallengeModal } from "../shared/ChallengeModal";
 import { DatasetInspectorInitialState, postToExtension, readInitialState } from "../shared/types";
 
 function DatasetInspectorApp(): JSX.Element {
+  const [pendingChallenge, setPendingChallenge] = useState<{
+    challenge: ChallengeResponse;
+    resolve: (val: string) => void;
+    reject: (err: Error) => void;
+  } | null>(null);
+
+  function confirmChallenge(challenge: ChallengeResponse): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      setPendingChallenge({ challenge, resolve, reject });
+    });
+  }
   const initial = readInitialState<DatasetInspectorInitialState>({
     baseUrl: "http://127.0.0.1:7823",
     authToken: null,
@@ -166,6 +183,21 @@ function DatasetInspectorApp(): JSX.Element {
       ) : null}
 
       <SamplePreview samples={initial.samplePreviews} />
+      <ChallengeModal
+        challenge={pendingChallenge ? pendingChallenge.challenge : null}
+        onConfirm={() => {
+          if (pendingChallenge) {
+            pendingChallenge.resolve(pendingChallenge.challenge.challenge_id);
+            setPendingChallenge(null);
+          }
+        }}
+        onCancel={() => {
+          if (pendingChallenge) {
+            pendingChallenge.reject(new Error("Operation cancelled."));
+            setPendingChallenge(null);
+          }
+        }}
+      />
     </main>
   );
 
@@ -205,9 +237,10 @@ function DatasetInspectorApp(): JSX.Element {
         overwrite: true,
       };
       const challenge = await requestChallenge(clientConfig, "dataset_split", payload);
+      const challengeId = await confirmChallenge(challenge);
       const result = await invokeTool<{ output_path: string }>(clientConfig, "dataset_split", {
         ...payload,
-        challenge_id: challenge.challenge_id,
+        challenge_id: challengeId,
       });
       setStatusMessage(`Split dataset written to ${result.output_path}.`);
       setError(null);

@@ -4,13 +4,232 @@ import * as vscode from "vscode";
 
 import { createWebviewHtml } from "../webviews/html";
 import { resolveLabelPath } from "../webviews/datasetInspector/sampleData";
+import { ExtensionFovuxClient } from "../fovux/extensionClient";
 import type {
   AnnotationEditorInitialState,
   DatasetSampleBox,
   WebviewToExtensionMessage,
 } from "../webviews/shared/types";
 
-export async function openAnnotationEditor(context: vscode.ExtensionContext): Promise<void> {
+interface QueueDetection {
+  class_id: number;
+  class_name: string;
+  confidence: number;
+  bbox_xyxy: number[];
+}
+
+interface ActiveLearningQueueItem {
+  id: string;
+  image_path: string;
+  dataset_path: string;
+  score: number;
+  reason: string;
+  status: string;
+  predictions: QueueDetection[];
+  corrected_labels?: QueueDetection[];
+  created_at?: string;
+}
+
+interface DatasetClassEntry {
+  name: string;
+  id?: number;
+}
+
+interface DatasetInspectResult {
+  classes?: DatasetClassEntry[];
+}
+
+export async function openAnnotationEditor(
+  context: vscode.ExtensionContext,
+  options?: { isQueueMode?: boolean; datasetPath?: string }
+): Promise<void> {
+  const client = await ExtensionFovuxClient.create();
+
+  if (options?.isQueueMode) {
+    let queue: ActiveLearningQueueItem[] = [];
+    try {
+      const res = await client.invokeTool<{
+        queue_entries: ActiveLearningQueueItem[];
+      }>("active_learning_queue_list", {
+        dataset_path: options.datasetPath,
+        status: "pending",
+        limit: 100,
+      });
+      queue = res.queue_entries || [];
+    } catch (error) {
+      void vscode.window.showErrorMessage(
+        `Failed to load review queue: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return;
+    }
+
+    if (queue.length === 0) {
+      void vscode.window.showInformationMessage("No pending items in the active learning queue.");
+      return;
+    }
+
+    const firstItem = queue[0];
+    let classNames = ["class_0"];
+    try {
+      const inspectResult = await client.invokeTool<DatasetInspectResult>("dataset_inspect", {
+        dataset_path: firstItem.dataset_path,
+      });
+      if (inspectResult && Array.isArray(inspectResult.classes)) {
+        classNames = inspectResult.classes
+          .map((c) => (c && typeof c === "object" ? c.name : null))
+          .filter((n): n is string => typeof n === "string");
+      }
+    } catch {
+      // fallback
+    }
+
+    const initialBoxes: DatasetSampleBox[] = (firstItem.predictions || []).map((p) => ({
+      classId: p.class_id,
+      className: p.class_name || `class_${p.class_id}`,
+      x: p.bbox_xyxy[0],
+      y: p.bbox_xyxy[1],
+      width: p.bbox_xyxy[2],
+      height: p.bbox_xyxy[3],
+    }));
+
+    const localResourceRoots = [
+      context.extensionUri,
+      vscode.Uri.file(path.dirname(firstItem.image_path)),
+      vscode.Uri.file(firstItem.dataset_path),
+    ];
+    if (vscode.workspace.workspaceFolders) {
+      for (const folder of vscode.workspace.workspaceFolders) {
+        localResourceRoots.push(folder.uri);
+      }
+    }
+
+    const panel = vscode.window.createWebviewPanel(
+      "fovux.annotationEditor",
+      "Fovux Annotation Editor Queue",
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots,
+      }
+    );
+
+    let currentIndex = 0;
+
+    const loadQueueItem = async (index: number) => {
+      if (index >= queue.length) {
+        try {
+          const res = await client.invokeTool<{
+            queue_entries: ActiveLearningQueueItem[];
+          }>("active_learning_queue_list", {
+            dataset_path: options.datasetPath,
+            status: "pending",
+            limit: 100,
+          });
+          queue = res.queue_entries || [];
+          currentIndex = 0;
+        } catch {
+          queue = [];
+        }
+        if (queue.length === 0) {
+          void vscode.window.showInformationMessage("All pending queue items have been reviewed.");
+          panel.dispose();
+          return;
+        }
+      }
+
+      const item = queue[currentIndex];
+      let itemClassNames = ["class_0"];
+      try {
+        const inspectResult = await client.invokeTool<DatasetInspectResult>("dataset_inspect", {
+          dataset_path: item.dataset_path,
+        });
+        if (inspectResult && Array.isArray(inspectResult.classes)) {
+          itemClassNames = inspectResult.classes
+            .map((c) => (c && typeof c === "object" ? c.name : null))
+            .filter((n): n is string => typeof n === "string");
+        }
+      } catch {
+        // fallback
+      }
+
+      const itemBoxes: DatasetSampleBox[] = (item.predictions || []).map((p) => ({
+        classId: p.class_id,
+        className: p.class_name || `class_${p.class_id}`,
+        x: p.bbox_xyxy[0],
+        y: p.bbox_xyxy[1],
+        width: p.bbox_xyxy[2],
+        height: p.bbox_xyxy[3],
+      }));
+
+      const state: AnnotationEditorInitialState = {
+        imagePath: item.image_path,
+        imageUri: panel.webview.asWebviewUri(vscode.Uri.file(item.image_path)).toString(),
+        classNames: itemClassNames,
+        initialBoxes: itemBoxes,
+        initialError: null,
+        isQueueMode: true,
+        queueReason: item.reason,
+        queueScore: item.score,
+        queueEntryId: item.id,
+        datasetPath: item.dataset_path,
+      };
+
+      void panel.webview.postMessage({ type: "setEditorState", state });
+    };
+
+    panel.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
+      if (message.type === "submitQueueEntry") {
+        const correctedLabels = message.boxes.map((b) => ({
+          class_id: b.classId,
+          class_name: b.className,
+          confidence: 1.0,
+          bbox_xyxy: [b.x, b.y, b.width, b.height],
+        }));
+        void client
+          .invokeTool("active_learning_queue_submit", {
+            entry_id: message.entryId,
+            corrected_labels: correctedLabels,
+            dataset_split: message.datasetSplit || "train",
+          })
+          .then(() => {
+            void vscode.window.showInformationMessage("Label corrections submitted successfully.");
+            currentIndex++;
+            return loadQueueItem(currentIndex);
+          })
+          .then(undefined, (error: unknown) => {
+            void vscode.window.showErrorMessage(
+              `Failed to submit: ${error instanceof Error ? error.message : String(error)}`
+            );
+          });
+      } else if (message.type === "skipQueueEntry") {
+        currentIndex++;
+        void loadQueueItem(currentIndex);
+      }
+    });
+
+    const initialState: AnnotationEditorInitialState = {
+      imagePath: firstItem.image_path,
+      imageUri: panel.webview.asWebviewUri(vscode.Uri.file(firstItem.image_path)).toString(),
+      classNames,
+      initialBoxes,
+      initialError: null,
+      isQueueMode: true,
+      queueReason: firstItem.reason,
+      queueScore: firstItem.score,
+      queueEntryId: firstItem.id,
+      datasetPath: firstItem.dataset_path,
+    };
+
+    panel.webview.html = createWebviewHtml(
+      panel.webview,
+      context.extensionUri,
+      "webviews/annotationEditor/main.js",
+      initialState
+    );
+    return;
+  }
+
   const selection = await vscode.window.showOpenDialog({
     canSelectFiles: true,
     canSelectFolders: false,

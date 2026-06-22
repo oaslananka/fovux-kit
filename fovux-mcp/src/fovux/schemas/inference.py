@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -259,3 +260,68 @@ class SyncToMlflowOutput(BaseModel):
     tracking_uri: str
     metrics_logged: int
     params_logged: int
+
+
+class ActiveLearningQueueItem(BaseModel):
+    """A single review queue entry."""
+
+    id: str
+    image_path: Path
+    dataset_path: Path
+    score: float
+    reason: str
+    status: str
+    predictions: list[Detection] = Field(default_factory=list)
+    corrected_labels: list[Detection] | None = None
+    created_at: datetime | None = None
+
+
+class ActiveLearningQueueRankInput(BaseModel):
+    """Input for active_learning_queue_rank."""
+
+    checkpoint: str
+    unlabeled_pool: Path
+    dataset_path: Path
+    strategy: Literal["entropy", "margin", "least_confident"] = "entropy"
+    limit: int = 50
+    imgsz: int = 640
+    conf: float = 0.25
+    device: str = "auto"
+
+
+class ActiveLearningQueueRankOutput(BaseModel):
+    """Output for active_learning_queue_rank."""
+
+    ranked_count: int
+    queue_entries: list[ActiveLearningQueueItem] = Field(default_factory=list)
+
+
+class ActiveLearningQueueListInput(BaseModel):
+    """Input for active_learning_queue_list."""
+
+    dataset_path: Path | None = None
+    status: Literal["pending", "reviewed", "skipped"] = "pending"
+    limit: int = 100
+
+
+class ActiveLearningQueueListOutput(BaseModel):
+    """Output for active_learning_queue_list."""
+
+    queue_entries: list[ActiveLearningQueueItem] = Field(default_factory=list)
+
+
+class ActiveLearningQueueSubmitInput(BaseModel):
+    """Input for active_learning_queue_submit."""
+
+    entry_id: str
+    corrected_labels: list[Detection] = Field(default_factory=list)
+    dataset_split: Literal["train", "val"] = "train"
+
+
+class ActiveLearningQueueSubmitOutput(BaseModel):
+    """Output for active_learning_queue_submit."""
+
+    entry_id: str
+    status: str
+    copied_image_path: Path
+    written_label_path: Path
