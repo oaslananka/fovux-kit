@@ -27,7 +27,7 @@ def _load_tool_names() -> set[str]:
             if "}" in line:
                 break
             stripped = line.strip()
-            if stripped.startswith('"'):
+            if stripped.startswith('"') and '":' in stripped:
                 name = stripped.split('"')[1]
                 names.add(name)
     return names

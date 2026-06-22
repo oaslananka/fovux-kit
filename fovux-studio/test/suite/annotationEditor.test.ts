@@ -80,4 +80,26 @@ describe("annotation editor reducer", () => {
 
     expect(state.boxes).toEqual([]);
   });
+
+  it("resets state with new boxes", () => {
+    let state = createAnnotationEditorState([]);
+    state = annotationEditorReducer(state, {
+      type: "reset",
+      boxes: [
+        {
+          classId: 1,
+          className: "person",
+          x: 0.1,
+          y: 0.1,
+          width: 0.5,
+          height: 0.5,
+        },
+      ],
+      status: "Reset status",
+    });
+
+    expect(state.boxes).toHaveLength(1);
+    expect(state.boxes[0]?.className).toBe("person");
+    expect(state.status).toBe("Reset status");
+  });
 });

@@ -73,11 +73,49 @@ def _validate_yolo(path: Path, inp: DatasetValidateInput) -> DatasetValidateOutp
     try:
         meta = read_yolo_data_yaml(path)
         nc: int = int(meta.get("nc", 0))
+        names = meta.get("names", [])
+        if isinstance(names, dict):
+            names_len = len(names)
+        elif isinstance(names, list):
+            names_len = len(names)
+        else:
+            names_len = 0
+        if nc > 0 and names_len > 0 and nc != names_len:
+            errors.append(
+                ValidationIssue(
+                    file="data.yaml",
+                    severity="error",
+                    message=(
+                        f"Class count nc ({nc}) does not match length of names list ({names_len})"
+                    ),
+                )
+            )
     except Exception:
         nc = 0
         warnings.append(
             ValidationIssue(file="data.yaml", severity="warning", message="Cannot parse data.yaml")
         )
+
+    # Scan for orphan images (images with no corresponding label files)
+    images_root = path / "images"
+    labels_root = path / "labels"
+    image_exts = {".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif"}
+    if images_root.is_dir():
+        for img_file in sorted(images_root.rglob("*")):
+            if img_file.suffix.lower() in image_exts and img_file.is_file():
+                try:
+                    rel = img_file.relative_to(images_root)
+                except ValueError:
+                    rel = Path(img_file.name)
+                lbl_file = labels_root / rel.with_suffix(".txt")
+                if not lbl_file.exists():
+                    warnings.append(
+                        ValidationIssue(
+                            file=str(img_file),
+                            severity="warning",
+                            message="Image has no corresponding label file",
+                        )
+                    )
 
     bad_image_paths: list[str] = []
     out_of_bounds_files: list[str] = []
@@ -100,17 +138,6 @@ def _validate_yolo(path: Path, inp: DatasetValidateInput) -> DatasetValidateOutp
                     )
                 )
                 bad_image_paths.append(str(img_path))
-
-        if not label_path.exists():
-            if img_path.exists():
-                warnings.append(
-                    ValidationIssue(
-                        file=str(img_path),
-                        severity="warning",
-                        message="Image has no corresponding label file",
-                    )
-                )
-            continue
 
         safe_label_path = ensure_within_root(label_path, path)
         validate_file_size(safe_label_path)

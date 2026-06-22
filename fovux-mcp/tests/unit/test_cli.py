@@ -159,7 +159,7 @@ def test_version_command_prints_version() -> None:
 
     assert result.exit_code == 0
     assert f"fovux-mcp {__version__}" in result.stdout
-    assert "37 tools" in result.stdout
+    assert "42 tools" in result.stdout
 
 
 def test_doctor_success_prints_table(tmp_path: Path) -> None:
