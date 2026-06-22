@@ -111,6 +111,12 @@
         "icon": "$(edit)"
       },
       {
+        "command": "fovux.openActiveLearningQueue",
+        "title": "Fovux: Open Active Learning Queue",
+        "category": "Fovux",
+        "icon": "$(list-unordered)"
+      },
+      {
         "command": "fovux.openExportWizard",
         "title": "Fovux: Export Model…",
         "category": "Fovux",
@@ -229,6 +235,11 @@
         "command": "fovux.openDatasetInspector",
         "key": "ctrl+shift+f i",
         "mac": "cmd+shift+f i"
+      },
+      {
+        "command": "fovux.openActiveLearningQueue",
+        "key": "ctrl+shift+f q",
+        "mac": "cmd+shift+f q"
       },
       {
         "command": "fovux.refreshViews",

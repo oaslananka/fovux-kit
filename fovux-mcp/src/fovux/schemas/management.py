@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -42,7 +42,7 @@ class ModelListInput(BaseModel):
 
 
 class RunMetricSummary(BaseModel):
-    """Comparable run summary."""
+    """Comparable run summary with experiment intelligence metrics."""
 
     run_id: str
     status: str
@@ -50,6 +50,16 @@ class RunMetricSummary(BaseModel):
     epochs: int
     current_epoch: int | None = None
     best_map50: float | None = None
+    best_map50_95: float | None = None
+    precision: float | None = None
+    recall: float | None = None
+    latency_ms: float | None = None
+    model_size_mb: float | None = None
+    config: dict[str, Any] = Field(default_factory=dict)
+    dataset_fingerprint: str | None = None
+    export_target: str | None = None
+    pareto_optimal: bool = False
+    promotion_state: Literal["draft", "candidate", "approved", "deployed"] = "draft"
     run_path: Path
 
 
@@ -67,6 +77,10 @@ class RunCompareOutput(BaseModel):
     best_run_id: str | None = None
     report_path: Path
     chart_path: Path
+    config_diffs: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    pareto_frontier_run_ids: list[str] = Field(default_factory=list)
+    model_cards: dict[str, str] = Field(default_factory=dict)
+    suggested_next_experiment: str = ""
 
 
 class RunDeleteInput(BaseModel):
@@ -119,3 +133,52 @@ class RunArchiveOutput(BaseModel):
     archived_files: int
     deleted_original: bool
     dry_run: bool = False
+
+
+class DeploymentAdviseInput(BaseModel):
+    """Input for deployment_advise."""
+
+    model_path: str
+    target_profile: Literal[
+        "cpu_server",
+        "nvidia_gpu_tensorrt",
+        "jetson",
+        "raspberry_pi",
+        "android_tflite",
+        "browser_wasm",
+    ]
+    dataset_path: str | None = None
+    imgsz: int = 640
+
+
+class DeploymentAdviseOutput(BaseModel):
+    """Output for deployment_advise."""
+
+    target_profile: str
+    model_path: str
+    format: str
+    model_size_mb: float
+    compatibility_preflight: dict[str, Any]
+    quantization_recommendation: str
+    readiness_score: int
+    parity_check: dict[str, Any]
+    benchmark_results: dict[str, Any]
+    risk_warnings: list[str]
+    runtime_snippets: dict[str, str]
+    report_path: Path
+
+
+class DemoInitInput(BaseModel):
+    """Input for demo_init."""
+
+    target_path: str
+
+
+class DemoInitOutput(BaseModel):
+    """Output for demo_init."""
+
+    dataset_path: Path
+    run_id: str
+    run_path: Path
+    model_path: Path
+    export_path: Path

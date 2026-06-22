@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, JSX } from "react";
 import { createRoot } from "react-dom/client";
 
-import { getRun, invokeTool, requestChallenge, type HttpClientConfig } from "../shared/api";
+import {
+  getRun,
+  invokeTool,
+  requestChallenge,
+  type ChallengeResponse,
+  type HttpClientConfig,
+} from "../shared/api";
+import { ChallengeModal } from "../shared/ChallengeModal";
 import { estimateTrainingMinutes, TRAINING_PRESETS, type TrainingPreset } from "./presets";
 import {
   postToExtension,
@@ -13,6 +20,18 @@ import {
 } from "../shared/types";
 
 function TrainingLauncherApp(): JSX.Element {
+  const [pendingChallenge, setPendingChallenge] = useState<{
+    challenge: ChallengeResponse;
+    resolve: (val: string) => void;
+    reject: (err: Error) => void;
+  } | null>(null);
+
+  function confirmChallenge(challenge: ChallengeResponse): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      setPendingChallenge({ challenge, resolve, reject });
+    });
+  }
+
   const initial = readInitialState<TrainingLauncherInitialState>({
     baseUrl: "http://127.0.0.1:7823",
     authToken: null,
@@ -310,6 +329,21 @@ function TrainingLauncherApp(): JSX.Element {
           </button>
         </div>
       </section>
+      <ChallengeModal
+        challenge={pendingChallenge ? pendingChallenge.challenge : null}
+        onConfirm={() => {
+          if (pendingChallenge) {
+            pendingChallenge.resolve(pendingChallenge.challenge.challenge_id);
+            setPendingChallenge(null);
+          }
+        }}
+        onCancel={() => {
+          if (pendingChallenge) {
+            pendingChallenge.reject(new Error("Operation cancelled."));
+            setPendingChallenge(null);
+          }
+        }}
+      />
     </main>
   );
 
@@ -331,10 +365,11 @@ function TrainingLauncherApp(): JSX.Element {
       }
       setStatus("Launching training run...");
       const challenge = await requestChallenge(clientConfig, "train_start", payload);
+      const challengeId = await confirmChallenge(challenge);
       const result = await invokeTool<{ run_id: string; run_path: string }>(
         clientConfig,
         "train_start",
-        { ...payload, challenge_id: challenge.challenge_id }
+        { ...payload, challenge_id: challengeId }
       );
       const nextRecentDatasets = [
         datasetPath.trim(),

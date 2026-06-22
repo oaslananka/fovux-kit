@@ -49,6 +49,13 @@ class HttpToolPolicy:
 _S = Scope
 
 HTTP_TOOL_POLICIES: dict[str, HttpToolPolicy] = {
+    "active_learning_queue_list": HttpToolPolicy("read_only", 20.0, 2, required_scope=_S.READ),
+    "active_learning_queue_rank": HttpToolPolicy(
+        "mutating", 60.0, 1, True, required_scope=_S.RUN_START
+    ),
+    "active_learning_queue_submit": HttpToolPolicy(
+        "mutating", 30.0, 1, True, required_scope=_S.DATASET_WRITE
+    ),
     "active_learning_select": HttpToolPolicy(
         "mutating", 30.0, 1, True, required_scope=_S.RUN_START
     ),

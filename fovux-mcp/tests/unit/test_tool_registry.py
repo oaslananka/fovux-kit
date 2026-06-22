@@ -25,7 +25,7 @@ def test_available_tools_lists_known_entries() -> None:
 def test_list_tool_names_is_available_tools_alias() -> None:
     """Release tooling should have a stable semantic tool-list helper."""
     assert list_tool_names() == available_tools()
-    assert len(list_tool_names()) == 37
+    assert len(list_tool_names()) == 42
 
 
 def test_resolve_tool_imports_and_returns_callable() -> None:

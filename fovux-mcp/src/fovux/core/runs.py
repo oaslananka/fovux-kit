@@ -213,6 +213,26 @@ class ExportRecord(Base):
     )
 
 
+class ReviewQueueEntry(Base):
+    """ORM model for active learning review queue entries."""
+
+    __tablename__ = "review_queue"
+
+    id: Any = Column(String, primary_key=True)
+    image_path: Any = Column(String, nullable=False)
+    dataset_path: Any = Column(String, nullable=False)
+    score: Any = Column(Float, nullable=False)
+    reason: Any = Column(String, nullable=False)
+    status: Any = Column(String, nullable=False, default="pending")
+    predictions_json: Any = Column(Text, nullable=False, default="[]")
+    corrected_labels_json: Any = Column(Text, nullable=True)
+    created_at: Any = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+
 class MetricRecord(Base):
     """ORM model for step or epoch-level metrics."""
 
@@ -985,6 +1005,71 @@ class RunRegistry:
                 .limit(limit)
             )
             return list(session.execute(stmt).scalars().all())
+
+    def add_review_queue_entry(
+        self,
+        entry_id: str,
+        image_path: Path,
+        dataset_path: Path,
+        score: float,
+        reason: str,
+        predictions: list[dict[str, Any]],
+    ) -> ReviewQueueEntry:
+        """Add or update an active learning review queue entry."""
+        with self._Session() as session:
+            record = ReviewQueueEntry(
+                id=entry_id,
+                image_path=str(image_path.resolve()),
+                dataset_path=str(dataset_path.resolve()),
+                score=score,
+                reason=reason,
+                status="pending",
+                predictions_json=json.dumps(predictions),
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+            )
+            session.merge(record)
+            session.commit()
+            return record
+
+    def get_review_queue_entry(self, entry_id: str) -> ReviewQueueEntry | None:
+        """Fetch a review queue entry by ID."""
+        with self._Session() as session:
+            return session.get(ReviewQueueEntry, entry_id)
+
+    def list_review_queue_entries(
+        self,
+        dataset_path: Path | None = None,
+        status: str = "pending",
+        limit: int = 100,
+    ) -> list[ReviewQueueEntry]:
+        """List active learning review queue entries ordered by score desc."""
+        with self._Session() as session:
+            stmt = (
+                select(ReviewQueueEntry)
+                .where(ReviewQueueEntry.status == status)
+                .order_by(ReviewQueueEntry.score.desc())
+                .limit(limit)
+            )
+            if dataset_path is not None:
+                stmt = stmt.where(ReviewQueueEntry.dataset_path == str(dataset_path.resolve()))
+            return list(session.execute(stmt).scalars().all())
+
+    def update_review_queue_status(
+        self,
+        entry_id: str,
+        status: str,
+        corrected_labels: list[dict[str, Any]] | None = None,
+    ) -> bool:
+        """Update review queue entry status and corrections."""
+        with self._Session() as session:
+            record = session.get(ReviewQueueEntry, entry_id)
+            if record is None:
+                return False
+            record.status = status
+            if corrected_labels is not None:
+                record.corrected_labels_json = json.dumps(corrected_labels)
+            session.commit()
+            return True
 
 
 def get_registry(db_path: Path) -> RunRegistry:

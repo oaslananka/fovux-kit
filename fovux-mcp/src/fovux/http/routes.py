@@ -130,6 +130,11 @@ async def get_run(run_id: str) -> JSONResponse:
     status_payload = _read_status_payload(run_path)
     status = str(status_payload.get("status") or record.status)
     current_epoch, best_map50 = read_metrics_summary(run_path)
+    raw_tags = cast(str, record.tags_json or "[]")
+    try:
+        tags = json.loads(raw_tags)
+    except Exception:
+        tags = []
     return JSONResponse(
         {
             "id": record.id,
@@ -145,6 +150,7 @@ async def get_run(run_id: str) -> JSONResponse:
             "created_at": record.created_at.isoformat() if record.created_at else None,
             "started_at": record.started_at.isoformat() if record.started_at else None,
             "finished_at": record.finished_at.isoformat() if record.finished_at else None,
+            "tags": tags,
         }
     )
 

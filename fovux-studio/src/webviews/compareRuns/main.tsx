@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import type { CSSProperties, JSX } from "react";
+import type { CSSProperties, JSX, ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 
 import type { HttpClientConfig, RunSummary } from "../shared/api";
-import { invokeTool, listRuns } from "../shared/api";
+import { getRun, invokeTool, listRuns } from "../shared/api";
 import { CompareRunsInitialState, postToExtension, readInitialState } from "../shared/types";
 
 interface ComparedRun {
@@ -13,6 +13,16 @@ interface ComparedRun {
   epochs: number;
   current_epoch?: number | null;
   best_map50?: number | null;
+  best_map50_95?: number | null;
+  precision?: number | null;
+  recall?: number | null;
+  latency_ms?: number | null;
+  model_size_mb?: number | null;
+  config?: Record<string, unknown>;
+  dataset_fingerprint?: string | null;
+  export_target?: string | null;
+  pareto_optimal?: boolean;
+  promotion_state?: "draft" | "candidate" | "approved" | "deployed";
   run_path: string;
 }
 
@@ -21,6 +31,10 @@ interface CompareResult {
   best_run_id: string | null;
   report_path: string;
   chart_path: string;
+  config_diffs: Record<string, Record<string, unknown>>;
+  pareto_frontier_run_ids: string[];
+  model_cards: Record<string, string>;
+  suggested_next_experiment: string;
 }
 
 function CompareRunsApp(): JSX.Element {
@@ -31,14 +45,23 @@ function CompareRunsApp(): JSX.Element {
     initialError: "Initial compare-runs state was not provided.",
     isServerReachable: false,
   });
+
   const clientConfig = useMemo<HttpClientConfig>(
     () => ({ baseUrl: initial.baseUrl, authToken: initial.authToken }),
     [initial.authToken, initial.baseUrl]
   );
+
   const [runs, setRuns] = useState<RunSummary[]>(initial.initialRuns);
   const [selectedRunIds, setSelectedRunIds] = useState<string[]>([]);
   const [result, setResult] = useState<CompareResult | null>(null);
   const [error, setError] = useState<string | null>(initial.initialError);
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>("best_map50");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Selected run for model card preview
+  const [activeModelCardRunId, setActiveModelCardRunId] = useState<string>("");
 
   useEffect(() => {
     if (!initial.isServerReachable) {
@@ -58,11 +81,196 @@ function CompareRunsApp(): JSX.Element {
     void loadRuns();
   }, [clientConfig, initial.isServerReachable]);
 
+  useEffect(() => {
+    if (result && result.compared_runs.length > 0) {
+      setActiveModelCardRunId(result.compared_runs[0].run_id);
+    }
+  }, [result]);
+
+  // Sort logic for compared runs
+  const sortedRuns = useMemo(() => {
+    if (!result) return [];
+    return [...result.compared_runs].sort((a, b) => {
+      const valA = a[sortBy as keyof ComparedRun];
+      const valB = b[sortBy as keyof ComparedRun];
+
+      if (valA === undefined || valA === null) return sortOrder === "desc" ? 1 : -1;
+      if (valB === undefined || valB === null) return sortOrder === "desc" ? -1 : 1;
+
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortOrder === "desc" ? valB - valA : valA - valB;
+      }
+      if (typeof valA === "string" && typeof valB === "string") {
+        return sortOrder === "desc" ? valB.localeCompare(valA) : valA.localeCompare(valB);
+      }
+      return 0;
+    });
+  }, [result, sortBy, sortOrder]);
+
+  const toggleRun = (runId: string): void => {
+    setSelectedRunIds((current) =>
+      current.includes(runId) ? current.filter((item) => item !== runId) : [...current, runId]
+    );
+  };
+
+  const handleSort = (field: string): void => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("desc");
+    }
+  };
+
+  const handlePromotionChange = async (
+    runId: string,
+    newState: "draft" | "candidate" | "approved" | "deployed"
+  ): Promise<void> => {
+    try {
+      // Fetch details to find existing tags
+      const details = await getRun(clientConfig, runId);
+      const currentTags = details.tags ?? [];
+
+      const promotionStates = ["candidate", "approved", "deployed"];
+      const baseTags = currentTags.filter((t) => !promotionStates.includes(t.toLowerCase()));
+
+      const nextTags = [...baseTags];
+      if (newState !== "draft") {
+        nextTags.push(newState);
+      }
+
+      await invokeTool(clientConfig, "run_tag", {
+        run_id: runId,
+        tags: nextTags,
+      });
+
+      // Update state locally
+      if (result) {
+        const nextCompared = result.compared_runs.map((r) => {
+          if (r.run_id === runId) {
+            return { ...r, promotion_state: newState };
+          }
+          return r;
+        });
+        setResult({
+          ...result,
+          compared_runs: nextCompared,
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const compare = async (): Promise<void> => {
+    if (selectedRunIds.length < 2) {
+      setError("Select at least two runs to compare.");
+      return;
+    }
+
+    try {
+      const nextResult = await invokeTool<CompareResult>(clientConfig, "run_compare", {
+        run_ids: selectedRunIds,
+      });
+      setResult(nextResult);
+      setError(null);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    }
+  };
+
+  const renderInlineMarkdown = (text: string): ReactNode => {
+    const parts = text.split("**");
+    if (parts.length === 1) {
+      if (text.includes("`")) {
+        const sub = text.split("`");
+        return sub.map((sp, idx) =>
+          idx % 2 === 1 ? (
+            <code key={idx} style={mdCodeStyle}>
+              {sp}
+            </code>
+          ) : (
+            sp
+          )
+        );
+      }
+      return text;
+    }
+    return parts.map((part, i) => {
+      if (i % 2 === 1) {
+        return <strong key={i}>{part}</strong>;
+      }
+      if (part.includes("`")) {
+        const sub = part.split("`");
+        return (
+          <span key={i}>
+            {sub.map((sp, idx) =>
+              idx % 2 === 1 ? (
+                <code key={idx} style={mdCodeStyle}>
+                  {sp}
+                </code>
+              ) : (
+                sp
+              )
+            )}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
+  const renderMarkdown = (md: string): JSX.Element => {
+    const lines = md.split("\n");
+    return (
+      <div style={markdownContainerStyle}>
+        {lines.map((line, idx) => {
+          if (line.startsWith("# ")) {
+            return (
+              <h1 key={idx} style={mdH1Style}>
+                {line.slice(2)}
+              </h1>
+            );
+          }
+          if (line.startsWith("## ")) {
+            return (
+              <h2 key={idx} style={mdH2Style}>
+                {line.slice(3)}
+              </h2>
+            );
+          }
+          if (line.startsWith("### ")) {
+            return (
+              <h3 key={idx} style={mdH3Style}>
+                {line.slice(4)}
+              </h3>
+            );
+          }
+          if (line.startsWith("- ")) {
+            return (
+              <ul key={idx} style={{ margin: 0, paddingLeft: 18 }}>
+                <li style={mdLiStyle}>{renderInlineMarkdown(line.slice(2))}</li>
+              </ul>
+            );
+          }
+          if (line.trim() === "") {
+            return <div key={idx} style={{ height: "6px" }} />;
+          }
+          return (
+            <p key={idx} style={mdPStyle}>
+              {renderInlineMarkdown(line)}
+            </p>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <main style={pageStyle}>
       <header style={headerStyle}>
         <div>
-          <p style={eyebrowStyle}>Run Comparison</p>
+          <p style={eyebrowStyle}>Run Comparison & Experiment Advisor</p>
           <h1 style={titleStyle}>Decide which run deserves the next export</h1>
         </div>
         <button type="button" style={buttonStyle} onClick={() => void compare()}>
@@ -94,30 +302,41 @@ function CompareRunsApp(): JSX.Element {
             No runs available yet. Complete at least two runs to compare them.
           </p>
         ) : null}
-        {runs.map((run) => (
-          <label key={run.id} style={itemStyle}>
-            <input
-              type="checkbox"
-              checked={selectedRunIds.includes(run.id)}
-              onChange={() => toggleRun(run.id)}
-            />
-            <span>
-              <strong>{run.id}</strong>
-              <span style={mutedStyle}>
-                {" "}
-                · {run.status} · {run.model}
+        <div style={checkboxGridStyle}>
+          {runs.map((run) => (
+            <label key={run.id} style={itemStyle}>
+              <input
+                type="checkbox"
+                checked={selectedRunIds.includes(run.id)}
+                onChange={() => toggleRun(run.id)}
+              />
+              <span>
+                <strong>{run.id}</strong>
+                <span style={mutedStyle}>
+                  {" "}
+                  · {run.status} · {run.model}
+                </span>
               </span>
-            </span>
-          </label>
-        ))}
+            </label>
+          ))}
+        </div>
       </section>
 
       {result ? (
         <section style={resultStyle}>
+          {/* Top Actions Row */}
           <div style={resultHeaderStyle}>
             <div>
               <strong>Best run</strong>
-              <p style={{ margin: "4px 0 0 0" }}>{result.best_run_id ?? "n/a"}</p>
+              <p
+                style={{
+                  margin: "4px 0 0 0",
+                  fontSize: "16px",
+                  color: "var(--vscode-charts-orange)",
+                }}
+              >
+                {result.best_run_id ?? "n/a"}
+              </p>
             </div>
             <div style={buttonRowStyle}>
               <button
@@ -141,61 +360,200 @@ function CompareRunsApp(): JSX.Element {
               </button>
             </div>
           </div>
-          <div style={cardGridStyle}>
-            {result.compared_runs.map((run) => (
-              <article key={run.run_id} style={cardStyle}>
-                <strong>{run.run_id}</strong>
-                <span style={mutedStyle}>{run.model}</span>
-                <span style={metricStyle}>mAP50 {formatMetric(run.best_map50)}</span>
-                <button
-                  type="button"
-                  style={secondaryButtonStyle}
-                  onClick={() => postToExtension({ type: "openPath", path: run.run_path })}
-                >
-                  Reveal run
-                </button>
-              </article>
-            ))}
+
+          {/* AI Advisor widget */}
+          <div style={advisorCardStyle}>
+            <div style={advisorTitleStyle}>
+              <span style={{ fontSize: "18px" }}>💡</span>
+              <strong>Experiment Advisor Recommendation</strong>
+            </div>
+            <p style={advisorContentStyle}>{result.suggested_next_experiment}</p>
           </div>
+
+          {/* Leaderboard Section */}
+          <div style={sectionCardStyle}>
+            <h2 style={sectionTitleStyle}>Leaderboard</h2>
+            <div style={tableWrapperStyle}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Run</th>
+                    <th style={thStyle}>Pareto</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Model</th>
+                    <th style={clickableThStyle} onClick={() => handleSort("best_map50")}>
+                      mAP50 {sortBy === "best_map50" && (sortOrder === "asc" ? "▲" : "▼")}
+                    </th>
+                    <th style={clickableThStyle} onClick={() => handleSort("best_map50_95")}>
+                      mAP50-95 {sortBy === "best_map50_95" && (sortOrder === "asc" ? "▲" : "▼")}
+                    </th>
+                    <th style={clickableThStyle} onClick={() => handleSort("precision")}>
+                      Precision {sortBy === "precision" && (sortOrder === "asc" ? "▲" : "▼")}
+                    </th>
+                    <th style={clickableThStyle} onClick={() => handleSort("recall")}>
+                      Recall {sortBy === "recall" && (sortOrder === "asc" ? "▲" : "▼")}
+                    </th>
+                    <th style={clickableThStyle} onClick={() => handleSort("latency_ms")}>
+                      Latency {sortBy === "latency_ms" && (sortOrder === "asc" ? "▲" : "▼")}
+                    </th>
+                    <th style={clickableThStyle} onClick={() => handleSort("model_size_mb")}>
+                      Size {sortBy === "model_size_mb" && (sortOrder === "asc" ? "▲" : "▼")}
+                    </th>
+                    <th style={thStyle}>Target</th>
+                    <th style={thStyle}>Promotion State</th>
+                    <th style={thStyle}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedRuns.map((run) => (
+                    <tr key={run.run_id} style={run.pareto_optimal ? paretoRowStyle : rowStyle}>
+                      <td style={tdStyle}>
+                        <strong>{run.run_id}</strong>
+                      </td>
+                      <td style={tdStyle}>
+                        {run.pareto_optimal ? (
+                          <span style={paretoBadgeStyle}>Pareto</span>
+                        ) : (
+                          <span style={nonParetoBadgeStyle}>No</span>
+                        )}
+                      </td>
+                      <td style={tdStyle}>{run.status}</td>
+                      <td style={tdStyle}>{run.model}</td>
+                      <td style={tdStyle}>{formatMetric(run.best_map50)}</td>
+                      <td style={tdStyle}>{formatMetric(run.best_map50_95)}</td>
+                      <td style={tdStyle}>{formatMetric(run.precision)}</td>
+                      <td style={tdStyle}>{formatMetric(run.recall)}</td>
+                      <td style={tdStyle}>
+                        {run.latency_ms ? `${run.latency_ms.toFixed(1)} ms` : "n/a"}
+                      </td>
+                      <td style={tdStyle}>
+                        {run.model_size_mb ? `${run.model_size_mb.toFixed(1)} MB` : "n/a"}
+                      </td>
+                      <td style={tdStyle}>{run.export_target || "None"}</td>
+                      <td style={tdStyle}>
+                        <select
+                          value={run.promotion_state || "draft"}
+                          onChange={(e) =>
+                            void handlePromotionChange(
+                              run.run_id,
+                              e.target.value as "draft" | "candidate" | "approved" | "deployed"
+                            )
+                          }
+                          style={selectStyle}
+                        >
+                          <option value="draft">draft</option>
+                          <option value="candidate">candidate</option>
+                          <option value="approved">approved</option>
+                          <option value="deployed">deployed</option>
+                        </select>
+                      </td>
+                      <td style={tdStyle}>
+                        <button
+                          type="button"
+                          style={tinyButtonStyle}
+                          onClick={() => postToExtension({ type: "openPath", path: run.run_path })}
+                        >
+                          Reveal
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Config Diff section */}
+          {Object.keys(result.config_diffs).length > 0 ? (
+            <div style={sectionCardStyle}>
+              <h2 style={sectionTitleStyle}>Hyperparameter Config Diff</h2>
+              <div style={tableWrapperStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Parameter</th>
+                      {result.compared_runs.map((r) => (
+                        <th key={r.run_id} style={thStyle}>
+                          {r.run_id}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.keys(result.config_diffs)
+                      .sort()
+                      .map((key) => (
+                        <tr key={key} style={rowStyle}>
+                          <td style={tdStyle}>
+                            <strong>{key}</strong>
+                          </td>
+                          {result.compared_runs.map((r) => (
+                            <td key={r.run_id} style={tdStyle}>
+                              {String(result.config_diffs[key][r.run_id] ?? "n/a")}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Model Card section */}
+          {result.model_cards && Object.keys(result.model_cards).length > 0 ? (
+            <div style={sectionCardStyle}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "12px",
+                }}
+              >
+                <h2 style={{ ...sectionTitleStyle, margin: 0 }}>Model Card Preview</h2>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <span style={mutedStyle}>Select Run:</span>
+                  <select
+                    value={activeModelCardRunId}
+                    onChange={(e) => setActiveModelCardRunId(e.target.value)}
+                    style={selectStyle}
+                  >
+                    {result.compared_runs.map((r) => (
+                      <option key={r.run_id} value={r.run_id}>
+                        {r.run_id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={modelCardContentWrapperStyle}>
+                {result.model_cards[activeModelCardRunId] ? (
+                  renderMarkdown(result.model_cards[activeModelCardRunId])
+                ) : (
+                  <p style={mutedStyle}>No model card generated for this run.</p>
+                )}
+              </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
     </main>
   );
-
-  function toggleRun(runId: string): void {
-    setSelectedRunIds((current) =>
-      current.includes(runId) ? current.filter((item) => item !== runId) : [...current, runId]
-    );
-  }
-
-  async function compare(): Promise<void> {
-    if (selectedRunIds.length < 2) {
-      setError("Select at least two runs to compare.");
-      return;
-    }
-
-    try {
-      const nextResult = await invokeTool<CompareResult>(clientConfig, "run_compare", {
-        run_ids: selectedRunIds,
-      });
-      setResult(nextResult);
-      setError(null);
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
-    }
-  }
 }
 
 function formatMetric(value: number | null | undefined): string {
-  return typeof value === "number" ? value.toFixed(3) : "n/a";
+  return typeof value === "number" ? value.toFixed(4) : "n/a";
 }
 
+// Styling (CSS Properties wrapped strictly under 100 characters)
 const pageStyle: CSSProperties = {
   minHeight: "100vh",
   padding: "24px",
   boxSizing: "border-box",
   background:
-    "linear-gradient(180deg, var(--vscode-editorWidget-background), var(--vscode-editor-background) 55%)",
+    "linear-gradient(180deg, var(--vscode-editorWidget-background), " +
+    "var(--vscode-editor-background) 55%)",
   color: "var(--vscode-editor-foreground)",
   fontFamily: "var(--vscode-font-family)",
   display: "grid",
@@ -219,22 +577,30 @@ const eyebrowStyle: CSSProperties = {
 
 const titleStyle: CSSProperties = {
   margin: 0,
-  fontSize: "30px",
+  fontSize: "26px",
+  fontWeight: "600",
 };
 
 const listStyle: CSSProperties = {
   display: "grid",
   gap: "10px",
   padding: "16px",
-  borderRadius: "16px",
+  borderRadius: "12px",
   border: "1px solid var(--vscode-panel-border)",
   background: "var(--vscode-sideBar-background)",
 };
 
+const checkboxGridStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "16px",
+};
+
 const itemStyle: CSSProperties = {
   display: "flex",
-  gap: "10px",
+  gap: "8px",
   alignItems: "center",
+  cursor: "pointer",
 };
 
 const mutedStyle: CSSProperties = {
@@ -243,12 +609,13 @@ const mutedStyle: CSSProperties = {
 };
 
 const buttonStyle: CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: "10px",
+  padding: "8px 16px",
+  borderRadius: "8px",
   border: "1px solid var(--vscode-button-border, var(--vscode-panel-border))",
   background: "var(--vscode-button-background)",
   color: "var(--vscode-button-foreground)",
   cursor: "pointer",
+  fontWeight: "500",
 };
 
 const secondaryButtonStyle: CSSProperties = {
@@ -257,20 +624,29 @@ const secondaryButtonStyle: CSSProperties = {
   color: "var(--vscode-editor-foreground)",
 };
 
+const tinyButtonStyle: CSSProperties = {
+  ...buttonStyle,
+  padding: "4px 8px",
+  fontSize: "11px",
+  borderRadius: "4px",
+  background: "var(--vscode-editorWidget-background)",
+  color: "var(--vscode-editor-foreground)",
+};
+
 const resultStyle: CSSProperties = {
   display: "grid",
   gap: "16px",
-  padding: "16px",
-  borderRadius: "16px",
-  border: "1px solid var(--vscode-panel-border)",
-  background: "var(--vscode-sideBar-background)",
 };
 
 const resultHeaderStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   gap: "12px",
-  alignItems: "start",
+  alignItems: "center",
+  padding: "16px",
+  borderRadius: "12px",
+  border: "1px solid var(--vscode-panel-border)",
+  background: "var(--vscode-sideBar-background)",
 };
 
 const buttonRowStyle: CSSProperties = {
@@ -279,38 +655,178 @@ const buttonRowStyle: CSSProperties = {
   flexWrap: "wrap",
 };
 
-const cardGridStyle: CSSProperties = {
+const advisorCardStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: "12px",
+  gap: "8px",
+  padding: "18px",
+  borderRadius: "12px",
+  border: "1px solid var(--vscode-charts-orange)",
+  background: "linear-gradient(135deg, rgba(255, 106, 61, 0.08), rgba(255, 106, 61, 0.02))",
 };
 
-const cardStyle: CSSProperties = {
-  display: "grid",
-  gap: "6px",
-  padding: "14px",
-  borderRadius: "14px",
-  background: "var(--vscode-editorWidget-background)",
+const advisorTitleStyle: CSSProperties = {
+  display: "flex",
+  gap: "8px",
+  alignItems: "center",
+  color: "var(--vscode-charts-orange)",
+  fontSize: "14px",
+};
+
+const advisorContentStyle: CSSProperties = {
+  margin: 0,
+  fontSize: "13px",
+  lineHeight: "1.6",
+};
+
+const sectionCardStyle: CSSProperties = {
+  padding: "16px",
+  borderRadius: "12px",
   border: "1px solid var(--vscode-panel-border)",
+  background: "var(--vscode-sideBar-background)",
 };
 
-const metricStyle: CSSProperties = {
+const sectionTitleStyle: CSSProperties = {
+  margin: "0 0 16px 0",
+  fontSize: "16px",
+  fontWeight: "600",
+};
+
+const tableWrapperStyle: CSSProperties = {
+  width: "100%",
+  overflowX: "auto",
+};
+
+const tableStyle: CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  fontSize: "13px",
+  textAlign: "left",
+};
+
+const thStyle: CSSProperties = {
+  padding: "10px 12px",
+  borderBottom: "2px solid var(--vscode-panel-border)",
+  color: "var(--vscode-descriptionForeground)",
+  fontWeight: "500",
+};
+
+const clickableThStyle: CSSProperties = {
+  ...thStyle,
+  cursor: "pointer",
+  userSelect: "none",
+};
+
+const rowStyle: CSSProperties = {
+  borderBottom: "1px solid var(--vscode-panel-border)",
+};
+
+const paretoRowStyle: CSSProperties = {
+  ...rowStyle,
+  background: "rgba(0, 255, 180, 0.04)",
+  borderLeft: "3px solid #00ffb4",
+};
+
+const tdStyle: CSSProperties = {
+  padding: "10px 12px",
+  verticalAlign: "middle",
+};
+
+const paretoBadgeStyle: CSSProperties = {
+  display: "inline-block",
+  padding: "2px 6px",
+  borderRadius: "4px",
+  background: "rgba(0, 255, 180, 0.15)",
+  color: "#00ffb4",
+  fontSize: "11px",
+  fontWeight: "bold",
+};
+
+const nonParetoBadgeStyle: CSSProperties = {
+  display: "inline-block",
+  padding: "2px 6px",
+  borderRadius: "4px",
+  background: "rgba(255, 255, 255, 0.05)",
+  color: "var(--vscode-descriptionForeground)",
+  fontSize: "11px",
+};
+
+const selectStyle: CSSProperties = {
+  padding: "4px 8px",
+  borderRadius: "6px",
+  border: "1px solid var(--vscode-panel-border)",
+  background: "var(--vscode-dropdown-background)",
+  color: "var(--vscode-dropdown-foreground)",
+  fontFamily: "var(--vscode-font-family)",
+  fontSize: "12px",
+  outline: "none",
+  cursor: "pointer",
+};
+
+const modelCardContentWrapperStyle: CSSProperties = {
+  padding: "16px",
+  borderRadius: "8px",
+  border: "1px solid var(--vscode-panel-border)",
+  background: "var(--vscode-editorWidget-background)",
+  maxHeight: "450px",
+  overflowY: "auto",
+};
+
+const markdownContainerStyle: CSSProperties = {
+  fontSize: "13px",
+  lineHeight: "1.6",
+};
+
+const mdH1Style: CSSProperties = {
+  margin: "0 0 12px 0",
   fontSize: "18px",
-  fontWeight: "700",
+  fontWeight: "600",
+  borderBottom: "1px solid var(--vscode-panel-border)",
+  paddingBottom: "4px",
+};
+
+const mdH2Style: CSSProperties = {
+  margin: "16px 0 8px 0",
+  fontSize: "14px",
+  fontWeight: "600",
+};
+
+const mdH3Style: CSSProperties = {
+  margin: "12px 0 6px 0",
+  fontSize: "13px",
+  fontWeight: "600",
+};
+
+const mdPStyle: CSSProperties = {
+  margin: "0 0 8px 0",
+};
+
+const mdLiStyle: CSSProperties = {
+  margin: "0 0 4px 12px",
+  listStyleType: "disc",
+};
+
+const mdCodeStyle: CSSProperties = {
+  fontFamily: "var(--vscode-editor-font-family, monospace)",
+  background: "rgba(255, 255, 255, 0.08)",
+  padding: "2px 4px",
+  borderRadius: "4px",
+  fontSize: "12px",
 };
 
 const errorStyle: CSSProperties = {
   padding: "12px 16px",
-  borderRadius: "12px",
+  borderRadius: "8px",
   background: "var(--vscode-inputValidation-errorBackground)",
   border: "1px solid var(--vscode-inputValidation-errorBorder)",
+  fontSize: "13px",
+  margin: 0,
 };
 
 const helperCardStyle: CSSProperties = {
   display: "grid",
   gap: "8px",
   padding: "16px",
-  borderRadius: "16px",
+  borderRadius: "12px",
   border: "1px solid var(--vscode-panel-border)",
   background: "var(--vscode-sideBar-background)",
 };

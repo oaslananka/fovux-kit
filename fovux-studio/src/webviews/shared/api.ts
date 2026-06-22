@@ -18,6 +18,7 @@ export interface RunDetail extends RunSummary {
   best_map50?: number | null;
   started_at?: string | null;
   finished_at?: string | null;
+  tags?: string[];
 }
 
 export interface ChallengeResponse {

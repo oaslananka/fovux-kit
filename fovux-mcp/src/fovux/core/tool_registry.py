@@ -12,8 +12,19 @@ ToolCallable = Callable[..., dict[str, Any]]
 
 _TOOL_SPECS: dict[str, str] = {
     "active_learning_select": "fovux.tools.active_learning_select:active_learning_select",
+    "active_learning_queue_rank": (
+        "fovux.tools.active_learning_queue_rank:active_learning_queue_rank"
+    ),
+    "active_learning_queue_list": (
+        "fovux.tools.active_learning_queue_list:active_learning_queue_list"
+    ),
+    "active_learning_queue_submit": (
+        "fovux.tools.active_learning_queue_submit:active_learning_queue_submit"
+    ),
     "annotation_quality_check": "fovux.tools.annotation_quality_check:annotation_quality_check",
     "benchmark_latency": "fovux.tools.benchmark_latency:benchmark_latency",
+    "deployment_advise": "fovux.tools.deployment_advise:deployment_advise",
+    "demo_init": "fovux.tools.demo_init:demo_init",
     "dataset_augment": "fovux.tools.dataset_augment:dataset_augment",
     "dataset_convert": "fovux.tools.dataset_convert:dataset_convert",
     "dataset_find_duplicates": "fovux.tools.dataset_find_duplicates:dataset_find_duplicates",

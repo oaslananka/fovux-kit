@@ -1,4 +1,4 @@
-import { useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import type { CSSProperties, JSX, KeyboardEvent, PointerEvent } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -50,31 +50,87 @@ export type AnnotationEditorAction =
   | { type: "deleteSelected" }
   | { type: "clear" }
   | { type: "undo" }
+  | { type: "reset"; boxes: DatasetSampleBox[]; status: string | null }
   | { type: "status"; status: string | null };
 
 const MIN_BOX_SIZE = 0.005;
 
+function sanitizeImageUri(uri: unknown): string {
+  if (typeof uri !== "string") {
+    return "";
+  }
+
+  const value = uri.trim();
+  if (!value) {
+    return "";
+  }
+
+  if (value.startsWith("vscode-webview-resource:")) {
+    return value;
+  }
+
+  if (/^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/.test(value)) {
+    return value;
+  }
+
+  return "";
+}
+
 function AnnotationEditorApp(): JSX.Element {
-  const initial = readInitialState<AnnotationEditorInitialState>({
-    imagePath: "",
-    imageUri: "",
-    classNames: ["class_0"],
-    initialBoxes: [],
-    initialError: "Initial annotation editor state was not provided.",
-  });
+  const [editorState, setEditorState] = useState<AnnotationEditorInitialState>(() =>
+    readInitialState<AnnotationEditorInitialState>({
+      imagePath: "",
+      imageUri: "",
+      classNames: ["class_0"],
+      initialBoxes: [],
+      initialError: "Initial annotation editor state was not provided.",
+    })
+  );
+  const [datasetSplit, setDatasetSplit] = useState<string>("train");
   const stageRef = useRef<HTMLElement | null>(null);
   const [classId, setClassId] = useReducer((_current: number, next: number) => next, 0);
   const [state, dispatch] = useReducer(
     annotationEditorReducer,
-    createAnnotationEditorState(initial.initialBoxes, initial.initialError)
+    createAnnotationEditorState(editorState.initialBoxes, editorState.initialError)
   );
+
+  useEffect(() => {
+    dispatch({
+      type: "reset",
+      boxes: editorState.initialBoxes,
+      status: editorState.initialError,
+    });
+  }, [editorState]);
+
+  useEffect(() => {
+    const listener = (event: MessageEvent) => {
+      const message = event.data;
+      if (!message || message.type !== "setEditorState" || !message.state) {
+        return;
+      }
+
+      const nextState = message.state as AnnotationEditorInitialState;
+      setEditorState({
+        ...nextState,
+        imageUri: sanitizeImageUri(nextState.imageUri),
+      });
+    };
+    window.addEventListener("message", listener);
+    return () => window.removeEventListener("message", listener);
+  }, []);
 
   return (
     <main style={pageStyle} tabIndex={0} onKeyDown={(event) => handleKeyDown(event, dispatch)}>
       <header style={toolbarStyle}>
         <div>
-          <p style={eyebrowStyle}>Annotation Editor</p>
-          <h1 style={titleStyle}>Draw YOLO boxes directly on the sample</h1>
+          <p style={eyebrowStyle}>
+            {editorState.isQueueMode ? "Active Learning Queue" : "Annotation Editor"}
+          </p>
+          <h1 style={titleStyle}>
+            {editorState.isQueueMode
+              ? "Review and correct labels for active learning"
+              : "Draw YOLO boxes directly on the sample"}
+          </h1>
         </div>
         <div style={controlsStyle}>
           <select
@@ -83,15 +139,26 @@ function AnnotationEditorApp(): JSX.Element {
             value={classId}
             onChange={(event) => setClassId(Number(event.target.value))}
           >
-            {initial.classNames.map((name, index) => (
+            {editorState.classNames.map((name, index) => (
               <option key={name} value={index}>
                 {name}
               </option>
             ))}
           </select>
-          <button type="button" style={buttonStyle} onClick={save}>
-            Save labels
-          </button>
+          {editorState.isQueueMode ? (
+            <>
+              <button type="button" style={buttonStyle} onClick={submitQueue}>
+                Submit corrections
+              </button>
+              <button type="button" style={secondaryButtonStyle} onClick={skipQueue}>
+                Skip item
+              </button>
+            </>
+          ) : (
+            <button type="button" style={buttonStyle} onClick={save}>
+              Save labels
+            </button>
+          )}
           <button
             type="button"
             style={secondaryButtonStyle}
@@ -109,6 +176,34 @@ function AnnotationEditorApp(): JSX.Element {
         </div>
       </header>
 
+      {editorState.isQueueMode ? (
+        <section style={queueCardStyle}>
+          <div style={queueFieldStyle}>
+            <span style={queueLabelStyle}>Uncertainty Score:</span>
+            <span style={queueValueStyle}>
+              {editorState.queueScore != null ? editorState.queueScore.toFixed(4) : "N/A"}
+            </span>
+          </div>
+          <div style={queueFieldStyle}>
+            <span style={queueLabelStyle}>Reason:</span>
+            <span style={queueValueStyle}>{editorState.queueReason || "N/A"}</span>
+          </div>
+          <div style={queueFieldStyle}>
+            <span style={queueLabelStyle}>Save to Split:</span>
+            <select
+              aria-label="Dataset split"
+              style={inputStyle}
+              value={datasetSplit}
+              onChange={(event) => setDatasetSplit(event.target.value)}
+            >
+              <option value="train">Train</option>
+              <option value="val">Validation (val)</option>
+              <option value="test">Test</option>
+            </select>
+          </div>
+        </section>
+      ) : null}
+
       {state.status ? <p style={statusStyle}>{state.status}</p> : null}
 
       <section
@@ -118,7 +213,7 @@ function AnnotationEditorApp(): JSX.Element {
           event.currentTarget.focus();
           event.currentTarget.setPointerCapture(event.pointerId);
           const point = normalizedPoint(event, event.currentTarget);
-          const className = initial.classNames[classId] ?? `class_${classId}`;
+          const className = editorState.classNames[classId] ?? `class_${classId}`;
           dispatch({ type: "beginDraw", classId, className, point });
         }}
         onPointerMove={(event) => {
@@ -141,7 +236,12 @@ function AnnotationEditorApp(): JSX.Element {
         }}
         onPointerCancel={() => dispatch({ type: "select", index: null })}
       >
-        <img src={initial.imageUri} alt={initial.imagePath} style={imageStyle} draggable={false} />
+        <img
+          src={editorState.imageUri}
+          alt={editorState.imagePath}
+          style={imageStyle}
+          draggable={false}
+        />
         {[...state.boxes, ...(state.draft ? [state.draft] : [])].map((box, index) => {
           const isDraft = index >= state.boxes.length;
           const isSelected = state.selectedIndex === index && !isDraft;
@@ -200,7 +300,7 @@ function AnnotationEditorApp(): JSX.Element {
       </section>
 
       <footer style={footerStyle}>
-        <code style={pathStyle}>{initial.imagePath}</code>
+        <code style={pathStyle}>{editorState.imagePath}</code>
         <span>{state.boxes.length} boxes</span>
       </footer>
     </main>
@@ -209,10 +309,32 @@ function AnnotationEditorApp(): JSX.Element {
   function save(): void {
     postToExtension({
       type: "saveAnnotation",
-      imagePath: initial.imagePath,
+      imagePath: editorState.imagePath,
       boxes: state.boxes,
     });
     dispatch({ type: "status", status: "Saving labels..." });
+  }
+
+  function submitQueue(): void {
+    if (editorState.queueEntryId) {
+      postToExtension({
+        type: "submitQueueEntry",
+        entryId: editorState.queueEntryId,
+        boxes: state.boxes,
+        datasetSplit,
+      });
+      dispatch({ type: "status", status: "Submitting corrections..." });
+    }
+  }
+
+  function skipQueue(): void {
+    if (editorState.queueEntryId) {
+      postToExtension({
+        type: "skipQueueEntry",
+        entryId: editorState.queueEntryId,
+      });
+      dispatch({ type: "status", status: "Skipping queue item..." });
+    }
   }
 }
 
@@ -345,6 +467,8 @@ export function annotationEditorReducer(
         selectedIndex: null,
       };
     }
+    case "reset":
+      return createAnnotationEditorState(action.boxes, action.status);
     case "status":
       return { ...state, status: action.status };
     default:
@@ -504,6 +628,34 @@ function handlePositionStyle(handle: ResizeHandle): CSSProperties {
     bottom: handle.includes("s") ? "-5px" : undefined,
   };
 }
+
+const queueCardStyle: CSSProperties = {
+  display: "flex",
+  gap: 16,
+  flexWrap: "wrap",
+  padding: "12px 16px",
+  border: "1px solid var(--vscode-panel-border)",
+  background: "var(--vscode-editorWidget-background)",
+  borderRadius: 4,
+  fontSize: 13,
+  alignItems: "center",
+};
+
+const queueFieldStyle: CSSProperties = {
+  display: "flex",
+  gap: 8,
+  alignItems: "center",
+};
+
+const queueLabelStyle: CSSProperties = {
+  color: "var(--vscode-descriptionForeground)",
+  fontWeight: 600,
+};
+
+const queueValueStyle: CSSProperties = {
+  color: "var(--vscode-textPreformat-foreground, var(--vscode-editor-foreground))",
+  fontFamily: "var(--vscode-editor-font-family, monospace)",
+};
 
 const pageStyle: CSSProperties = {
   minHeight: "100vh",
