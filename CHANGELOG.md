@@ -5,6 +5,13 @@ All notable changes to Fovux are documented in this file.
 The format follows Keep a Changelog, and this project uses semantic versioning
 for individual packages (`fovux-mcp`, `fovux-mcp-npm`, `fovux-studio`).
 
+## [1.1.0] - 2026-06-22
+
+### Added
+
+- Experiment advisor, active learning queue, challenge confirmation modals, path policy checks,
+  and training launch constraints.
+
 ## [1.0.1] - 2026-06-11
 
 ### Added

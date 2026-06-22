@@ -5,6 +5,18 @@ All notable changes to `fovux-mcp` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.0.1...fovux-mcp-v1.1.0) (2026-06-22)
+
+
+### Features
+
+* implement path policy checks and training launch constraints ([#77](https://github.com/oaslananka/fovux-kit/issues/77)) ([f490ea3](https://github.com/oaslananka/fovux-kit/commit/f490ea3d8a3f238c0aca7f6facf21fbbd470cb68))
+
+
+### Bug Fixes
+
+* **docs:** align version identity + feat(http): server-issued confirmation challenges ([#75](https://github.com/oaslananka/fovux-kit/issues/75)) ([ef7d0a9](https://github.com/oaslananka/fovux-kit/commit/ef7d0a91cbf166e2c4dc5af43a790fb0c87b0eac))
+
 ## [1.0.1](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.0.0...fovux-mcp-v1.0.1) (2026-06-11)
 
 
