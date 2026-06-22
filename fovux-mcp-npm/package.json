@@ -1,6 +1,6 @@
 {
   "name": "fovux-mcp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "npm CLI shim for the Fovux MCP Python package.",
   "license": "Apache-2.0",
   "author": "Fovux Contributors",

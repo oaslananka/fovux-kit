@@ -11,6 +11,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Renamed the Marketplace display name to `Fovux Studio Kit` so the first public VSIX publish uses
   a unique display name while keeping the `oaslananka.fovuxstudiokit` extension identifier stable.
 
+## [1.2.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.1.0...fovux-studio-v1.2.0) (2026-06-22)
+
+
+### Features
+
+* **annotation:** add active learning strategies and reason codes ([#83](https://github.com/oaslananka/fovux-kit/issues/83)) ([025deca](https://github.com/oaslananka/fovux-kit/commit/025deca496a253e20780989a3f64d1dea98b853f))
+* **vscode:** improve granular tool schemas, descriptions, and confirmation ux ([#81](https://github.com/oaslananka/fovux-kit/issues/81)) ([5f192ce](https://github.com/oaslananka/fovux-kit/commit/5f192ce3bf0898264d3084c58f04dfd58b65c72f))
+
 ## [1.1.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.0.1...fovux-studio-v1.1.0) (2026-06-22)
 
 ### Features

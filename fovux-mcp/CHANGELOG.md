@@ -5,6 +5,13 @@ All notable changes to `fovux-mcp` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.2.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.1.0...fovux-mcp-v1.2.0) (2026-06-22)
+
+
+### Features
+
+* **annotation:** add active learning strategies and reason codes ([#83](https://github.com/oaslananka/fovux-kit/issues/83)) ([025deca](https://github.com/oaslananka/fovux-kit/commit/025deca496a253e20780989a3f64d1dea98b853f))
+
 ## [1.1.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.0.1...fovux-mcp-v1.1.0) (2026-06-22)
 
 
