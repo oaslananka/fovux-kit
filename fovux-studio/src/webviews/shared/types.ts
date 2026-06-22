@@ -7,6 +7,10 @@ export interface DashboardInitialState {
   initialRuns: RunSummary[];
   initialError: string | null;
   isServerReachable: boolean;
+  fovuxHome?: string;
+  activeProfile?: string | null;
+  availableProfiles?: FovuxProfile[];
+  discoveredDatasets?: string[];
 }
 
 export interface DatasetSample {
@@ -76,6 +80,11 @@ export interface AnnotationEditorInitialState {
   classNames: string[];
   initialBoxes: DatasetSampleBox[];
   initialError: string | null;
+  isQueueMode?: boolean;
+  queueReason?: string;
+  queueScore?: number;
+  queueEntryId?: string;
+  datasetPath?: string;
 }
 
 export interface TrainingLauncherInitialState {
@@ -119,12 +128,22 @@ export type WebviewToExtensionMessage =
   | { type: "exportUserPresets" }
   | { type: "importUserPresets"; presets: UserPreset[] }
   | { type: "selectFovuxProfile"; profile: FovuxProfile }
-  | { type: "saveAnnotation"; imagePath: string; boxes: DatasetSampleBox[] };
+  | { type: "initializeDemoWorkspace" }
+  | { type: "triggerCommand"; command: string; args?: unknown[] }
+  | { type: "saveAnnotation"; imagePath: string; boxes: DatasetSampleBox[] }
+  | {
+      type: "submitQueueEntry";
+      entryId: string;
+      boxes: DatasetSampleBox[];
+      datasetSplit?: string;
+    }
+  | { type: "skipQueueEntry"; entryId: string };
 
 export type ExtensionToWebviewMessage =
   | { type: "authTokenUpdated"; authToken: string | null }
   | { type: "userPresetsUpdated"; presets: UserPreset[] }
-  | { type: "fovuxProfileUpdated"; profile: FovuxProfile };
+  | { type: "fovuxProfileUpdated"; profile: FovuxProfile }
+  | { type: "setEditorState"; state: AnnotationEditorInitialState };
 
 declare global {
   interface Window {

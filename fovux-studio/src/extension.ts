@@ -119,6 +119,12 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("fovux.openAnnotationEditor", () =>
       openAnnotationEditor(context)
     ),
+    vscode.commands.registerCommand("fovux.openActiveLearningQueue", (datasetPath?: string) =>
+      openAnnotationEditor(context, {
+        isQueueMode: true,
+        datasetPath: typeof datasetPath === "string" ? datasetPath : undefined,
+      })
+    ),
     vscode.commands.registerCommand("fovux.openExportWizard", () => openExportWizard(context)),
     vscode.commands.registerCommand("fovux.openTimeline", () => openTimeline(context)),
     vscode.commands.registerCommand("fovux.compareRuns", () => openCompareRuns(context)),
