@@ -110,11 +110,11 @@ def _log_audit(
     error_msg: str | None = None,
 ) -> None:
     try:
-        from fovux.core.paths import get_fovux_home, FovuxPaths
+        import uuid
+
+        from fovux.core.paths import FovuxPaths, get_fovux_home
         from fovux.core.runs import get_registry
         from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
-        import json
-        import uuid
 
         # Determine risk level from policy category
         policy = HTTP_TOOL_POLICIES.get(tool_name)
@@ -127,6 +127,7 @@ def _log_audit(
                 if isinstance(value, str) and value:
                     try:
                         from pathlib import Path
+
                         resolved = str(Path(value).expanduser().resolve())
                         resolved_paths.append(resolved)
                     except Exception:
@@ -149,5 +150,5 @@ def _log_audit(
                 "error": error_msg,
             },
         )
-    except Exception:
+    except Exception:  # noqa: S110
         pass

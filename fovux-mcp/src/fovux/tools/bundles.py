@@ -2,37 +2,38 @@
 
 from __future__ import annotations
 
-import os
-import sys
-import platform
-import json
-import zipfile
-import uuid
-import shutil
 import importlib
+import json
+import os
+import platform
+import sys
+import tomllib
+import uuid
+import zipfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-import tomllib
-import tomli_w
-from datetime import UTC, datetime
 
-from fovux.config import load_config, clear_config_cache
-from fovux.core.paths import get_fovux_home, FovuxPaths
-from fovux.core.runs import get_registry
+import tomli_w
+
+from fovux.config import clear_config_cache, load_config
 from fovux.core.doctor import collect_doctor_report
 from fovux.core.errors import FovuxError
-from fovux.server import mcp
+from fovux.core.paths import FovuxPaths, get_fovux_home
+from fovux.core.runs import get_registry
 from fovux.core.tooling import tool_event
 from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
+from fovux.server import mcp
 
 
 def get_redacted_env() -> dict[str, str]:
     """Return environment variables with sensitive keys redacted."""
     redacted = {}
     for key, val in os.environ.items():
-        if any(sec in key.lower() for sec in (
-            "key", "token", "secret", "password", "pat", "auth", "credential", "jwt"
-        )):
+        if any(
+            sec in key.lower()
+            for sec in ("key", "token", "secret", "password", "pat", "auth", "credential", "jwt")
+        ):
             redacted[key] = "[REDACTED]"
         else:
             redacted[key] = val
@@ -43,16 +44,25 @@ def redact_dict(data: dict[str, Any]) -> dict[str, Any]:
     """Recursively redact sensitive keys in a dictionary."""
     redacted = {}
     for key, val in data.items():
-        if any(sec in key.lower() for sec in (
-            "key", "token", "secret", "password", "pat", "auth", "credential", "endpoint", "url"
-        )):
+        if any(
+            sec in key.lower()
+            for sec in (
+                "key",
+                "token",
+                "secret",
+                "password",
+                "pat",
+                "auth",
+                "credential",
+                "endpoint",
+                "url",
+            )
+        ):
             redacted[key] = "[REDACTED]"
         elif isinstance(val, dict):
             redacted[key] = redact_dict(val)
         elif isinstance(val, list):
-            redacted[key] = [
-                redact_dict(item) if isinstance(item, dict) else item for item in val
-            ]
+            redacted[key] = [redact_dict(item) if isinstance(item, dict) else item for item in val]
         else:
             redacted[key] = val
     return redacted
@@ -74,6 +84,7 @@ def get_policy_status() -> dict[str, Any]:
 
         # Build list of allowed tools dynamically based on policy mode
         from fovux.http.tool_proxy import available_tools
+
         allowed_tools = available_tools()
 
         # Build map of which tools require confirmation
@@ -81,7 +92,9 @@ def get_policy_status() -> dict[str, Any]:
         for name, policy in HTTP_TOOL_POLICIES.items():
             requires_c = policy.requires_confirmation
             if policy_mode == "safe" and policy.category in (
-                "mutating", "long_running", "destructive"
+                "mutating",
+                "long_running",
+                "destructive",
             ):
                 requires_c = True
             elif policy_mode in ("automation", "lab"):
@@ -131,15 +144,17 @@ def list_audit_events(limit: int = 100, offset: int = 0) -> dict[str, Any]:
 
         events = []
         for record in records:
-            events.append({
-                "id": record.id,
-                "actor": record.actor,
-                "action": record.action,
-                "entity_type": record.entity_type,
-                "entity_id": record.entity_id,
-                "created_at": record.created_at.isoformat() + "Z",
-                "details": json.loads(str(record.details_json or "{}")),
-            })
+            events.append(
+                {
+                    "id": record.id,
+                    "actor": record.actor,
+                    "action": record.action,
+                    "entity_type": record.entity_type,
+                    "entity_id": record.entity_id,
+                    "created_at": record.created_at.isoformat() + "Z",
+                    "details": json.loads(str(record.details_json or "{}")),
+                }
+            )
         return {"events": events}
 
 
@@ -181,12 +196,14 @@ def export_reproducibility_bundle(
         metrics_records = registry.list_metrics(run_id)
         metrics = []
         for m in metrics_records:
-            metrics.append({
-                "epoch": m.epoch,
-                "key": m.metric_key,
-                "value": m.metric_value,
-                "created_at": m.created_at.isoformat() + "Z",
-            })
+            metrics.append(
+                {
+                    "epoch": m.epoch,
+                    "key": m.metric_key,
+                    "value": m.metric_value,
+                    "created_at": m.created_at.isoformat() + "Z",
+                }
+            )
 
         # Manifest
         manifest = {
@@ -197,8 +214,12 @@ def export_reproducibility_bundle(
             "task": run_record.task,
             "epochs": run_record.epochs,
             "created_at": run_record.created_at.isoformat() + "Z",
-            "started_at": run_record.started_at.isoformat() + "Z" if run_record.started_at else None,
-            "finished_at": run_record.finished_at.isoformat() + "Z" if run_record.finished_at else None,
+            "started_at": (
+                run_record.started_at.isoformat() + "Z" if run_record.started_at else None
+            ),
+            "finished_at": (
+                run_record.finished_at.isoformat() + "Z" if run_record.finished_at else None
+            ),
             "dataset_fingerprint": run_record.dataset_fingerprint,
             "config_hash": run_record.config_hash,
             "code_version": run_record.code_version,
@@ -307,13 +328,17 @@ def generate_support_bundle(destination_path: str | None = None) -> dict[str, An
             ops = registry.list_operations(limit=100)
             for op in ops:
                 if op.status == "failed":
-                    failed_ops.append({
-                        "id": op.id,
-                        "tool": op.tool,
-                        "error_type": op.error_type,
-                        "error": op.error,
-                        "created_at": op.created_at.isoformat() + "Z" if op.created_at else None,
-                    })
+                    failed_ops.append(
+                        {
+                            "id": op.id,
+                            "tool": op.tool,
+                            "error_type": op.error_type,
+                            "error": op.error,
+                            "created_at": op.created_at.isoformat() + "Z"
+                            if op.created_at
+                            else None,
+                        }
+                    )
         except Exception as exc:
             failed_ops = [{"error": f"Failed to list failed operations: {exc}"}]
 

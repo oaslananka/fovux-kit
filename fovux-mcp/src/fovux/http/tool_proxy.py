@@ -72,9 +72,7 @@ HTTP_TOOL_POLICIES: dict[str, HttpToolPolicy] = {
     "eval_error_analysis": HttpToolPolicy("read_only", 30.0, 1, required_scope=_S.READ),
     "eval_per_class": HttpToolPolicy("read_only", 30.0, 1, required_scope=_S.READ),
     "eval_run": HttpToolPolicy("long_running", 120.0, 1, True, required_scope=_S.RUN_START),
-    "export_reproducibility_bundle": HttpToolPolicy(
-        "read_only", 30.0, 2, required_scope=_S.READ
-    ),
+    "export_reproducibility_bundle": HttpToolPolicy("read_only", 30.0, 2, required_scope=_S.READ),
     "export_onnx": HttpToolPolicy("mutating", 120.0, 1, True, required_scope=_S.EXPORT_WRITE),
     "export_tflite": HttpToolPolicy("mutating", 120.0, 1, True, required_scope=_S.EXPORT_WRITE),
     "fovux_doctor": HttpToolPolicy("read_only", 20.0, 2, required_scope=_S.READ),
@@ -94,9 +92,7 @@ HTTP_TOOL_POLICIES: dict[str, HttpToolPolicy] = {
     "run_compare": HttpToolPolicy("mutating", 30.0, 1, True, required_scope=_S.RUN_START),
     "run_delete": HttpToolPolicy("destructive", 30.0, 1, True, required_scope=_S.DESTRUCTIVE),
     "run_tag": HttpToolPolicy("mutating", 20.0, 2, True, required_scope=_S.RUN_START),
-    "set_policy_mode": HttpToolPolicy(
-        "mutating", 10.0, 1, True, required_scope=_S.ADMIN
-    ),
+    "set_policy_mode": HttpToolPolicy("mutating", 10.0, 1, True, required_scope=_S.ADMIN),
     "sync_to_mlflow": HttpToolPolicy("mutating", 60.0, 1, True, required_scope=_S.EXPORT_WRITE),
     "train_adjust": HttpToolPolicy("mutating", 30.0, 1, True, required_scope=_S.RUN_START),
     "train_resume": HttpToolPolicy("mutating", 60.0, 1, True, required_scope=_S.RUN_START),
@@ -111,6 +107,7 @@ del _S
 def check_scope(policy: HttpToolPolicy, scopes: set[Scope]) -> None:
     """Check that the provided scopes satisfy the tool policy requirement."""
     from fovux.config import load_config
+
     config = load_config()
     policy_mode = getattr(config, "policy_mode", "developer").lower()
 
@@ -131,6 +128,7 @@ def check_scope(policy: HttpToolPolicy, scopes: set[Scope]) -> None:
 def available_tools() -> list[str]:
     """Return the tool names reachable through the HTTP proxy under the current policy mode."""
     from fovux.config import load_config
+
     config = load_config()
     policy_mode = getattr(config, "policy_mode", "developer").lower()
 
@@ -148,6 +146,7 @@ def available_tools() -> list[str]:
 def policy_for_tool(name: str) -> HttpToolPolicy:
     """Return the HTTP policy for a reachable tool, adjusted by policy mode."""
     from fovux.config import load_config
+
     config = load_config()
     policy_mode = getattr(config, "policy_mode", "developer").lower()
 

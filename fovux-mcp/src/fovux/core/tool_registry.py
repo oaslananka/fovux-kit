@@ -37,9 +37,7 @@ _TOOL_SPECS: dict[str, str] = {
     "eval_per_class": "fovux.tools.eval_per_class:eval_per_class",
     "eval_run": "fovux.tools.eval_run:eval_run",
     "export_onnx": "fovux.tools.export_onnx:export_onnx",
-    "export_reproducibility_bundle": (
-        "fovux.tools.bundles:export_reproducibility_bundle"
-    ),
+    "export_reproducibility_bundle": ("fovux.tools.bundles:export_reproducibility_bundle"),
     "export_tflite": "fovux.tools.export_tflite:export_tflite",
     "fovux_doctor": "fovux.tools.fovux_doctor:fovux_doctor",
     "generate_support_bundle": "fovux.tools.bundles:generate_support_bundle",
