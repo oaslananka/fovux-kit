@@ -5,6 +5,13 @@ All notable changes to the `fovux-mcp` npm wrapper are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.3.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-npm-v1.2.0...fovux-mcp-npm-v1.3.0) (2026-06-23)
+
+
+### Miscellaneous Chores
+
+* **fovux-mcp-npm:** Synchronize fovux-mcp versions
+
 ## [1.2.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-npm-v1.1.0...fovux-mcp-npm-v1.2.0) (2026-06-22)
 
 
