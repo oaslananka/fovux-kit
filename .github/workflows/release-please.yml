@@ -82,7 +82,8 @@ jobs:
               trap - RETURN
               continue
             fi
-            git add mcp.json fovux-mcp/server.json fovux-mcp/smithery.yaml fovux-mcp/uv.lock
+            git add mcp.json fovux-mcp/server.json fovux-mcp/smithery.yaml fovux-mcp/uv.lock \
+              CHANGELOG.md RELEASE_NOTES.md docs/release-notes/
             git commit -m "chore(release): sync release metadata"
             git remote set-url origin \
               "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
