@@ -42,7 +42,7 @@ def get_redacted_env() -> dict[str, str]:
 
 def redact_dict(data: dict[str, Any]) -> dict[str, Any]:
     """Recursively redact sensitive keys in a dictionary."""
-    redacted = {}
+    redacted: dict[str, Any] = {}
     for key, val in data.items():
         if any(
             sec in key.lower()
