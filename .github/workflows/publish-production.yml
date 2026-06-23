@@ -543,3 +543,51 @@ jobs:
           name: publish-report-${{ github.event.repository.name }}-open-vsx
           path: out/publish-report-open-vsx.json
           if-no-files-found: ignore
+
+  verify-release:
+    name: Verify Release
+    needs:
+      - pypi-publish
+      - mcp-registry-publish
+      - vscode-marketplace
+      - open-vsx
+    if: >
+      always() &&
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        needs.pypi-publish.result == 'success' ||
+        needs.pypi-publish.result == 'skipped'
+      ) &&
+      (
+        needs.mcp-registry-publish.result == 'success' ||
+        needs.mcp-registry-publish.result == 'skipped'
+      ) &&
+      (
+        needs.vscode-marketplace.result == 'success' ||
+        needs.vscode-marketplace.result == 'skipped'
+      ) &&
+      (
+        needs.open-vsx.result == 'success' ||
+        needs.open-vsx.result == 'skipped'
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.13"
+      - name: Verify release packages are live and functional
+        run: |
+          set -euo pipefail
+          channel="${{ inputs.channel }}"
+          if [[ "${channel}" == "all" ]]; then
+            python scripts/verify_registry_releases.py \
+              --channel all --retries 20 --delay 15
+          elif [[ "${channel}" == "pypi" || "${channel}" == "mcp-registry" ]]; then
+            python scripts/verify_registry_releases.py \
+              --channel python --retries 20 --delay 15
+          elif [[ "${channel}" == "studio" ]]; then
+            python scripts/verify_registry_releases.py \
+              --channel studio --retries 20 --delay 15
+          fi
