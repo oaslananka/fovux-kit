@@ -5,6 +5,13 @@ All notable changes to `fovux-mcp` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.3.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.2.0...fovux-mcp-v1.3.0) (2026-06-23)
+
+
+### Features
+
+* **policy/governance:** add security policy modes and posture reports ([#84](https://github.com/oaslananka/fovux-kit/issues/84)) ([f1f7bc5](https://github.com/oaslananka/fovux-kit/commit/f1f7bc596a5a5767f450d30d2fbe69fe750a7243))
+
 ## [1.2.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.1.0...fovux-mcp-v1.2.0) (2026-06-22)
 
 

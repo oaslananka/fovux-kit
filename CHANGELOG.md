@@ -5,6 +5,12 @@ All notable changes to Fovux are documented in this file.
 The format follows Keep a Changelog, and this project uses semantic versioning
 for individual packages (`fovux-mcp`, `fovux-mcp-npm`, `fovux-studio`).
 
+## [1.3.0] - 2026-06-23
+
+### Added
+
+- Synchronized release package updates.
+
 ## [1.2.0] - 2026-06-23
 
 ### Added
