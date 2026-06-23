@@ -22,7 +22,7 @@ def test_mcp_server_has_tools() -> None:
     """MCP server should register every release tool with basic metadata."""
     tools = list_tool_names()
 
-    assert len(tools) == 42
+    assert len(tools) == 47
 
     assert {
         "active_learning_select",

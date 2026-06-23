@@ -64,6 +64,7 @@ def tool_event(
                 error_code=exc.code,
                 error_message=exc.message,
             )
+            _log_audit(tool_name, run_id, context, "failed", exc.message)
             raise
         except FileNotFoundError as exc:
             checkpoint_error = FovuxCheckpointNotFoundError(str(exc))
@@ -73,6 +74,7 @@ def tool_event(
                 error_code=checkpoint_error.code,
                 error_message=checkpoint_error.message,
             )
+            _log_audit(tool_name, run_id, context, "failed", checkpoint_error.message)
             raise checkpoint_error from exc
         except (RuntimeError, AssertionError) as exc:
             library_error = FovuxError(f"Underlying library error in {tool_name}: {exc}")
@@ -82,6 +84,7 @@ def tool_event(
                 error_code=library_error.code,
                 error_message=library_error.message,
             )
+            _log_audit(tool_name, run_id, context, "failed", library_error.message)
             raise library_error from exc
         except Exception as exc:
             bound.error(
@@ -90,8 +93,61 @@ def tool_event(
                 error_type=type(exc).__name__,
                 error_message=str(exc),
             )
+            _log_audit(tool_name, run_id, context, "failed", str(exc))
             raise FovuxError(f"Unexpected error in {tool_name}: {exc}") from exc
         else:
             bound.info("tool_end", duration_seconds=round(perf_counter() - started_at, 6))
+            _log_audit(tool_name, run_id, context, "success")
     finally:
         reset_active_tool(active_token, roots_token)
+
+
+def _log_audit(
+    tool_name: str,
+    run_id: str | None,
+    context: dict[str, object],
+    status: str,
+    error_msg: str | None = None,
+) -> None:
+    try:
+        from fovux.core.paths import get_fovux_home, FovuxPaths
+        from fovux.core.runs import get_registry
+        from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
+        import json
+        import uuid
+
+        # Determine risk level from policy category
+        policy = HTTP_TOOL_POLICIES.get(tool_name)
+        risk_level = policy.category if policy else "unknown"
+
+        # Resolve path values to absolute strings
+        resolved_paths = []
+        for key, value in context.items():
+            if any(s in key.lower() for s in ("path", "pool", "checkpoint", "file", "dir")):
+                if isinstance(value, str) and value:
+                    try:
+                        from pathlib import Path
+                        resolved = str(Path(value).expanduser().resolve())
+                        resolved_paths.append(resolved)
+                    except Exception:
+                        resolved_paths.append(value)
+
+        paths = FovuxPaths(get_fovux_home())
+        registry = get_registry(paths.runs_db)
+
+        # Log to SQLite runs.db
+        registry.log_audit_event(
+            actor="client",
+            action=tool_name,
+            entity_type="tool",
+            entity_id=run_id or f"op_{uuid.uuid4().hex[:8]}",
+            details={
+                "risk_level": risk_level,
+                "resolved_target_paths": resolved_paths,
+                "challenge_id": context.get("challenge_id"),
+                "status": status,
+                "error": error_msg,
+            },
+        )
+    except Exception:
+        pass

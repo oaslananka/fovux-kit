@@ -69,6 +69,7 @@ class FovuxConfig(BaseModel):
     """Root Fovux configuration."""
 
     version: str = "1.0"
+    policy_mode: str = "developer"
     paths: PathsConfig = Field(default_factory=PathsConfig)
     training: TrainingConfig = Field(default_factory=TrainingConfig)
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
@@ -149,6 +150,7 @@ def write_default_config(config_path: Path) -> None:
     default: dict[str, Any] = {
         "fovux": {
             "version": "1.0",
+            "policy_mode": "developer",
             "paths": {
                 "home": "~/.fovux",
                 "runs": "runs",

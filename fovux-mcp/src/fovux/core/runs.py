@@ -954,6 +954,40 @@ class RunRegistry:
                 stmt = stmt.where(RunEventRecord.run_id == run_id)
             return list(session.execute(stmt).scalars().all())
 
+    def log_audit_event(
+        self,
+        actor: str,
+        action: str,
+        entity_type: str,
+        entity_id: str,
+        details: dict[str, Any],
+    ) -> AuditEventRecord:
+        """Log an audit event to the database."""
+        with self._Session() as session:
+            record = AuditEventRecord(
+                actor=actor,
+                action=action,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                details_json=json.dumps(details),
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+            )
+            session.add(record)
+            session.commit()
+            session.refresh(record)
+            return record
+
+    def list_audit_events(self, limit: int = 100, offset: int = 0) -> list[AuditEventRecord]:
+        """List audit events ordered by created_at desc."""
+        with self._Session() as session:
+            stmt = (
+                select(AuditEventRecord)
+                .order_by(AuditEventRecord.created_at.desc())
+                .offset(max(offset, 0))
+                .limit(max(limit, 1))
+            )
+            return list(session.execute(stmt).scalars().all())
+
     def list_artifacts(self, run_id: str | None = None, limit: int = 1000) -> list[ArtifactRecord]:
         """List registered artifacts."""
         with self._Session() as session:
