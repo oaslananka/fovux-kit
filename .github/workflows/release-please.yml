@@ -246,12 +246,15 @@ jobs:
           uv build
 
       - name: Generate SBOM and checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           uv run --project fovux-mcp python scripts/build_spdx_sbom.py \
             --name fovux-mcp \
             --output fovux-mcp-sbom.spdx.json
-          sha256sum fovux-mcp/dist/* fovux-mcp-sbom.spdx.json > fovux-mcp.sha256
+          python scripts/generate_security_posture.py
+          sha256sum fovux-mcp/dist/* fovux-mcp-sbom.spdx.json docs/security-posture.md > fovux-mcp.sha256
 
       - name: Attest Python release assets
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
@@ -267,6 +270,7 @@ jobs:
           gh release upload "$RELEASE_TAG" --clobber \
             fovux-mcp/dist/* \
             fovux-mcp-sbom.spdx.json \
+            docs/security-posture.md \
             fovux-mcp.sha256
 
       - name: Publish Python package
@@ -399,12 +403,15 @@ jobs:
           node ../scripts/package_vscode_extension.mjs --extension-dir . --out fovuxstudiokit.vsix
 
       - name: Generate SBOM and checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           node scripts/build_node_spdx_sbom.mjs \
             --package fovux-studio/package.json \
             --output fovux-studio-sbom.spdx.json
-          sha256sum fovux-studio/fovuxstudiokit.vsix fovux-studio-sbom.spdx.json > fovux-studio.sha256
+          python scripts/generate_security_posture.py
+          sha256sum fovux-studio/fovuxstudiokit.vsix fovux-studio-sbom.spdx.json docs/security-posture.md > fovux-studio.sha256
 
       - name: Attest Studio release assets
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
@@ -420,6 +427,7 @@ jobs:
           gh release upload "$RELEASE_TAG" --clobber \
             fovux-studio/fovuxstudiokit.vsix \
             fovux-studio-sbom.spdx.json \
+            docs/security-posture.md \
             fovux-studio.sha256
 
       - name: Publish Studio extension
