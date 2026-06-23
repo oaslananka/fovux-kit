@@ -81,6 +81,12 @@ tasks:
       - cmd: cd fovux-studio && {{.PNPM}} audit --prod
       - cmd: cd fovux-mcp-npm && {{.NPM}} audit --omit=dev
       - cmd: gitleaks detect --no-banner --redact
+      - cmd: python scripts/generate_security_posture.py
+
+  security:posture:
+    desc: Check and generate security posture report
+    cmds:
+      - python scripts/generate_security_posture.py --strict
 
   build:
     desc: Build distributable packages

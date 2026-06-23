@@ -178,10 +178,35 @@ jobs:
             --lockfile fovux-mcp-npm/package-lock.json \
             .
 
+  posture:
+    name: Security posture check
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Run posture check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python scripts/generate_security_posture.py --strict
+
   security-required:
     name: security-required
     needs:
-      [gitleaks, trivy-fs, pip-audit, pnpm-audit, npm-wrapper-audit, osv-scan]
+      [gitleaks, trivy-fs, pip-audit, pnpm-audit, npm-wrapper-audit, osv-scan, posture]
     if: always() && github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -194,6 +219,7 @@ jobs:
           PNPM_AUDIT_RESULT: ${{ needs.pnpm-audit.result }}
           NPM_WRAPPER_AUDIT_RESULT: ${{ needs.npm-wrapper-audit.result }}
           OSV_SCAN_RESULT: ${{ needs.osv-scan.result }}
+          POSTURE_RESULT: ${{ needs.posture.result }}
         run: |
           set -euo pipefail
           for result in \
@@ -202,7 +228,8 @@ jobs:
             "$PIP_AUDIT_RESULT" \
             "$PNPM_AUDIT_RESULT" \
             "$NPM_WRAPPER_AUDIT_RESULT" \
-            "$OSV_SCAN_RESULT"; do
+            "$OSV_SCAN_RESULT" \
+            "$POSTURE_RESULT"; do
             if [[ "$result" != "success" ]]; then
               echo "::error::At least one security scan did not pass."
               exit 1
