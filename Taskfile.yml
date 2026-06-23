@@ -118,6 +118,12 @@ tasks:
     cmds:
       - cmd: node scripts/validate_release_automation.mjs
 
+  release:verify:
+    desc: Verify that published packages are available on registries and pass smoke tests
+    cmds:
+      - python scripts/verify_registry_releases.py
+
+
   ci:act:
     desc: Run GitHub Actions workflows locally with nektos/act
     cmds:

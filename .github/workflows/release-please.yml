@@ -482,3 +482,53 @@ jobs:
             --publisher oaslananka \
             --name fovuxstudiokit \
             --version "$PACKAGE_VERSION"
+
+  verify-release:
+    name: Verify Release
+    needs:
+      - release-please
+      - publish-mcp
+      - publish-npm-wrapper
+      - publish-studio
+    if: >
+      always() &&
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        needs.release-please.outputs.mcp_release_created == 'true' ||
+        needs.release-please.outputs.mcp_npm_release_created == 'true' ||
+        needs.release-please.outputs.studio_release_created == 'true'
+      ) &&
+      (
+        needs.publish-mcp.result == 'success' ||
+        needs.publish-mcp.result == 'skipped'
+      ) &&
+      (
+        needs.publish-npm-wrapper.result == 'success' ||
+        needs.publish-npm-wrapper.result == 'skipped'
+      ) &&
+      (
+        needs.publish-studio.result == 'success' ||
+        needs.publish-studio.result == 'skipped'
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.13"
+      - name: Verify release packages are live and functional
+        run: |
+          set -euo pipefail
+          if [[ "${{ needs.release-please.outputs.mcp_release_created }}" == "true" ]]; then
+            python scripts/verify_registry_releases.py \
+              --channel python --retries 20 --delay 15
+          fi
+          if [[ "${{ needs.release-please.outputs.mcp_npm_release_created }}" == "true" ]]; then
+            python scripts/verify_registry_releases.py \
+              --channel npm --retries 20 --delay 15
+          fi
+          if [[ "${{ needs.release-please.outputs.studio_release_created }}" == "true" ]]; then
+            python scripts/verify_registry_releases.py \
+              --channel studio --retries 20 --delay 15
+          fi
