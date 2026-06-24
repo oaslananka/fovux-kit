@@ -103,40 +103,59 @@ uv run fovux-mcp serve --http --tcp --metrics
 
 ## The tool set
 
-Fovux MCP currently exposes 28 local tools.
+Fovux MCP 1.3.0 currently exposes 47 local tools.
 
 <!-- fovux-tools:start -->
 
-| Tool                       | Purpose                                                  |
-| -------------------------- | -------------------------------------------------------- |
-| `annotation_quality_check` | Find common YOLO annotation quality issues.              |
-| `benchmark_latency`        | Measure p50/p95/p99 inference latency.                   |
-| `dataset_convert`          | Convert datasets between supported formats.              |
-| `dataset_find_duplicates`  | Detect duplicate images with perceptual hashing.         |
-| `dataset_inspect`          | Inspect dataset structure, classes, and samples.         |
-| `dataset_split`            | Create train/val/test splits.                            |
-| `dataset_validate`         | Validate dataset integrity and label ranges.             |
-| `eval_compare`             | Compare evaluation outputs.                              |
-| `eval_error_analysis`      | Extract worst false-positive and false-negative samples. |
-| `eval_per_class`           | Report per-class validation metrics.                     |
-| `eval_run`                 | Run validation for a checkpoint.                         |
-| `export_onnx`              | Export checkpoints to ONNX.                              |
-| `export_tflite`            | Export checkpoints to TFLite.                            |
-| `fovux_doctor`             | Report local environment health.                         |
-| `infer_batch`              | Run batch inference over image folders.                  |
-| `infer_image`              | Run single-image inference.                              |
-| `infer_rtsp`               | Run live RTSP inference with reconnect handling.         |
-| `model_list`               | List local checkpoints and exports.                      |
-| `model_profile`            | Profile model size and complexity.                       |
-| `quantize_int8`            | Create INT8 quantized artifacts.                         |
-| `quantize_report`          | Compare quantized model quality.                         |
-| `run_compare`              | Compare local training runs.                             |
-| `run_delete`               | Delete non-running runs safely.                          |
-| `run_tag`                  | Edit local run tags.                                     |
-| `train_resume`             | Resume a stopped or failed run.                          |
-| `train_start`              | Start detached YOLO training.                            |
-| `train_status`             | Read current run status and metrics.                     |
-| `train_stop`               | Stop a running training process.                         |
+| Tool                            | Purpose                                                                                                    |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `active_learning_queue_list`    | List review queue entries from the SQLite database.                                                        |
+| `active_learning_queue_rank`    | Rank unlabeled images by uncertainty using a YOLO checkpoint and populate the review queue.                |
+| `active_learning_queue_submit`  | Submit label corrections for a queue entry, copy the image to the dataset, and write the YOLO label file.  |
+| `active_learning_select`        | Rank unlabeled images by model uncertainty for annotation prioritization.                                  |
+| `annotation_quality_check`      | Inspect YOLO labels for common annotation mistakes before a bad dataset wastes training time.              |
+| `benchmark_latency`             | Measure local inference latency and throughput for a model artifact.                                       |
+| `dataset_augment`               | Create a local augmented YOLO dataset copy using deterministic transforms.                                 |
+| `dataset_convert`               | Convert between supported YOLO and COCO dataset layouts.                                                   |
+| `dataset_find_duplicates`       | Perceptual hash duplicate detection for image datasets.                                                    |
+| `dataset_inspect`               | Comprehensive dataset statistics for YOLO or COCO exports.                                                 |
+| `dataset_split`                 | Create reproducible train, val, and test splits.                                                           |
+| `dataset_validate`              | Deep integrity checks for YOLO datasets.                                                                   |
+| `demo_init`                     | Initialize a demo workspace for first-run onboarding.                                                      |
+| `deployment_advise`             | Analyze deployment readiness, preflight checks, parity, and benchmarks.                                    |
+| `distill_model`                 | Start a student-model training run with teacher-model distillation metadata.                               |
+| `eval_compare`                  | Evaluate multiple checkpoints on the same dataset and rank the results.                                    |
+| `eval_error_analysis`           | Inspect confusion patterns and worst examples beyond headline metrics.                                     |
+| `eval_per_class`                | Return a sorted per-class view over evaluation output.                                                     |
+| `eval_run`                      | Run a validation pass on a checkpoint.                                                                     |
+| `export_onnx`                   | Export a checkpoint to ONNX and optionally verify parity.                                                  |
+| `export_reproducibility_bundle` | Export a reproducibility bundle zip file for a training run.                                               |
+| `export_tflite`                 | Export a checkpoint to TFLite, optionally with INT8 enabled.                                               |
+| `fovux_doctor`                  | Inspect the local Fovux environment before training, exporting, or opening Studio live views.              |
+| `generate_support_bundle`       | Generate a redacted support bundle zip file containing system diagnostic information.                      |
+| `get_policy_status`             | Retrieve the current security policy status and allowed tools for the active environment.                  |
+| `infer_batch`                   | Run inference over an image directory and persist the detections as a reusable manifest.                   |
+| `infer_ensemble`                | Run inference with multiple checkpoints and fuse the detections.                                           |
+| `infer_image`                   | Run structured inference on a single image.                                                                |
+| `infer_rtsp`                    | Run live inference over an RTSP stream with reconnection logic.                                            |
+| `list_audit_events`             | Retrieve audit event logs from the local database.                                                         |
+| `model_compare_visual`          | Generate visual comparison artifacts between two model checkpoints.                                        |
+| `model_list`                    | List tracked checkpoints and exported model artifacts.                                                     |
+| `model_profile`                 | Profile a checkpoint so you can choose between accuracy, size, and compute cost before training or export. |
+| `quantize_int8`                 | Produce an INT8 ONNX export using a calibration dataset.                                                   |
+| `quantize_report`               | Compare original and quantized checkpoints on the same evaluation set.                                     |
+| `run_archive`                   | Archive a completed training run to a compressed file.                                                     |
+| `run_compare`                   | Generate a markdown and PNG summary across multiple training runs.                                         |
+| `run_delete`                    | Deletes a non-running training run from the SQLite registry and, by default, removes its run.              |
+| `run_tag`                       | Replaces the tag list for a training run. Tags are stored in the local SQLite registry and used by.        |
+| `set_policy_mode`               | Set the local security policy mode to adjust permissions and confirmation prompts.                         |
+| `sync_to_mlflow`                | Sync a training run to a local or remote MLflow tracking server.                                           |
+| `train_adjust`                  | Adjust hyperparameters of a running training run.                                                          |
+| `train_preflight`               | Perform preflight checks and return a diagnostic training compatibility summary.                           |
+| `train_resume`                  | Resume a stopped or failed run from its latest checkpoint.                                                 |
+| `train_start`                   | Launch a non-blocking YOLO training subprocess.                                                            |
+| `train_status`                  | Read the latest state and metrics for a tracked training run.                                              |
+| `train_stop`                    | Stop a running training subprocess and mark the run as stopped.                                            |
 
 <!-- fovux-tools:end -->
 

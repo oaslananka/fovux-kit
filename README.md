@@ -19,13 +19,13 @@
 
 ## What is Fovux?
 
-Fovux is a local-first vision workbench for YOLO datasets, training, evaluation, export, and edge inference. It seamlessly integrates a powerful Python MCP server (`fovux-mcp`) with a highly interactive VS Code companion (`Fovux Studio`) to streamline your computer vision engineering lifecycle.
+Fovux is a local-first vision workbench for YOLO datasets, training, evaluation, export, and edge inference. It combines the Python backend package `fovux-mcp` 1.3.0, the npm wrapper `fovux-mcp` 1.3.0, and the VS Code companion `Fovux Studio` 1.2.0 to streamline the computer vision engineering lifecycle.
 
 ## Why developers use it
 
 - **Local-first**: No hosted control plane required. Your datasets and models stay entirely on your local machine or trusted infrastructure.
 - **End-to-end YOLO lifecycle**: From raw image to optimized ONNX/TensorRT edge artifact, Fovux manages the complexity.
-- **MCP-native automation**: Fully compatible with the Model Context Protocol (MCP) to automate AI workflows.
+- **MCP-native automation**: Exposes the tool surface over MCP stdio for agent clients, while Fovux Studio uses a separate local HTTP/SSE API for dashboards and guarded UI workflows.
 - **VS Code Studio**: Visual workflows directly in your editor for tracking runs, visualizing performance, and evaluating datasets.
 - **Reproducible local runs**: Consistent configurations that you can share, compare, and audit.
 - **Export and edge inference focus**: Export your models seamlessly to production-ready formats.
@@ -103,28 +103,16 @@ Use the VS Code Command Palette (`Cmd/Ctrl+Shift+P`) and type `Fovux:` to discov
 
 ## Core tools
 
-| Tool              | Description                                                    |
-| ----------------- | -------------------------------------------------------------- |
-| `train_start`     | Launch a new YOLO training run with specified hyperparameters. |
-| `train_status`    | Get metrics and status for an ongoing or completed run.        |
-| `dataset_inspect` | Analyze a YOLO dataset and generate quality reports.           |
-| `eval_compare`    | Compare metrics between two runs.                              |
-| `export_onnx`     | Export a PyTorch weight file to an ONNX graph.                 |
-| `fovux_doctor`    | Generate a diagnostic health report.                           |
+Fovux MCP 1.3.0 exposes 47 local tools across dataset inspection, validation, active learning, training, evaluation, export, quantization, inference, benchmarking, run management, policy/audit, and support-bundle workflows.
 
-_(For a full list of tools, run `fovux-mcp --help`)_
-
-Both CLI aliases are intentional:
-
-- `fovux-mcp`: primary alias for MCP clients, Studio, automation, and docs.
-- `fovux`: convenience alias for humans typing local commands.
+The package README and MkDocs site contain the generated complete tool list; CI now fails if a registered tool is missing from docs or the MkDocs navigation.
 
 ## Architecture
 
 Fovux separates concerns across three core components:
 
 1. **Fovux Core**: The underlying Python engine interfacing with YOLO and local hardware.
-2. **Fovux MCP Server**: The standardized HTTP/stdio layer exposing Fovux Core to AI agents.
+2. **Fovux MCP Server**: The stdio MCP server exposing Fovux Core to AI agents, plus a local HTTP/SSE API used by Fovux Studio. A standards-compliant Streamable HTTP MCP endpoint is tracked separately in the `v1.4.0 - MCP Conformance & Agent Safety` milestone.
 3. **Fovux Studio**: The React/TypeScript VS Code extension for human interaction.
 
 [Read more about the architecture in the docs](docs/architecture.md)
@@ -154,9 +142,11 @@ documented in [docs/repository-operations.md](docs/repository-operations.md),
 
 ## Roadmap
 
-- Multi-GPU distributed training orchestration
-- CoreML optimization support for Apple Silicon edge devices
-- Extended integration with Hugging Face Hub
+- `v1.3.1 - Stabilization & Documentation Truth`: documentation drift, local DX, registry verification, release metadata, and fail-fast quality gates.
+- `v1.4.0 - MCP Conformance & Agent Safety`: official MCP transport decision, conformance tests, schema snapshots, and agent approval safety.
+- `v1.5.0 - Studio Workflow & Dataset Intelligence`: guided dataset→training→evaluation→export workflows and Studio e2e smoke coverage.
+- `v1.6.0 - Edge Export & Deployment Intelligence`: current export matrix, target profiles, benchmark reproducibility, and quantization workflow.
+- `v2.0.0 - Extensibility, Supply Chain & Ecosystem Readiness`: plugin/API stability, trusted publishing, attestations, threat model, and marketplace release evidence.
 
 ## Contributing
 

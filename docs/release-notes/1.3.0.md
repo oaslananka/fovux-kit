@@ -1,13 +1,44 @@
 # Fovux 1.3.0 Release Notes
 
-Fovux 1.1.0 is a minor release that introduces the experiment advisor, active learning queue,
-challenge confirmation modals, path policy checks, and training launch constraints.
+Fovux 1.3.0 is the current reviewed release baseline for the local-first edge-AI computer vision
+workbench. It consolidates the expanded MCP tool registry, active-learning queue workflow, policy and
+audit tools, support/reproducibility bundles, and Studio guarded-tool UX.
 
 ## Headline Wins
 
-- **Experiment Advisor.** A new intelligent assistant that guides user experiments and onboarding.
-- **Active Learning Queue.** Support for ranking and submitting active learning data queues.
-- **Challenge Confirmation Modals.** Strengthened confirmation modal UX for risky tool actions in
-  Studio.
-- **Path Policy Checks & Lockdown Safety.** Tightened path checks to enforce filesystem policies and
-  prevent accidental writes outside designated workspace bounds.
+- **47 local backend tools.** The backend registry now covers dataset inspection, validation,
+  active learning, training, evaluation, export, quantization, inference, benchmarking, run
+  management, policy/audit, and support-bundle workflows.
+- **Active Learning Queue.** Queue ranking, listing, and submission tools support review-driven data
+  improvement loops.
+- **Policy and Audit Surface.** Policy status, policy mode changes, audit event listing, support
+  bundles, and reproducibility bundles make agent actions easier to inspect.
+- **Studio Tooling Growth.** Fovux Studio exposes 20 granular Language Model Tools plus one generic
+  fallback tool for hosts that support VS Code LM tools.
+- **Local-first Transport Clarity.** MCP stdio remains the standards-oriented agent surface; the
+  HTTP/SSE server is documented as a local Studio API/custom bridge until Streamable HTTP conformance
+  is implemented.
+- **Documentation Gates.** Tool docs, MkDocs navigation, docs code-block lint, and version/tool-count
+  truth checks are part of the release-quality path.
+
+## Upgrade Path
+
+```bash
+# Backend
+uv tool upgrade fovux-mcp
+
+# npm wrapper
+npm install -g fovux-mcp@latest
+
+# Source checkout
+cd fovux-kit/fovux-mcp
+uv sync --frozen --extra dev
+```
+
+## Release Validation
+
+- `python scripts/check_versions.py`
+- `python scripts/check_docs_truth.py`
+- `cd fovux-mcp && uv run python scripts/check_tool_docs.py`
+- `cd fovux-mcp && uv run mkdocs build --strict`
+- `python scripts/lint_docs_code.py .`

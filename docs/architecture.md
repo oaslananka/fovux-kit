@@ -3,7 +3,7 @@
 Fovux is a local-first CV workbench with two primary packages:
 
 - `fovux-mcp`: a Python FastMCP server that owns tools, training subprocesses, the SQLite run
-  registry, local HTTP/SSE transport, and artifact generation.
+  registry, MCP stdio transport, the local Studio HTTP/SSE API, and artifact generation.
 - `fovux-studio`: a VS Code extension that renders run, model, export, dataset, and training
   workflows over the local server.
 
@@ -15,7 +15,7 @@ flowchart LR
   Studio --> Status["Status Bar Items: active runs, profile, privacy"]
   Studio --> Trees["Tree Views: Runs, Models, Exports, Doctor"]
   Studio --> Webviews["React Webviews"]
-  Studio --> LMTools["Language Model Tools: 13"]
+  Studio --> LMTools["Language Model Tools: 20 granular + 1 generic fallback"]
   Webviews --> Dashboard["Dashboard: SSE with polling fallback"]
   Webviews --> DatasetInspector["Dataset Inspector"]
   Webviews --> TrainingLauncher["Training Launcher"]
@@ -24,7 +24,7 @@ flowchart LR
   Webviews --> Compare["Run Compare / Timeline"]
   Trees --> Client["Extension Host Client"]
   Status --> Client
-  Client --> HTTP["fovux-mcp HTTP"]
+  Client --> HTTP["Fovux Studio local HTTP/SSE API"]
   Dashboard --> HTTP
   DatasetInspector --> HTTP
   TrainingLauncher --> HTTP
@@ -34,7 +34,9 @@ flowchart LR
   HTTP --> Stream["/runs/:id/stream: SSE, auth required"]
   HTTP --> MetricsAlias["/runs/:id/metrics: compatibility SSE alias"]
   HTTP --> ToolsEndpoint["/tools/:name: auth required, rate-limited"]
-  HTTP --> Stdio["MCP stdio transport"]
+  HTTP --> LocalAPI["Custom local API bridge"]
+  LocalAPI --> MCP
+  Stdio["MCP stdio transport"]
   ToolsEndpoint --> MCP["fovux-mcp tool registry"]
   Stdio --> MCP
   MCP --> Tools["Dataset / Train / Eval / Export / Infer tools"]
@@ -46,7 +48,7 @@ flowchart LR
 
 ## Data Flow
 
-1. Studio reads `fovux.home` or `FOVUX_HOME` and starts `fovux-mcp serve --http --tcp` on demand.
+1. Studio reads `fovux.home` or `FOVUX_HOME` and starts `fovux-mcp serve --http --tcp` on demand. This is the Studio local API/custom bridge; MCP agent clients should use the stdio server unless and until the Streamable HTTP milestone is implemented.
 2. The extension host uses the short-lived local HTTP client for health, list, detail, and tool
    invocation calls.
 3. Webviews receive `baseUrl`, auth token, and initial state from the extension host.
@@ -58,7 +60,7 @@ flowchart LR
 
 ## Security Model
 
-Fovux is local-first and private by default. The HTTP transport binds locally, requires bearer-token
+Fovux is local-first and private by default. The Studio local HTTP/SSE API binds locally, requires bearer-token
 auth for non-health endpoints, and stores the token under `FOVUX_HOME/auth.token`. The Studio
 extension reads that token from the same filesystem and never asks the user to paste it into a UI.
 
@@ -111,3 +113,17 @@ training require a trusted workspace and fail before spawning processes when tru
 The backend intentionally exposes both `fovux-mcp` and `fovux` entry points. `fovux-mcp` is the
 primary alias used by Studio and MCP clients; `fovux` is a shorter convenience alias for direct CLI
 use.
+
+
+## MCP Transport Status
+
+As of the 2026-06-24 review, Fovux has two intentionally different surfaces:
+
+- **MCP stdio:** the standards-oriented MCP surface used by agent clients that launch
+  `fovux-mcp serve` as a subprocess.
+- **Studio local HTTP/SSE API:** a local, bearer-token-protected API used by Fovux Studio webviews,
+  dashboards, and guarded commands.
+
+The current HTTP/SSE API is not documented as a standards-compliant MCP Streamable HTTP endpoint.
+That decision and any `/mcp` endpoint implementation are tracked in the `v1.4.0 - MCP Conformance &
+Agent Safety` milestone.

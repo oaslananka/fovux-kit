@@ -1,0 +1,194 @@
+"""Fail-fast checks for public documentation/version/tool-count drift."""
+
+from __future__ import annotations
+
+import json
+import re
+import tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+MCP_ROOT = ROOT / "fovux-mcp"
+STUDIO_ROOT = ROOT / "fovux-studio"
+
+
+def _read(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def _mcp_version() -> str:
+    data = tomllib.loads(_read(MCP_ROOT / "pyproject.toml"))
+    return str(data["project"]["version"])
+
+
+def _json_version(path: Path) -> str:
+    return str(json.loads(_read(path))["version"])
+
+
+def _tool_names() -> set[str]:
+    content = _read(MCP_ROOT / "src" / "fovux" / "core" / "tool_registry.py")
+    return set(re.findall(r'^\s+"([a-z0-9_]+)":', content, flags=re.MULTILINE))
+
+
+def _granular_lm_tool_count() -> int:
+    content = _read(STUDIO_ROOT / "src" / "fovux" / "tools" / "definitions.ts")
+    return len(re.findall(r'name:\s*"fovux_[^"]+"', content))
+
+
+def _readme_tool_names() -> set[str]:
+    content = _read(MCP_ROOT / "README.md")
+    match = re.search(
+        r"<!-- fovux-tools:start -->\n\n(?P<table>.*?)\n\n<!-- fovux-tools:end -->",
+        content,
+        flags=re.S,
+    )
+    if not match:
+        raise AssertionError("fovux-mcp README is missing generated tool table markers")
+    return set(re.findall(r"\| `([a-z0-9_]+)`", match.group("table")))
+
+
+def _expect(condition: bool, message: str, failures: list[str]) -> None:
+    if not condition:
+        failures.append(message)
+
+
+def _with_regen(message: str, command: str) -> str:
+    """Attach the exact regeneration command to a failure message."""
+    return f"{message}. Regenerate/check with: `{command}`"
+
+
+def main() -> int:
+    """Run public documentation truth checks."""
+    failures: list[str] = []
+    mcp_version = _mcp_version()
+    npm_wrapper_version = _json_version(ROOT / "fovux-mcp-npm" / "package.json")
+    studio_version = _json_version(STUDIO_ROOT / "package.json")
+    tools = _tool_names()
+    lm_tool_count = _granular_lm_tool_count()
+
+    root_readme = _read(ROOT / "README.md")
+    mcp_readme = _read(MCP_ROOT / "README.md")
+    architecture = _read(ROOT / "docs" / "architecture.md")
+    roadmap = _read(ROOT / "ROADMAP.md")
+    release_notes = _read(ROOT / "RELEASE_NOTES.md")
+
+    _expect(
+        f"Python backend package `fovux-mcp` {mcp_version}" in root_readme,
+        _with_regen(
+            "README.md does not state the current fovux-mcp Python package version",
+            "python scripts/check_versions.py && python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    _expect(
+        f"npm wrapper `fovux-mcp` {npm_wrapper_version}" in root_readme,
+        _with_regen(
+            "README.md does not state the current fovux-mcp npm wrapper version",
+            "python scripts/check_versions.py && python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    _expect(
+        f"VS Code companion `Fovux Studio` {studio_version}" in root_readme,
+        _with_regen(
+            "README.md does not state the current Fovux Studio version",
+            "python scripts/check_versions.py && python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    _expect(
+        f"Fovux MCP {mcp_version} exposes {len(tools)} local tools" in root_readme,
+        _with_regen(
+            "README.md tool count is stale",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    _expect(
+        f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools" in mcp_readme,
+        _with_regen(
+            "fovux-mcp/README.md tool count is stale",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+
+    readme_tools = _readme_tool_names()
+    missing_readme_tools = sorted(tools - readme_tools)
+    extra_readme_tools = sorted(readme_tools - tools)
+    _expect(
+        readme_tools == tools,
+        _with_regen(
+            "fovux-mcp/README.md tool table drift: "
+            f"missing={missing_readme_tools} extra={extra_readme_tools}",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    _expect(
+        "standardized HTTP/stdio" not in root_readme + architecture,
+        _with_regen(
+            "README.md or docs/architecture.md still describe the Studio HTTP API "
+            "as a standardized HTTP/stdio MCP layer",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    _expect(
+        "Studio local HTTP/SSE API" in architecture,
+        _with_regen(
+            "docs/architecture.md does not explicitly name the Studio local HTTP/SSE API",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    _expect(
+        "not documented as a standards-compliant MCP Streamable HTTP endpoint" in architecture,
+        _with_regen(
+            "docs/architecture.md does not distinguish the current HTTP/SSE API "
+            "from MCP Streamable HTTP",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    lm_tool_phrase = f"{lm_tool_count} granular tools plus 1 generic fallback"
+    _expect(
+        lm_tool_phrase in architecture + roadmap + release_notes,
+        _with_regen(
+            "LM tool count is stale in docs/architecture.md, ROADMAP.md, or RELEASE_NOTES.md",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    _expect(
+        "1.2.0 — Q3 2026" not in roadmap and "1.3.0 — Q4 2026" not in roadmap,
+        _with_regen(
+            "ROADMAP.md still describes already-published versions as future milestones",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    _expect(
+        f"Fovux {mcp_version} is the current reviewed release baseline" in release_notes,
+        _with_regen(
+            "RELEASE_NOTES.md does not describe the current reviewed release baseline",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+
+    if failures:
+        for failure in failures:
+            print(f"ERROR: {failure}")
+        return 1
+
+    print(
+        "Docs truth checks passed: "
+        f"fovux-mcp={mcp_version}, npm-wrapper={npm_wrapper_version}, "
+        f"studio={studio_version}, tools={len(tools)}, lm-tools={lm_tool_count}+1."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

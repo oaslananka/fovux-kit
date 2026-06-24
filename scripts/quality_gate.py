@@ -1,3 +1,8 @@
+"""Local quality gates for the Fovux monorepo.
+
+The command lists are fixed in this script or derived from repo-local paths.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -34,7 +39,7 @@ def _run(command: list[str], cwd: Path = ROOT) -> None:
     """Run a command and fail with a friendly message when tooling is missing."""
     print(f"> {' '.join(command)}")
     try:
-        subprocess.run(command, cwd=cwd, check=True)
+        subprocess.run(command, cwd=cwd, check=True)  # noqa: S603
     except FileNotFoundError as exc:
         tool = command[0]
         raise SystemExit(
@@ -84,13 +89,9 @@ def run_pre_commit(file_args: list[str]) -> None:
     """Run fast staged checks for the current commit."""
     paths = _existing_repo_paths(file_args)
     python_files = [
-        _root_relative(path)
-        for path in paths
-        if path.suffix == ".py" and MCP_DIR in path.parents
+        _root_relative(path) for path in paths if path.suffix == ".py" and MCP_DIR in path.parents
     ]
-    prettier_files = [
-        str(path) for path in paths if path.suffix.lower() in PRETTIER_EXTENSIONS
-    ]
+    prettier_files = [str(path) for path in paths if path.suffix.lower() in PRETTIER_EXTENSIONS]
     eslint_files = _studio_absolute(paths, ESLINT_EXTENSIONS)
 
     if python_files:
@@ -141,6 +142,11 @@ def check_versions() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_versions.py")])
 
 
+def docs_truth() -> None:
+    """Enforce public docs, package metadata, and tool-count truth."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_docs_truth.py")])
+
+
 def mcp_check() -> None:
     """Run the locked backend validation used locally and in CI."""
     check_versions()
@@ -168,8 +174,10 @@ def mcp_security() -> None:
 
 def mcp_docs() -> None:
     """Build the backend docs and lint embedded code blocks."""
+    docs_truth()
+    _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
     _run(["uv", "run", "mkdocs", "build", "--strict"], cwd=MCP_DIR)
-    _run(["uv", "run", "python", "../scripts/lint_docs_code.py", "docs"], cwd=MCP_DIR)
+    _run(["uv", "run", "python", "../scripts/lint_docs_code.py", ".."], cwd=MCP_DIR)
 
 
 def mcp_audit() -> None:
@@ -226,9 +234,7 @@ def repo_verify() -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     """Create the CLI parser for local quality gate modes."""
-    parser = argparse.ArgumentParser(
-        description="Local quality gates for the Fovux monorepo."
-    )
+    parser = argparse.ArgumentParser(description="Local quality gates for the Fovux monorepo.")
     parser.add_argument(
         "mode",
         choices=[
@@ -237,6 +243,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-lint",
             "mcp-check",
             "mcp-docs",
+            "docs-truth",
             "mcp-audit",
             "mcp-build",
             "mcp-security",
@@ -266,6 +273,8 @@ def main() -> int:
         mcp_check()
     elif args.mode == "mcp-docs":
         mcp_docs()
+    elif args.mode == "docs-truth":
+        docs_truth()
     elif args.mode == "mcp-audit":
         mcp_audit()
     elif args.mode == "mcp-build":
