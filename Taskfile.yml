@@ -88,6 +88,14 @@ tasks:
     cmds:
       - python scripts/generate_security_posture.py --strict
 
+
+  docs:
+    desc: Build and lint documentation
+    cmds:
+      - cmd: cd fovux-mcp && uv run python scripts/check_tool_docs.py
+      - cmd: cd fovux-mcp && uv run mkdocs build --strict
+      - cmd: cd fovux-mcp && uv run python ../scripts/lint_docs_code.py ..
+
   build:
     desc: Build distributable packages
     cmds:
@@ -110,6 +118,7 @@ tasks:
       - task: typecheck
       - task: test:cov
       - task: security
+      - task: docs
       - task: build
       - task: release:dry-run
 

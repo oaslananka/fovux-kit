@@ -50,6 +50,8 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Concepts: concepts.md
+  - MCP Conformance: mcp-conformance.md
+  - Testing and Coverage: testing-and-coverage.md
   - Upgrade:
       - v2.0.0 Upgrade Guide: upgrade/v2.md
   - Tools:
@@ -62,7 +64,11 @@ nav:
           - dataset_convert: tools/dataset_convert.md
           - dataset_augment: tools/dataset_augment.md
           - active_learning_select: tools/active_learning_select.md
+          - active_learning_queue_submit: tools/active_learning_queue_submit.md
+          - active_learning_queue_list: tools/active_learning_queue_list.md
+          - active_learning_queue_rank: tools/active_learning_queue_rank.md
       - Training:
+          - train_preflight: tools/train_preflight.md
           - train_start: tools/train_start.md
           - train_status: tools/train_status.md
           - train_stop: tools/train_stop.md
@@ -77,6 +83,8 @@ nav:
       - Export and Quantization:
           - export_onnx: tools/export_onnx.md
           - export_tflite: tools/export_tflite.md
+          - export_reproducibility_bundle: tools/export_reproducibility_bundle.md
+          - deployment_advise: tools/deployment_advise.md
           - quantize_int8: tools/quantize_int8.md
           - quantize_report: tools/quantize_report.md
       - Inference and Benchmarking:
@@ -95,6 +103,11 @@ nav:
           - run_tag: tools/run_tag.md
           - run_archive: tools/run_archive.md
           - sync_to_mlflow: tools/sync_to_mlflow.md
+          - demo_init: tools/demo_init.md
+          - get_policy_status: tools/get_policy_status.md
+          - set_policy_mode: tools/set_policy_mode.md
+          - list_audit_events: tools/list_audit_events.md
+          - generate_support_bundle: tools/generate_support_bundle.md
   - Recipes:
       - Bootstrap Dataset: recipes/01-bootstrap-dataset.md
       - Diagnose Low mAP: recipes/02-diagnose-low-map.md

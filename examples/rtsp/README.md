@@ -22,7 +22,8 @@ To refresh the pin, verify the latest upstream release and Docker tag:
 
 ```bash
 gh api repos/bluenviron/mediamtx/releases/latest --jq '.tag_name, .published_at'
-docker buildx imagetools inspect docker.io/bluenviron/mediamtx:<version>
+MEDIAMTX_VERSION=1.19.0
+docker buildx imagetools inspect "docker.io/bluenviron/mediamtx:${MEDIAMTX_VERSION}"
 docker compose -f examples/rtsp/docker-compose.yml config
 docker compose -f examples/rtsp/docker-compose.yml pull
 ```

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 
 def _mcp_root() -> Path:
     return Path(__file__).resolve().parent.parent
@@ -41,15 +43,41 @@ def _load_doc_names() -> set[str]:
     return {path.stem for path in docs_dir.glob("*.md")}
 
 
+def _iter_nav_paths(node: object) -> set[str]:
+    """Return Markdown paths referenced by mkdocs.yml nav entries."""
+    paths: set[str] = set()
+    if isinstance(node, str) and node.endswith(".md"):
+        paths.add(node)
+    elif isinstance(node, list):
+        for item in node:
+            paths.update(_iter_nav_paths(item))
+    elif isinstance(node, dict):
+        for value in node.values():
+            paths.update(_iter_nav_paths(value))
+    return paths
+
+
+def _load_nav_doc_paths() -> set[str]:
+    """Parse mkdocs.yml and return docs-relative Markdown paths in nav."""
+    config_path = _mcp_root() / "mkdocs.yml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    nav = config.get("nav", []) if isinstance(config, dict) else []
+    return _iter_nav_paths(nav)
+
+
 def check_tool_docs() -> int:
-    """Check completeness and return 0 if all tools have docs, 1 otherwise."""
+    """Check tool documentation and MkDocs nav coverage."""
     tools = _load_tool_names()
     docs = _load_doc_names()
     missing = tools - docs
     extra = docs - tools
 
-    if not missing and not extra:
-        print(f"All {len(tools)} tools have documentation pages.")
+    nav_paths = _load_nav_doc_paths()
+    expected_tool_paths = {f"tools/{name}.md" for name in docs}
+    missing_from_nav = expected_tool_paths - nav_paths
+
+    if not missing and not extra and not missing_from_nav:
+        print(f"All {len(tools)} tools have documentation pages and MkDocs nav entries.")
         return 0
 
     if missing:
@@ -62,8 +90,14 @@ def check_tool_docs() -> int:
         for name in sorted(extra):
             print(f"  - {name}")
 
+    if missing_from_nav:
+        print(f"\nMISSING MKDOCS NAV ENTRIES ({len(missing_from_nav)} tool pages):")
+        for path in sorted(missing_from_nav):
+            print(f"  - {path}")
+
     print(f"\nRegistered tools: {len(tools)}")
     print(f"Documentation pages: {len(docs)}")
+    print(f"Tool nav entries: {len(expected_tool_paths - missing_from_nav)}")
     return 1
 
 
