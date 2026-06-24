@@ -1,6 +1,6 @@
-# MCP 2025-06-18 Conformance
+# MCP 2025-11-25 Conformance
 
-This checklist records the Fovux MCP surface for protocol revision `2025-06-18`.
+This checklist records the Fovux MCP surface for protocol revision `2025-11-25`.
 It separates the stdio MCP server from the Fovux Studio local API so MCP clients
 do not treat the Studio REST/SSE bridge as Streamable HTTP.
 
@@ -8,7 +8,7 @@ do not treat the Studio REST/SSE bridge as Streamable HTTP.
 
 Checked on 2026-06-24:
 
-- MCP specification `2025-06-18`: transports, lifecycle, tools, and authorization pages at
+- MCP specification `2025-11-25`: transports, lifecycle, tools, and authorization pages at
   `modelcontextprotocol.io`.
 - Transport requirements verified against the official Streamable HTTP page: stdio and Streamable
   HTTP are the two standard transports; Streamable HTTP requires one MCP endpoint supporting JSON-RPC
@@ -19,14 +19,14 @@ Checked on 2026-06-24:
 
 | Surface                        | Status          | Evidence                                                                            |
 | ------------------------------ | --------------- | ----------------------------------------------------------------------------------- |
-| Protocol revision              | Targeted        | Fovux tracks MCP `2025-06-18` for current conformance planning.                     |
+| Protocol revision              | Supported       | FastMCP negotiates MCP `2025-11-25` during `initialize`.                            |
 | stdio transport                | Supported       | `fovux-mcp` with no subcommand starts the FastMCP stdio server.                     |
 | Streamable HTTP transport      | Not exposed     | `fovux-mcp serve --http` is the Fovux Studio local API, not an MCP endpoint.        |
-| Lifecycle                      | Covered         | The stdio contract test initializes, lists tools, calls a tool, then closes.        |
+| Lifecycle                      | Covered         | Raw stdio JSON-RPC tests cover `initialize`, `notifications/initialized`, calls, and shutdown. |
 | Tools capability               | Covered         | Server initialization advertises tool capability through FastMCP.                   |
-| `tools/list`                   | Covered         | All 47 registered tools are returned with object input schemas in stdio tests.      |
-| `tools/call`                   | Covered         | Contract tests call real tools and assert structured output/error behavior.         |
-| Protocol tool errors           | Covered         | Unknown tool calls raise FastMCP `ToolError` instead of invoking local code.        |
+| `tools/list`                   | Covered         | FastMCP and raw JSON-RPC tests validate all 47 tools, object schemas, output schemas, annotations, and no pagination cursor. |
+| `tools/call`                   | Covered         | Raw JSON-RPC tests call `model_list` and assert structured content plus JSON text fallback. |
+| Protocol and tool errors       | Covered         | Unknown tools return `isError=true`; invalid methods return JSON-RPC `error`.       |
 | Studio local API auth          | Covered         | `/health` is public; `/runs` and `/tools/{name}` require bearer auth.               |
 | Studio local API policy        | Covered         | Tool calls use a fixed allow-list, rate limits, scope checks, and challenge gates.  |
 | Tool list change notifications | Declared static | Fovux has a static release-time registry; dynamic list mutation is not supported.   |
@@ -62,6 +62,19 @@ The Studio local API intentionally exposes REST routes such as `/health`, `/runs
 `/runs/{run_id}/stream`, and `/tools/{name}`. It does not implement the MCP
 Streamable HTTP single endpoint, `MCP-Protocol-Version` header negotiation, or
 OAuth resource-server metadata.
+
+## Raw JSON-RPC Stdio Coverage
+
+`tests/contract/test_mcp_protocol.py` includes a wrapper-independent golden stdio flow that sends
+newline-delimited JSON-RPC messages directly to `python -m fovux.cli`. It verifies:
+
+- `initialize` protocol/version/server capability negotiation;
+- `notifications/initialized`;
+- `tools/list` schema shape, output schema presence, annotations, and pagination cursor behavior;
+- `tools/call` structured content and text fallback;
+- tool-level error results for unknown tools;
+- JSON-RPC error objects for invalid methods;
+- `notifications/cancelled` does not destabilize the session.
 
 ## Streamable HTTP Implementation Requirements
 

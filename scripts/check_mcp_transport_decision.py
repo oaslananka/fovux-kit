@@ -41,9 +41,9 @@ def main() -> int:
         _expect(phrase in adr, f"ADR 0004 missing decision phrase: {phrase}", failures)
 
     for phrase in [
-        "MCP 2025-06-18 Conformance",
+        "MCP 2025-11-25 Conformance",
         "Streamable HTTP transport      | Not exposed",
-        "All 47 registered tools",
+        "all 47 tools",
         "Studio local API auth",
         "Streamable HTTP Implementation Requirements",
     ]:
