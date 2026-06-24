@@ -4,6 +4,12 @@
   <strong>Local-first YOLO workbench for edge AI.</strong>
 </p>
 
+<p align="center">
+  <a href="https://www.buymeacoffee.com/oaslananka">
+    <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=%E2%98%95&slug=oaslananka&button_colour=FFDD00&font_colour=000000&font_family=Arial&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" />
+  </a>
+</p>
+
 [![Org CI/CD](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/fovux-kit/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/fovux-mcp)](https://pypi.org/project/fovux-mcp/)
 [![npm](https://img.shields.io/npm/v/fovux-mcp)](https://www.npmjs.com/package/fovux-mcp)
