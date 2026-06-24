@@ -369,3 +369,11 @@
 - name: "wip"
   color: "cccccc"
   description: "Work in progress"
+
+- name: "area:infra"
+  color: "1d76db"
+  description: "Infrastructure, containers, runners, and deployment surfaces"
+
+- name: "python:uv"
+  color: "2b67c6"
+  description: "Pull requests that update uv or Python packaging metadata"
