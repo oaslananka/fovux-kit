@@ -89,9 +89,13 @@ def run_pre_commit(file_args: list[str]) -> None:
     """Run fast staged checks for the current commit."""
     paths = _existing_repo_paths(file_args)
     python_files = [
-        _root_relative(path) for path in paths if path.suffix == ".py" and MCP_DIR in path.parents
+        _root_relative(path)
+        for path in paths
+        if path.suffix == ".py" and MCP_DIR in path.parents
     ]
-    prettier_files = [str(path) for path in paths if path.suffix.lower() in PRETTIER_EXTENSIONS]
+    prettier_files = [
+        str(path) for path in paths if path.suffix.lower() in PRETTIER_EXTENSIONS
+    ]
     eslint_files = _studio_absolute(paths, ESLINT_EXTENSIONS)
 
     if python_files:
@@ -152,6 +156,11 @@ def task_docs() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
 
 
+def test_strategy() -> None:
+    """Verify the documented backend test strategy contract."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_test_strategy.py")])
+
+
 def mcp_check() -> None:
     """Run the locked backend validation used locally and in CI."""
     check_versions()
@@ -181,6 +190,7 @@ def mcp_docs() -> None:
     """Build the backend docs and lint embedded code blocks."""
     docs_truth()
     task_docs()
+    test_strategy()
     _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
     _run(["uv", "run", "mkdocs", "build", "--strict"], cwd=MCP_DIR)
     _run(["uv", "run", "python", "../scripts/lint_docs_code.py", ".."], cwd=MCP_DIR)
@@ -240,7 +250,9 @@ def repo_verify() -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     """Create the CLI parser for local quality gate modes."""
-    parser = argparse.ArgumentParser(description="Local quality gates for the Fovux monorepo.")
+    parser = argparse.ArgumentParser(
+        description="Local quality gates for the Fovux monorepo."
+    )
     parser.add_argument(
         "mode",
         choices=[
@@ -250,6 +262,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-check",
             "mcp-docs",
             "docs-truth",
+            "test-strategy",
             "mcp-audit",
             "mcp-build",
             "mcp-security",
@@ -281,6 +294,8 @@ def main() -> int:
         mcp_docs()
     elif args.mode == "docs-truth":
         docs_truth()
+    elif args.mode == "test-strategy":
+        test_strategy()
     elif args.mode == "mcp-audit":
         mcp_audit()
     elif args.mode == "mcp-build":
