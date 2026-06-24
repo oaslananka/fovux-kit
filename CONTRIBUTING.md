@@ -23,6 +23,9 @@ fovux/
 | Node.js                          | >= 22.0.0, with 24.16.0 pinned in `.nvmrc` for release builds | https://nodejs.org                                            |
 | pnpm                             | 10.34.1                                                       | `corepack enable && corepack prepare pnpm@10.34.1 --activate` |
 | pre-commit                       | ≥ 4.0                                                         | included in `dev` extra                                       |
+| go-task/task                     | 3.50.0                                                        | `go install github.com/go-task/task/v3/cmd/task@v3.50.0`      |
+| actionlint                       | 1.7.12                                                        | `go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12` |
+| gitleaks                         | 8.30.1                                                        | `go install github.com/zricethezav/gitleaks/v8@v8.30.1`      |
 
 ## Local setup
 
@@ -30,14 +33,14 @@ fovux/
 git clone https://github.com/oaslananka/fovux-kit
 cd fovux-kit
 
-# Fast path: install dependencies, hooks, and run the repo-quality gate.
-task install
-task hooks
+# Fast path: verify/install the local toolchain, install dependencies, hooks, and run CI parity.
+scripts/bootstrap-dev.sh --install-deps --hooks
 task ci
 ```
 
-That sequence is the expected 15-minute path to a working checkout. If `task` is unavailable,
-run the Python and Studio commands below directly.
+That sequence is the expected path to a working checkout on Linux/macOS. On Windows, follow the
+PowerShell commands in [docs/development.md](docs/development.md). If `task` is unavailable, use the
+fallback command blocks in that same page.
 
 ## Running the quality gates
 
@@ -105,7 +108,7 @@ The pre-push hook runs the full quality gate. Do not skip it with `--no-verify`.
 
 1. Fork the repo and create a branch from `main`.
 2. Make your changes with appropriate tests.
-3. Ensure `python scripts/quality_gate.py repo-check` passes locally.
+3. Ensure `python scripts/quality_gate.py repo-check` passes locally; run `task docs` for documentation-only changes and `task ci` before larger PRs.
 4. Open a pull request against `main` in `oaslananka/fovux-kit` (the canonical repo).
 5. Fill in the pull request template.
 

@@ -133,12 +133,20 @@ All releases are created by release-please from Conventional Commits, gated by C
 
 ## Repository operations
 
-Repository operations, runtime compatibility, branch protection, and the release process are
-documented in [docs/repository-operations.md](docs/repository-operations.md),
+Repository operations, runtime compatibility, branch protection, developer bootstrap, and the release
+process are documented in [docs/repository-operations.md](docs/repository-operations.md),
 [docs/runtime-compatibility.md](docs/runtime-compatibility.md),
+[docs/development.md](docs/development.md),
 [docs/branch-protection.md](docs/branch-protection.md), and
 [docs/release-process.md](docs/release-process.md). Local environment variable names are listed in
 [`.env.example`](.env.example); publishing credentials remain in protected GitHub Actions secrets.
+
+For a fresh development checkout on Linux/macOS:
+
+```bash
+scripts/bootstrap-dev.sh --install-deps --hooks
+task ci
+```
 
 ## Roadmap
 

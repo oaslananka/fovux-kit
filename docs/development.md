@@ -1,43 +1,161 @@
 # Development
 
-## One-time setup
+This page is the canonical local developer workflow for the monorepo.
+
+## Required toolchain
+
+| Tool | Pinned / supported version | Purpose |
+| --- | --- | --- |
+| Python | 3.12, 3.13, or 3.14 | Backend runtime and tests |
+| `uv` | latest stable | Python dependency, build, and audit workflow |
+| Node.js | >=22.0.0; `.nvmrc` pins 24.16.0 for release builds | Studio and npm-wrapper runtime |
+| pnpm | 10.34.1 | Studio package manager |
+| Go | latest stable | Installs local CI helper binaries |
+| go-task/task | 3.50.0 | Monorepo task runner |
+| actionlint | 1.7.12 | GitHub Actions linting |
+| gitleaks | 8.30.1 | Secret scanning |
+| act | optional | Local GitHub Actions simulation |
+
+## One-time bootstrap
+
+### Linux / macOS
 
 ```bash
-# Install Task: https://taskfile.dev/installation/
-task install     # install dev deps
-task hooks       # install git hooks
+git clone https://github.com/oaslananka/fovux-kit
+cd fovux-kit
+scripts/bootstrap-dev.sh --install-deps --hooks
 ```
 
-## Daily workflow
+The script verifies Python, Node, npm, Go, `uv`, Task, actionlint, gitleaks, and pnpm. It installs
+Task/actionlint/gitleaks through `go install` when missing and enables `pnpm@10.34.1` through
+Corepack.
+
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/oaslananka/fovux-kit
+cd fovux-kit
+corepack enable
+corepack prepare pnpm@10.34.1 --activate
+go install github.com/go-task/task/v3/cmd/task@v3.50.0
+go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+go install github.com/zricethezav/gitleaks/v8@v8.30.1
+$env:Path = "$(go env GOPATH)\bin;$env:Path"
+task install
+task hooks
+```
+
+Install `uv` from the official Astral documentation before running `task install` when it is not
+already available.
+
+## Daily workflow with Task
 
 ```bash
+task install     # install Python, Studio, and npm-wrapper dependencies
 task format      # auto-format
-task lint        # check formatting and linting
-task typecheck   # static types
-task test        # run tests
-task ci          # run the full CI pipeline locally
+task lint        # lint Python, Studio, npm wrapper, and workflows
+task typecheck   # static typing
+task test        # backend and Studio tests
+task security    # Bandit, pip-audit, pnpm audit, npm audit, gitleaks, security posture
+task docs        # version/tool/docs truth checks, MkDocs strict build, docs code-block lint
+task build       # Python package, Studio bundle, npm wrapper dry-run pack
+task ci          # full local parity with the main CI workflow
+task ci:act      # optional GitHub Actions simulation through Docker/act
+```
+
+## Direct fallback commands without Task
+
+Use these when a machine cannot install Task. They mirror the main task groups.
+
+### Install
+
+```bash
+cd fovux-mcp && uv sync --frozen --extra dev
+cd ../fovux-studio && corepack pnpm@10.34.1 --ignore-workspace install --frozen-lockfile
+cd ../fovux-mcp-npm && npm ci --ignore-scripts
+```
+
+### Lint
+
+```bash
+cd fovux-mcp && uv run ruff check . && uv run ruff format --check .
+cd ../fovux-studio && corepack pnpm@10.34.1 --ignore-workspace run lint
+cd .. && node --check fovux-mcp-npm/bin/fovux-mcp.js
+actionlint
+```
+
+### Typecheck
+
+```bash
+cd fovux-mcp && uv run mypy --strict --warn-unused-ignores src/fovux
+cd ../fovux-studio && corepack pnpm@10.34.1 --ignore-workspace run typecheck
+```
+
+### Test
+
+```bash
+cd fovux-mcp && uv run pytest -x --no-header -q --basetemp="${TMPDIR:-/tmp}/fovux-kit-pytest"
+cd ../fovux-studio && corepack pnpm@10.34.1 --ignore-workspace test --run
+```
+
+### Security
+
+```bash
+cd fovux-mcp
+uv run bandit -r src/fovux -ll
+uv export --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
+uv run pip-audit --requirement requirements-audit.txt
+cd ../fovux-studio && corepack pnpm@10.34.1 --ignore-workspace audit --prod
+cd ../fovux-mcp-npm && npm audit --omit=dev
+cd .. && gitleaks detect --no-banner --redact
+python scripts/generate_security_posture.py
+```
+
+### Documentation
+
+```bash
+python scripts/check_versions.py
+python scripts/check_docs_truth.py
+python scripts/check_task_docs.py
+cd fovux-mcp && uv run python scripts/check_tool_docs.py
+uv run mkdocs build --strict
+uv run python ../scripts/lint_docs_code.py ..
+```
+
+### Build
+
+```bash
+cd fovux-mcp && uv build
+cd ../fovux-studio && corepack pnpm@10.34.1 --ignore-workspace run build
+cd ../fovux-mcp-npm && npm pack --dry-run
 ```
 
 ## Before push
 
-`pre-push` hook automatically runs `task pre-push`.
-If you want to be sure CI will pass:
+The pre-push hook runs `task pre-push` after `task hooks` is installed. Before a larger PR or release
+change, run:
 
 ```bash
-task ci          # full local parity with CI
-task ci:act      # optional: run GitHub Actions in Docker locally
+task ci
 ```
 
 ## Troubleshooting
 
-- `task: command not found`: install Task with `brew install go-task` or download from https://taskfile.dev/installation/
-- pre-commit hook is too slow: run `pre-commit run --all-files` once to warm caches
+- `task: command not found`: run `scripts/bootstrap-dev.sh` on Linux/macOS, or install
+  `github.com/go-task/task/v3/cmd/task@v3.50.0` with Go on Windows.
+- `pnpm: command not found`: run `corepack enable && corepack prepare pnpm@10.34.1 --activate`.
+- `uv: command not found`: install `uv` from the official Astral documentation and rerun
+  `task install`.
+- `actionlint` or `gitleaks` missing: rerun the bootstrap script or install the pinned Go commands
+  listed above.
 - `task ci` fails but CI passes, or vice versa: compare local runtime versions with
-  `docs/runtime-compatibility.md` and rerun `task install`
+  [runtime-compatibility.md](runtime-compatibility.md), then rerun `task install`.
+
+## Optional local GitHub Actions simulation
 
 ```bash
 # https://github.com/nektos/act
 brew install act    # or download from releases
-act -j test         # run the test job locally in Docker
 act --list          # see all jobs across all workflows
+act -W .github/workflows/ci.yml
 ```

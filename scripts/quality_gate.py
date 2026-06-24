@@ -147,6 +147,11 @@ def docs_truth() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_docs_truth.py")])
 
 
+def task_docs() -> None:
+    """Verify documented Taskfile command references."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
+
+
 def mcp_check() -> None:
     """Run the locked backend validation used locally and in CI."""
     check_versions()
@@ -175,6 +180,7 @@ def mcp_security() -> None:
 def mcp_docs() -> None:
     """Build the backend docs and lint embedded code blocks."""
     docs_truth()
+    task_docs()
     _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
     _run(["uv", "run", "mkdocs", "build", "--strict"], cwd=MCP_DIR)
     _run(["uv", "run", "python", "../scripts/lint_docs_code.py", ".."], cwd=MCP_DIR)
