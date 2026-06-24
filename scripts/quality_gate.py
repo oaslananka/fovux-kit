@@ -151,6 +151,11 @@ def docs_truth() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_docs_truth.py")])
 
 
+def mcp_transport_decision() -> None:
+    """Verify that serve --http is not advertised as official MCP Streamable HTTP."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_mcp_transport_decision.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -189,6 +194,7 @@ def mcp_security() -> None:
 def mcp_docs() -> None:
     """Build the backend docs and lint embedded code blocks."""
     docs_truth()
+    mcp_transport_decision()
     task_docs()
     test_strategy()
     _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
@@ -262,6 +268,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-check",
             "mcp-docs",
             "docs-truth",
+            "mcp-transport-decision",
             "test-strategy",
             "mcp-audit",
             "mcp-build",
@@ -294,6 +301,8 @@ def main() -> int:
         mcp_docs()
     elif args.mode == "docs-truth":
         docs_truth()
+    elif args.mode == "mcp-transport-decision":
+        mcp_transport_decision()
     elif args.mode == "test-strategy":
         test_strategy()
     elif args.mode == "mcp-audit":

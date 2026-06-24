@@ -1,7 +1,8 @@
-"""FastAPI application for optional HTTP transport.
+"""FastAPI application for the Fovux Studio local API.
 
-Provides REST endpoints for fovux-studio to query run state and stream
-live metrics. Binds to 127.0.0.1 by default.
+Provides custom REST/SSE endpoints for fovux-studio to query run state, invoke
+guarded tools, and stream live metrics. This is not an MCP Streamable HTTP
+endpoint. Binds to 127.0.0.1 by default.
 """
 
 from __future__ import annotations

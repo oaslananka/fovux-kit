@@ -30,7 +30,7 @@ class GpuHealth(BaseModel):
 
 
 class HttpHealth(BaseModel):
-    """Health summary for the optional local HTTP transport."""
+    """Health summary for the Fovux Studio local API."""
 
     reachable: bool
     base_url: str

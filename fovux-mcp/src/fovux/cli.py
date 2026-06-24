@@ -70,9 +70,11 @@ def _run_stdio() -> None:
 @app.command()
 def serve(
     ctx: typer.Context,
-    http: bool = typer.Option(False, "--http", help="Enable HTTP transport."),
-    host: str = typer.Option("127.0.0.1", "--host", help="HTTP bind host."),
-    port: int = typer.Option(7823, "--port", help="HTTP bind port."),
+    http: bool = typer.Option(
+        False, "--http", help="Enable the Fovux Studio local API/custom REST+SSE bridge."
+    ),
+    host: str = typer.Option("127.0.0.1", "--host", help="Studio local API bind host."),
+    port: int = typer.Option(7823, "--port", help="Studio local API bind port."),
     tcp: bool = typer.Option(False, "--tcp", help="Force TCP instead of a Unix domain socket."),
     metrics: bool = typer.Option(False, "--metrics", help="Enable local Prometheus /metrics."),
     allow_nonlocal_bind: bool = typer.Option(
@@ -81,7 +83,7 @@ def serve(
         help="Allow binding to non-local hosts (unsafe, opt-in).",
     ),
 ) -> None:
-    """Start the MCP server (stdio by default, or HTTP with --http)."""
+    """Start stdio MCP by default, or the Studio local API with --http."""
     _configure_from_context(ctx.obj)
     if http:
         import uvicorn
@@ -149,7 +151,7 @@ def doctor(ctx: typer.Context) -> None:
             report.fovux_home.writable,
             f"{report.fovux_home.path} · {report.fovux_home.disk_free_gb:.1f} GB free",
         ),
-        ("HTTP transport", report.http.reachable, report.http.detail),
+        ("Studio local API", report.http.reachable, report.http.detail),
         ("auth token", auth_ok, auth_detail),
     ]
     all_ok = not report.errors
@@ -179,7 +181,7 @@ def rotate_token_command(
         help="Print the raw token once for manual local client configuration.",
     ),
 ) -> None:
-    """Rotate the local HTTP bearer token used by the optional transport."""
+    """Rotate the bearer token used by the Fovux Studio local API."""
     _configure_from_context(ctx.obj)
     token = rotate_auth_token()
     token_path = auth_token_path(get_fovux_home())
@@ -194,7 +196,7 @@ def rotate_token_command(
 telemetry_app = typer.Typer(help="Manage local-first telemetry settings.")
 app.add_typer(telemetry_app, name="telemetry")
 
-session_app = typer.Typer(help="Create and manage scoped session tokens for HTTP transport.")
+session_app = typer.Typer(help="Create and manage scoped session tokens for the Studio local API.")
 app.add_typer(session_app, name="session")
 
 

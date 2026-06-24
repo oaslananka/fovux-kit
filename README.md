@@ -112,7 +112,7 @@ The package README and MkDocs site contain the generated complete tool list; CI 
 Fovux separates concerns across three core components:
 
 1. **Fovux Core**: The underlying Python engine interfacing with YOLO and local hardware.
-2. **Fovux MCP Server**: The stdio MCP server exposing Fovux Core to AI agents, plus a local HTTP/SSE API used by Fovux Studio. A standards-compliant Streamable HTTP MCP endpoint is tracked separately in the `v1.4.0 - MCP Conformance & Agent Safety` milestone.
+2. **Fovux MCP Server**: The stdio MCP server exposing Fovux Core to AI agents, plus the Fovux Studio local API/custom REST+SSE bridge used by Fovux Studio. A standards-compliant Streamable HTTP MCP endpoint is tracked separately in the `v1.4.0 - MCP Conformance & Agent Safety` milestone.
 3. **Fovux Studio**: The React/TypeScript VS Code extension for human interaction.
 
 [Read more about the architecture in the docs](docs/architecture.md)

@@ -1,6 +1,6 @@
 # Start the Server
 
-Fovux Studio uses a local HTTP transport to read run state, invoke tools, and stream training metrics. The server binds to `127.0.0.1` and authenticates requests with the token stored in your `FOVUX_HOME`.
+Fovux Studio uses the Fovux Studio local API to read run state, invoke tools, and stream training metrics. The server binds to `127.0.0.1` and authenticates requests with the token stored in your `FOVUX_HOME`.
 
 ## Steps
 

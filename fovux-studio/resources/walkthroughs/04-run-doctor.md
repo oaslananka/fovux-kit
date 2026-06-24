@@ -1,6 +1,6 @@
 # Run Doctor
 
-The Fovux doctor checks Python support, package availability, CUDA or MPS status, disk space, HTTP transport health, and active runs. Running it early catches environment issues before a long training or export job starts.
+The Fovux doctor checks Python support, package availability, CUDA or MPS status, disk space, Studio local API health, and active runs. Running it early catches environment issues before a long training or export job starts.
 
 ## Steps
 

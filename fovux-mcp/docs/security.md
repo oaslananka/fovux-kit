@@ -33,7 +33,7 @@ The VS Code extension reads the token from the same `FOVUX_HOME` directory, so `
 
 ## HTTP tool policy
 
-The HTTP transport exposes a fixed allow-list with per-tool timeouts and concurrency limits. Filesystem-writing, mutating, long-running, or destructive tools require a trusted local UI confirmation field (`confirm=true`) before execution. Audit logs record token fingerprints, origin, tool name, redacted argument hashes, status, duration, and failure class without storing raw bearer tokens or full payloads.
+The Studio local API exposes a fixed allow-list with per-tool timeouts and concurrency limits. Filesystem-writing, mutating, long-running, or destructive tools require a trusted local UI confirmation field (`confirm=true`) before execution. Audit logs record token fingerprints, origin, tool name, redacted argument hashes, status, duration, and failure class without storing raw bearer tokens or full payloads.
 
 ## Rate limiting
 

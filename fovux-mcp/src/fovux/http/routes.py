@@ -454,7 +454,7 @@ async def proxy_tool(
     name: str,
     payload: dict[str, object] = _EMPTY_PAYLOAD,
 ) -> JSONResponse:
-    """Invoke a local Fovux tool through the HTTP transport.
+    """Invoke a local Fovux tool through the Studio local API.
 
     Tools that require confirmation must include a valid challenge_id
     obtained from POST /tools/{name}/challenge.

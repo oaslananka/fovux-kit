@@ -22,4 +22,4 @@ Each error includes:
 
 ## Debugging Tip
 
-Set `FOVUX_LOG_FORMAT=json` and `FOVUX_LOG_LEVEL=DEBUG` when reproducing tool failures from the CLI or HTTP transport.
+Set `FOVUX_LOG_FORMAT=json` and `FOVUX_LOG_LEVEL=DEBUG` when reproducing tool failures from the CLI or Studio local API.

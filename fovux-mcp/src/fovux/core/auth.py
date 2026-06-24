@@ -1,4 +1,4 @@
-"""Local authentication helpers for the optional HTTP transport."""
+"""Local authentication helpers for the Fovux Studio local API."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ TOKEN_BYTES = 32
 
 
 class Scope(enum.StrEnum):
-    """Access scopes for local HTTP bearer tokens."""
+    """Access scopes for Studio local API bearer tokens."""
 
     READ = "read"
     DATASET_WRITE = "dataset:write"
@@ -56,7 +56,7 @@ _CATEGORY_SCOPES: dict[str, set[Scope]] = {
 
 
 def auth_token_path(home: Path | None = None) -> Path:
-    """Return the path to the local HTTP auth token."""
+    """Return the path to the Studio local API auth token."""
     base = home or get_fovux_home()
     return base / "auth.token"
 

@@ -49,7 +49,7 @@ def collect_doctor_report() -> FovuxDoctorOutput:
     if onnxruntime.status != "ok":
         warnings.append("onnxruntime is unavailable; ONNX benchmarking and parity checks may fail.")
     if not http.reachable:
-        warnings.append("The local HTTP transport is offline; Studio live views require it.")
+        warnings.append("The Studio local API is offline; Studio live views require it.")
     if home.disk_low:
         warnings.append("FOVUX_HOME has less than 5 GB free; long training runs may fail.")
 

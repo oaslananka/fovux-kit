@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The optional HTTP transport can launch training, inference, and export tools. In v1.0.0 it trusted any local process that could reach loopback.
+The Fovux Studio local API can launch training, inference, and export tools. In v1.0.0 it trusted any local process that could reach loopback.
 
 ## Decision
 
@@ -14,6 +14,6 @@ Fovux v1.0.0 requires a bearer token for every HTTP route except `/health`. The 
 
 ## Consequences
 
-- The HTTP transport becomes safe for same-machine local use.
+- The Studio local API becomes safe for same-machine local use.
 - Studio and `fovux-mcp` must share the same `FOVUX_HOME`.
 - Clients that previously used unauthenticated curl snippets must add the bearer token.

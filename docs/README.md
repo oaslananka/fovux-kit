@@ -5,7 +5,7 @@ Fovux. Product documentation for the MCP server lives under `fovux-mcp/docs`.
 
 ## Start Here
 
-- [Architecture](architecture.md) explains the MCP server, VS Code extension, HTTP/SSE transport,
+- [Architecture](architecture.md) explains the MCP server, VS Code extension, Studio local API,
   local auth model, and run lifecycle.
 - [Repository Operations](repository-operations.md) describes protected branches, remotes, and release gates.
 - [Demo Script](demo-script.md) is the 90-second recording checklist and screenshot set.
