@@ -45,6 +45,18 @@ Fovux uses a protected GitHub Actions release model.
 - Marketplace publishing runs only when `VSCE_PAT` and `OVSX_PAT` are configured
   in the `vsce-production` environment or org repo secrets.
 
+
+## Release Evidence Checklist
+
+A GitHub Release is not considered verified until its notes or attached artifacts document:
+
+- package versions for every released track;
+- VSIX packaging status plus VS Marketplace and Open VSX publication status when Studio is released;
+- SBOM, SHA256 checksum, and provenance/attestation assets;
+- registry verification evidence JSON;
+- PyPI, npm, Marketplace, and Open VSX smoke-test or metadata-check results for the channels that were released;
+- any skipped channel, external blocker, or manual recovery action.
+
 ## Normal Release
 
 1. Merge changes to `main` through a reviewed pull request.

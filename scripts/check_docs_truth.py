@@ -71,6 +71,15 @@ def main() -> int:
     architecture = _read(ROOT / "docs" / "architecture.md")
     roadmap = _read(ROOT / "ROADMAP.md")
     release_notes = _read(ROOT / "RELEASE_NOTES.md")
+    root_changelog = _read(ROOT / "CHANGELOG.md")
+    package_changelogs = {
+        "fovux-mcp": _read(MCP_ROOT / "CHANGELOG.md"),
+        "fovux-mcp-npm": _read(ROOT / "fovux-mcp-npm" / "CHANGELOG.md"),
+        "fovux-studio": _read(STUDIO_ROOT / "CHANGELOG.md"),
+    }
+    release_docs = _read(ROOT / "docs" / "release.md") + _read(
+        ROOT / "docs" / "release-process.md"
+    )
 
     _expect(
         f"Python backend package `fovux-mcp` {mcp_version}" in root_readme,
@@ -105,7 +114,8 @@ def main() -> int:
         failures,
     )
     _expect(
-        f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools" in mcp_readme,
+        f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools"
+        in mcp_readme,
         _with_regen(
             "fovux-mcp/README.md tool count is stale",
             "python scripts/check_docs_truth.py",
@@ -143,7 +153,8 @@ def main() -> int:
         failures,
     )
     _expect(
-        "not documented as a standards-compliant MCP Streamable HTTP endpoint" in architecture,
+        "not documented as a standards-compliant MCP Streamable HTTP endpoint"
+        in architecture,
         _with_regen(
             "docs/architecture.md does not distinguish the current HTTP/SSE API "
             "from MCP Streamable HTTP",
@@ -169,9 +180,108 @@ def main() -> int:
         failures,
     )
     _expect(
-        f"Fovux {mcp_version} is the current reviewed release baseline" in release_notes,
+        f"Fovux {mcp_version} is the current reviewed release baseline"
+        in release_notes,
         _with_regen(
             "RELEASE_NOTES.md does not describe the current reviewed release baseline",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+
+    for milestone_number, milestone_title in [
+        (1, "v1.3.1 — Stabilization & Documentation Truth"),
+        (2, "v1.4.0 — MCP Conformance & Agent Safety"),
+        (3, "v1.5.0 — Studio Workflow & Dataset Intelligence"),
+        (4, "v1.6.0 — Edge Export & Deployment Intelligence"),
+        (5, "v2.0.0 — Extensibility, Supply Chain & Ecosystem Readiness"),
+        (6, "Backlog — Research & Product Discovery"),
+    ]:
+        _expect(
+            f"[{milestone_title}](https://github.com/oaslananka/fovux-kit/milestone/{milestone_number})"
+            in roadmap,
+            _with_regen(
+                f"ROADMAP.md is missing the GitHub milestone link for {milestone_title}",
+                "python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
+
+    for phrase in [
+        "Released work is recorded in",
+        "Planned work is tracked in the milestone sections below",
+        "GitHub Releases must include package versions",
+    ]:
+        _expect(
+            phrase in roadmap,
+            _with_regen(
+                f"ROADMAP.md is missing release/planning boundary phrase: {phrase}",
+                "python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
+
+    _expect(
+        "This changelog records released work only" in root_changelog,
+        _with_regen(
+            "CHANGELOG.md does not separate released work from planned work",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+    for package_name, content in package_changelogs.items():
+        _expect(
+            "This package changelog records released" in content
+            and "Planned work and target dates are tracked" in content,
+            _with_regen(
+                f"{package_name} changelog does not separate released work from planned work",
+                "python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
+
+    for phrase in [
+        "Package Versions and Release Evidence",
+        "VSIX packaging",
+        "VS Marketplace",
+        "Open VSX",
+        "SBOM",
+        "provenance",
+        "registry verification evidence",
+        "smoke-test result",
+    ]:
+        _expect(
+            phrase in release_notes,
+            _with_regen(
+                f"RELEASE_NOTES.md is missing release evidence phrase: {phrase}",
+                "python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
+
+    _expect(
+        "Release Evidence Checklist" in release_docs
+        and "registry verification evidence JSON" in release_docs
+        and "VSIX packaging status" in release_docs,
+        _with_regen(
+            "Release process docs do not define the required GitHub Release evidence",
+            "python scripts/check_docs_truth.py",
+        ),
+        failures,
+    )
+
+    stale_url_files = []
+    for candidate in [
+        ROOT / "SUPPORT.md",
+        ROOT / "scripts" / "build_node_spdx_sbom.mjs",
+        ROOT / "scripts" / "build_spdx_sbom.py",
+    ]:
+        if "github.com/oaslananka/fovux/" in _read(candidate):
+            stale_url_files.append(str(candidate.relative_to(ROOT)))
+    _expect(
+        not stale_url_files,
+        _with_regen(
+            f"Stale oaslananka/fovux repository URLs remain in {stale_url_files}",
             "python scripts/check_docs_truth.py",
         ),
         failures,

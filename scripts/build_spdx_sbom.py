@@ -135,7 +135,7 @@ def _document_namespace(name: str, distributions: list[metadata.Distribution]) -
     for dist in distributions:
         digest.update(dist.metadata["Name"].lower().encode("utf-8"))
         digest.update(dist.version.encode("utf-8"))
-    return f"https://github.com/oaslananka/fovux/spdx/{digest.hexdigest()}"
+    return f"https://github.com/oaslananka/fovux-kit/spdx/{digest.hexdigest()}"
 
 
 if __name__ == "__main__":

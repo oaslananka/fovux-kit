@@ -2,6 +2,13 @@
 
 All notable changes to `fovux-mcp` are documented here.
 
+
+## Scope and planning boundary
+
+This package changelog records released `fovux-mcp` Python package changes only. The current released baseline is
+`1.3.0`. Planned work and target dates are tracked in the root [`ROADMAP.md`](../ROADMAP.md) and
+GitHub milestones, not in package changelog sections.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 

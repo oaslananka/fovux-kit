@@ -5,6 +5,18 @@ All notable changes to Fovux are documented in this file.
 The format follows Keep a Changelog, and this project uses semantic versioning
 for individual packages (`fovux-mcp`, `fovux-mcp-npm`, `fovux-studio`).
 
+## Scope and planning boundary
+
+This changelog records released work only. Planned work, open tasks, and target dates live in
+[`ROADMAP.md`](ROADMAP.md) and the GitHub milestones linked from that roadmap. Package-specific
+released changes remain in each package changelog:
+
+| Package | Current released baseline | Changelog |
+| ------- | ------------------------- | --------- |
+| `fovux-mcp` | `1.3.0` | [`fovux-mcp/CHANGELOG.md`](fovux-mcp/CHANGELOG.md) |
+| `fovux-mcp` npm wrapper | `1.3.0` | [`fovux-mcp-npm/CHANGELOG.md`](fovux-mcp-npm/CHANGELOG.md) |
+| `fovux-studio` | `1.2.0` | [`fovux-studio/CHANGELOG.md`](fovux-studio/CHANGELOG.md) |
+
 ## [1.3.0] - 2026-06-23
 
 ### Added

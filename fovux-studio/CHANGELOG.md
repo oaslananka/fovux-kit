@@ -2,6 +2,13 @@
 
 All notable changes to Fovux Studio (`fovuxstudiokit`) are documented here.
 
+
+## Scope and planning boundary
+
+This package changelog records released `fovux-studio` VS Code extension changes only. The current released baseline is
+`1.2.0`. Planned work and target dates are tracked in the root [`ROADMAP.md`](../ROADMAP.md) and
+GitHub milestones, not in package changelog sections.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased

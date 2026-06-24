@@ -4,14 +4,14 @@
 
 | Channel                                                                        | Use for                              | SLA                       |
 | ------------------------------------------------------------------------------ | ------------------------------------ | ------------------------- |
-| [GitHub Issues](https://github.com/oaslananka/fovux/issues)                    | Bug reports and feature requests     | Triage within 7 days      |
-| [GitHub Discussions](https://github.com/oaslananka/fovux/discussions)          | Questions, ideas, and community help | Best-effort               |
-| [Security Advisories](https://github.com/oaslananka/fovux/security/advisories) | Vulnerability reports                | 48 hours initial response |
+| [GitHub Issues](https://github.com/oaslananka/fovux-kit/issues)                    | Bug reports and feature requests     | Triage within 7 days      |
+| [GitHub Discussions](https://github.com/oaslananka/fovux-kit/discussions)          | Questions, ideas, and community help | Best-effort               |
+| [Security Advisories](https://github.com/oaslananka/fovux-kit/security/advisories) | Vulnerability reports                | 48 hours initial response |
 
 ## Before Opening an Issue
 
 1. Run `fovux doctor` and include the output.
-2. Search [existing issues](https://github.com/oaslananka/fovux/issues) for duplicates.
+2. Search [existing issues](https://github.com/oaslananka/fovux-kit/issues) for duplicates.
 3. Include your Python version, OS, and `fovux-mcp` version.
 4. Provide a minimal reproduction if possible.
 

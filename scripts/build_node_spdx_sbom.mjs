@@ -53,7 +53,7 @@ const document = {
   dataLicense: "CC0-1.0",
   SPDXID: "SPDXRef-DOCUMENT",
   name: `${manifest.name}-node-runtime`,
-  documentNamespace: `https://github.com/oaslananka/fovux/spdx/${manifest.name}-${manifest.version}`,
+  documentNamespace: `https://github.com/oaslananka/fovux-kit/spdx/${manifest.name}-${manifest.version}`,
   creationInfo: {
     created: new Date(Number(process.env.SOURCE_DATE_EPOCH ?? "0") * 1000)
       .toISOString()

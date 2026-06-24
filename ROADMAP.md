@@ -11,6 +11,14 @@ This document starts from the current published baseline reviewed on 2026-06-24:
 Themes and dates are targets, not commitments. GitHub milestones are the source of truth for
 issue-level scope and progress.
 
+
+## Release and changelog boundary
+
+- Released work is recorded in [`CHANGELOG.md`](CHANGELOG.md) and package changelogs.
+- Planned work is tracked in the milestone sections below and in their linked GitHub issues.
+- GitHub Releases must include package versions, VSIX/marketplace status, SBOM/provenance assets,
+  checksums, and registry smoke-test evidence before a release is considered verified.
+
 ## [v1.3.1 — Stabilization & Documentation Truth](https://github.com/oaslananka/fovux-kit/milestone/1)
 
 **Target:** 2026-07-15
