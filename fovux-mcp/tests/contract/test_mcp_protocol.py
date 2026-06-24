@@ -112,7 +112,7 @@ async def test_stdio_cli_transport_initializes_lists_calls_and_shuts_down(
 @pytest.mark.contract
 def test_studio_http_bridge_is_not_mcp_streamable_http_contract(tmp_fovux_home: Path) -> None:
     """The HTTP path should remain the authenticated Studio bridge, not MCP HTTP."""
-    from fastapi.testclient import TestClient
+    from starlette.testclient import TestClient
 
     from fovux.http.app import create_app
 

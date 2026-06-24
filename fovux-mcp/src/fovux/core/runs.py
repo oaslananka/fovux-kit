@@ -14,7 +14,6 @@ from typing import Any, Literal
 
 from sqlalchemy import (
     Column,
-    DateTime,
     Float,
     Integer,
     String,
@@ -28,11 +27,54 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import NullPool
+from sqlalchemy.types import TypeDecorator
 
 _REGISTRIES: dict[Path, RunRegistry] = {}
 _REGISTRIES_LOCK = threading.Lock()
 
 RunStatus = Literal["pending", "running", "complete", "failed", "stopped", "archived"]
+
+
+def _utcnow_naive() -> datetime:
+    """Return a naive UTC datetime for registry ORM objects."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _serialize_datetime(value: datetime) -> str:
+    """Serialize datetimes explicitly instead of relying on sqlite3 adapters."""
+    if value.tzinfo is not None:
+        value = value.astimezone(UTC).replace(tzinfo=None)
+    return value.isoformat(timespec="microseconds")
+
+
+def _deserialize_datetime(value: str | datetime) -> datetime:
+    """Deserialize registry datetimes stored as explicit ISO-8601 strings."""
+    if isinstance(value, datetime):
+        return value.astimezone(UTC).replace(tzinfo=None) if value.tzinfo else value
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    parsed = datetime.fromisoformat(normalized)
+    return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo else parsed
+
+
+class UtcDateTime(TypeDecorator[datetime]):
+    """Store datetimes as ISO-8601 text to avoid sqlite3 default adapters."""
+
+    impl = String
+    cache_ok = True
+
+    def process_bind_param(self, value: datetime | None, _dialect: object) -> str | None:
+        """Serialize a Python datetime before binding it to SQLite."""
+        if value is None:
+            return None
+        return _serialize_datetime(value)
+
+    def process_result_value(
+        self, value: str | datetime | None, _dialect: object
+    ) -> datetime | None:
+        """Deserialize a stored SQLite value into a Python datetime."""
+        if value is None:
+            return None
+        return _deserialize_datetime(value)
 
 
 class Base(DeclarativeBase):
@@ -51,12 +93,12 @@ class RunRecord(Base):
     task = Column(String, nullable=False, default="detect")
     epochs = Column(Integer, nullable=False)
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
-    started_at = Column(DateTime, nullable=True)
-    finished_at = Column(DateTime, nullable=True)
+    started_at = Column(UtcDateTime, nullable=True)
+    finished_at = Column(UtcDateTime, nullable=True)
     pid = Column(Integer, nullable=True)
     run_path = Column(String, nullable=False)
     tags_json = Column(Text, nullable=False, default="[]")
@@ -85,12 +127,12 @@ class OperationRecord(Base):
     error_type = Column(String, nullable=True)
     error = Column(Text, nullable=True)
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
-    started_at = Column(DateTime, nullable=True)
-    finished_at = Column(DateTime, nullable=True)
+    started_at = Column(UtcDateTime, nullable=True)
+    finished_at = Column(UtcDateTime, nullable=True)
     run_id = Column(String, nullable=True)
 
 
@@ -104,9 +146,9 @@ class OperationEventRecord(Base):
     event_type = Column(String, nullable=False)  # status_change, progress, etc.
     data_json = Column(Text, nullable=False)
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
 
 
@@ -117,9 +159,9 @@ class SchemaMigrationRecord(Base):
 
     version = Column(Integer, primary_key=True)
     applied_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
 
 
@@ -135,9 +177,9 @@ class RunEventRecord(Base):
     to_status = Column(String, nullable=True)
     message = Column(Text, nullable=True)
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
     extra_json = Column(Text, nullable=False, default="{}")
 
@@ -151,9 +193,9 @@ class DatasetRecord(Base):
     path = Column(String, nullable=False)
     class_map_json = Column(Text, nullable=False, default="{}")
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
     extra_json = Column(Text, nullable=False, default="{}")
 
@@ -170,9 +212,9 @@ class ArtifactRecord(Base):
     sha256 = Column(String, nullable=True)
     size = Column(Integer, nullable=True)
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
     extra_json = Column(Text, nullable=False, default="{}")
 
@@ -188,9 +230,9 @@ class ModelRecord(Base):
     path = Column(String, nullable=True)
     sha256 = Column(String, nullable=True)
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
 
 
@@ -207,9 +249,9 @@ class ExportRecord(Base):
     duration_s = Column(Float, nullable=True)
     validation_result_json = Column(Text, nullable=True)
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
 
 
@@ -227,9 +269,9 @@ class ReviewQueueEntry(Base):
     predictions_json: Any = Column(Text, nullable=False, default="[]")
     corrected_labels_json: Any = Column(Text, nullable=True)
     created_at: Any = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
 
 
@@ -244,9 +286,9 @@ class MetricRecord(Base):
     metric_key = Column(String, nullable=False)
     metric_value = Column(Float, nullable=False)
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
 
 
@@ -272,9 +314,9 @@ class AuditEventRecord(Base):
     entity_type = Column(String, nullable=False)
     entity_id = Column(String, nullable=False)
     created_at = Column(
-        DateTime,
+        UtcDateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=_utcnow_naive,
     )
     details_json = Column(Text, nullable=False, default="{}")
 
@@ -348,7 +390,7 @@ class RunRegistry:
                     "INSERT OR IGNORE INTO schema_migrations (version, applied_at) "
                     "VALUES (1, :applied_at)"
                 ),
-                {"applied_at": datetime.now(UTC).replace(tzinfo=None)},
+                {"applied_at": _serialize_datetime(_utcnow_naive())},
             )
 
     def close(self) -> None:
@@ -515,7 +557,7 @@ class RunRegistry:
                     task=task,
                     epochs=epochs,
                     status="pending",
-                    created_at=datetime.now(UTC).replace(tzinfo=None),
+                    created_at=_utcnow_naive(),
                     tags_json=json.dumps(tags or []),
                     extra_json=json.dumps(extra or {}),
                     dataset_fingerprint=dataset_fingerprint,
@@ -585,7 +627,7 @@ class RunRegistry:
                     task=task,
                     epochs=epochs,
                     status="pending",
-                    created_at=datetime.now(UTC).replace(tzinfo=None),
+                    created_at=_utcnow_naive(),
                     tags_json=json.dumps(tags or []),
                     extra_json=json.dumps(extra or {}),
                     dataset_fingerprint=dataset_fingerprint,
@@ -672,9 +714,9 @@ class RunRegistry:
             if pid is not None:
                 record.pid = pid  # type: ignore[assignment]
             if status == "running" and record.started_at is None:
-                record.started_at = datetime.now(UTC).replace(tzinfo=None)
+                record.started_at = _utcnow_naive()
             if status in ("complete", "failed", "stopped", "archived"):
-                record.finished_at = datetime.now(UTC).replace(tzinfo=None)  # type: ignore[assignment]
+                record.finished_at = _utcnow_naive()  # type: ignore[assignment]
             session.commit()
 
     def list_runs(
@@ -763,7 +805,7 @@ class RunRegistry:
                 arguments_json=json.dumps(arguments),
                 idempotency_key=idempotency_key,
                 status="pending",
-                created_at=datetime.now(UTC).replace(tzinfo=None),
+                created_at=_utcnow_naive(),
             )
             session.add(record)
             session.commit()
@@ -799,9 +841,9 @@ class RunRegistry:
                 return
             record.status = status  # type: ignore[assignment]
             if status == "running" and record.started_at is None:
-                record.started_at = datetime.now(UTC).replace(tzinfo=None)
+                record.started_at = _utcnow_naive()
             elif status in ("succeeded", "failed", "cancelled"):
-                record.finished_at = datetime.now(UTC).replace(tzinfo=None)  # type: ignore[assignment]
+                record.finished_at = _utcnow_naive()  # type: ignore[assignment]
             if error_type is not None:
                 record.error_type = error_type  # type: ignore[assignment]
             if error is not None:
@@ -840,7 +882,7 @@ class RunRegistry:
                 operation_id=op_id,
                 event_type=event_type,
                 data_json=json.dumps(data),
-                created_at=datetime.now(UTC).replace(tzinfo=None),
+                created_at=_utcnow_naive(),
             )
             session.add(event_rec)
             session.commit()
@@ -895,7 +937,7 @@ class RunRegistry:
                 sha256=sha256,
                 size=size,
                 extra_json=json.dumps(extra or {}),
-                created_at=datetime.now(UTC).replace(tzinfo=None),
+                created_at=_utcnow_naive(),
             )
             session.merge(record)
 
@@ -931,7 +973,7 @@ class RunRegistry:
                 format=format,
                 duration_s=duration_s,
                 validation_result_json=json.dumps(validation_result or {}),
-                created_at=datetime.now(UTC).replace(tzinfo=None),
+                created_at=_utcnow_naive(),
             )
             session.add(record)
             session.commit()
@@ -970,7 +1012,7 @@ class RunRegistry:
                 entity_type=entity_type,
                 entity_id=entity_id,
                 details_json=json.dumps(details),
-                created_at=datetime.now(UTC).replace(tzinfo=None),
+                created_at=_utcnow_naive(),
             )
             session.add(record)
             session.commit()
@@ -1023,7 +1065,7 @@ class RunRegistry:
                 epoch=epoch,
                 metric_key=key,
                 metric_value=value,
-                created_at=datetime.now(UTC).replace(tzinfo=None),
+                created_at=_utcnow_naive(),
             )
             session.add(record)
             session.commit()
@@ -1059,7 +1101,7 @@ class RunRegistry:
                 reason=reason,
                 status="pending",
                 predictions_json=json.dumps(predictions),
-                created_at=datetime.now(UTC).replace(tzinfo=None),
+                created_at=_utcnow_naive(),
             )
             session.merge(record)
             session.commit()

@@ -8,7 +8,7 @@ import time
 from unittest.mock import patch
 
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from fovux.http.app import create_app as _create_app
 from fovux.http.challenge import (

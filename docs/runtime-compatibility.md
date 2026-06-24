@@ -31,6 +31,19 @@ The selected baseline is the latest pnpm 10 release line. pnpm 11 is stable, but
 latest 10.x line preserves the current Node 22/24 support policy while avoiding package-manager
 major-version churn in this compatibility update.
 
+
+## Python datetime and HTTP test-client policy
+
+The SQLite-backed run registry does not rely on Python's default `sqlite3` datetime adapters or
+converters. Registry timestamp columns use an explicit SQLAlchemy `UtcDateTime` type that stores
+UTC timestamps as ISO-8601 text and deserializes them back to naive UTC `datetime` objects for
+backward-compatible ORM behavior. Raw migration writes serialize timestamps before binding.
+
+HTTP route tests use Starlette's `TestClient` import path and the dev dependency set includes
+`httpx2`, which is the non-deprecated backend expected by the current Starlette test client.
+Compatibility tests run affected modules with `DeprecationWarning` and `StarletteDeprecationWarning`
+promoted to errors.
+
 ## Source Checks
 
 This policy was refreshed against:

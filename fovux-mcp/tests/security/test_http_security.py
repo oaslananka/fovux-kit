@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 from tests.path_helpers import find_package_root
 
 from fovux.core.auth import Scope, token_fingerprint

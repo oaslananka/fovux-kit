@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from fovux.http.app import create_app
 

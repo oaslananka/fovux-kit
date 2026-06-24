@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy import text
+from starlette.testclient import TestClient
 
 from fovux.core.runs import RunRegistry, close_registry
 from fovux.http.app import create_app
