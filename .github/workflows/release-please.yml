@@ -127,6 +127,7 @@ jobs:
             local sha="$2"
             local workflow="$3"
             local context="$4"
+            local started_at="$5"
             local run_id=""
 
             for _ in {1..60}; do
@@ -137,8 +138,8 @@ jobs:
                   --branch "$branch" \
                   --json databaseId,headSha,createdAt \
                   --limit 20 \
-                  | jq -r --arg sha "$sha" \
-                    '[.[] | select(.headSha == $sha)] | sort_by(.createdAt) | reverse | .[0].databaseId // empty'
+                  | jq -r --arg sha "$sha" --arg started_at "$started_at" \
+                    '[.[] | select(.headSha == $sha and .createdAt >= $started_at)] | sort_by(.createdAt) | reverse | .[0].databaseId // empty'
               )"
               if [[ -n "$run_id" ]]; then
                 break
@@ -187,13 +188,14 @@ jobs:
           while IFS= read -r branch; do
             [[ -z "$branch" ]] && continue
             head_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${branch}" --jq '.sha')"
+            dispatch_started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             for workflow in "${!workflow_contexts[@]}"; do
               context="${workflow_contexts[$workflow]}"
               create_status "$head_sha" pending "$context" "$workflow release PR check is queued."
               gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref "$branch"
             done
             for workflow in "${!workflow_contexts[@]}"; do
-              wait_for_workflow "$branch" "$head_sha" "$workflow" "${workflow_contexts[$workflow]}"
+              wait_for_workflow "$branch" "$head_sha" "$workflow" "${workflow_contexts[$workflow]}" "$dispatch_started"
             done
           done <<<"$branches"
 
