@@ -18,6 +18,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Renamed the Marketplace display name to `Fovux Studio Kit` so the first public VSIX publish uses
   a unique display name while keeping the `oaslananka.fovuxstudiokit` extension identifier stable.
 
+## [1.3.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.2.0...fovux-studio-v1.3.0) (2026-06-25)
+
+
+### Features
+
+* add guided Studio workflow ([ed07c54](https://github.com/oaslananka/fovux-kit/commit/ed07c54c19a95f941fd4e9160a2be75c8eb3927c))
+
+
+### Bug Fixes
+
+* align Studio LM tool contracts ([19a81e4](https://github.com/oaslananka/fovux-kit/commit/19a81e4f5fdf4d6f9af01f670d3357173f72371a))
+* harden dashboard resilience contract ([d2e2f12](https://github.com/oaslananka/fovux-kit/commit/d2e2f12aa279f151ed70aa7a6eb743747ba95e75))
+* require preflight before guided training ([90696cf](https://github.com/oaslananka/fovux-kit/commit/90696cf03b7e5338b84fce523c686da2dcb791bf))
+
 ## [1.2.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.1.0...fovux-studio-v1.2.0) (2026-06-22)
 
 

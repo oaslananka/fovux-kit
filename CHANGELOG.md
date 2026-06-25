@@ -17,6 +17,12 @@ released changes remain in each package changelog:
 | `fovux-mcp` npm wrapper | `1.3.0` | [`fovux-mcp-npm/CHANGELOG.md`](fovux-mcp-npm/CHANGELOG.md) |
 | `fovux-studio` | `1.2.0` | [`fovux-studio/CHANGELOG.md`](fovux-studio/CHANGELOG.md) |
 
+## [1.4.0] - 2026-06-25
+
+### Added
+
+- Synchronized release package updates.
+
 ## [1.3.0] - 2026-06-23
 
 ### Added
