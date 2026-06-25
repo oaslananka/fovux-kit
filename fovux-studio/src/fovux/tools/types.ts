@@ -8,6 +8,8 @@ export interface GranularToolDefinition {
   toolReferenceName: string;
   /** Human-readable display name. */
   displayName: string;
+  /** User-facing description shown in VS Code UI. */
+  userDescription: string;
   /** LLM-facing description (max 1024 chars). */
   modelDescription: string;
   /** Tags for filtering. */

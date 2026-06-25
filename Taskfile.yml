@@ -98,6 +98,7 @@ tasks:
       - cmd: python scripts/check_http_security_policy.py
       - cmd: python scripts/check_agent_policy.py
       - cmd: uv run --project fovux-mcp python scripts/check_tool_contracts.py
+      - cmd: uv run --project fovux-mcp python scripts/check_studio_lm_tools.py
       - cmd: python scripts/check_task_docs.py
       - cmd: python scripts/check_test_strategy.py
       - cmd: cd fovux-mcp && uv run python scripts/check_tool_docs.py

@@ -250,7 +250,7 @@
     ],
     "languageModelTools": [
       {
-        "name": "fovux_callTool",
+        "name": "fovux_call_tool",
         "toolReferenceName": "fovux",
         "displayName": "Call Fovux MCP Tool",
         "modelDescription": "(Advanced/Fallback only) Call a generic fovux-mcp tool. PREFER using the specific granular tools (e.g. fovux_train_start, fovux_dataset_inspect) whenever possible. Only use fovux_callTool if no specific tool covers the required operation.",
@@ -276,10 +276,11 @@
           "required": [
             "tool"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Call Fovux MCP Tool using the local fovux-mcp server."
       },
       {
-        "name": "fovux_dataset_inspect",
+        "name": "fovux_inspect_dataset",
         "toolReferenceName": "fovux_dataset_inspect",
         "displayName": "Inspect Dataset",
         "modelDescription": "Produce comprehensive statistics and quality metrics for a dataset. Use when you need to check class balance, Gini index, image sizes, or get an auto-fix recommendation plan. DO NOT use for deep structural checks (use fovux_dataset_validate instead) or perceptual duplicate search (use fovux_dataset_find_duplicates).",
@@ -330,10 +331,11 @@
           "required": [
             "dataset_path"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Inspect Dataset using the local fovux-mcp server."
       },
       {
-        "name": "fovux_dataset_validate",
+        "name": "fovux_validate_dataset",
         "toolReferenceName": "fovux_dataset_validate",
         "displayName": "Validate Dataset",
         "modelDescription": "Validate a YOLO/COCO dataset for structural correctness. Checks data.yaml, image-label pairing, and annotation format. Use to ensure the dataset is ready for training. DO NOT use if you only want descriptive statistics (use fovux_dataset_inspect instead).",
@@ -385,10 +387,11 @@
           "required": [
             "dataset_path"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Validate Dataset using the local fovux-mcp server."
       },
       {
-        "name": "fovux_dataset_find_duplicates",
+        "name": "fovux_find_dataset_duplicates",
         "toolReferenceName": "fovux_dataset_find_duplicates",
         "displayName": "Find Dataset Duplicates",
         "modelDescription": "Detect duplicate or near-duplicate images in a YOLO dataset using perceptual hashing. Use to clean redundant training data and resolve split leakage. DO NOT use for general file comparison or structural validation.",
@@ -438,10 +441,11 @@
           "required": [
             "dataset_path"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Find Dataset Duplicates using the local fovux-mcp server."
       },
       {
-        "name": "fovux_annotation_quality_check",
+        "name": "fovux_check_annotation_quality",
         "toolReferenceName": "fovux_annotation_quality_check",
         "displayName": "Annotation Quality Check",
         "modelDescription": "Run targeted heuristic checks for common bounding box anomalies (out of bounds, extremely tiny, highly overlapping, empty). Use to clean up annotation quality before training. DO NOT use for general dataset structure (use fovux_dataset_validate).",
@@ -476,10 +480,11 @@
           "required": [
             "dataset_path"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Annotation Quality Check using the local fovux-mcp server."
       },
       {
-        "name": "fovux_train_start",
+        "name": "fovux_start_train",
         "toolReferenceName": "fovux_train_start",
         "displayName": "Start Training",
         "modelDescription": "Launch a new YOLO training run as a non-blocking background subprocess. Use this to start training after preflight/validation checks are successful. DO NOT use if there is an active training run unless force=True or max_concurrent_runs is increased.",
@@ -617,10 +622,11 @@
           "required": [
             "dataset_path"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Start Training using the local fovux-mcp server."
       },
       {
-        "name": "fovux_train_preflight",
+        "name": "fovux_preflight_train",
         "toolReferenceName": "fovux_train_preflight",
         "displayName": "Training Preflight Check",
         "modelDescription": "Run safety and diagnostic preflight checks before launching training. Checks dataset validity, model source, device availability, disk budgets, and run directory collisions. Use to prevent runtime training failures. DO NOT use to launch training (use fovux_train_start instead).",
@@ -686,10 +692,11 @@
           "required": [
             "dataset_path"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Training Preflight Check using the local fovux-mcp server."
       },
       {
-        "name": "fovux_train_status",
+        "name": "fovux_get_train_status",
         "toolReferenceName": "fovux_train_status",
         "displayName": "Training Status",
         "modelDescription": "Get current metrics and process state for an ongoing or completed YOLO training run. Use to check if training is complete or monitor loss. DO NOT use to stop training (use fovux_train_stop instead).",
@@ -713,10 +720,11 @@
           "required": [
             "run_id"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Training Status using the local fovux-mcp server."
       },
       {
-        "name": "fovux_train_stop",
+        "name": "fovux_stop_train",
         "toolReferenceName": "fovux_train_stop",
         "displayName": "Stop Training",
         "modelDescription": "Stop a running YOLO training run by its run ID. Use to abort training that is overfitting or taking too long. DO NOT use for idle or completed runs.",
@@ -743,10 +751,11 @@
           "required": [
             "run_id"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Stop Training using the local fovux-mcp server."
       },
       {
-        "name": "fovux_train_resume",
+        "name": "fovux_resume_train",
         "toolReferenceName": "fovux_train_resume",
         "displayName": "Resume Training",
         "modelDescription": "Resume a stopped or failed training run from its last checkpoint (weights/last.pt). Use when training was interrupted (e.g. system reboot or timeout). DO NOT use for starting a clean run (use fovux_train_start instead).",
@@ -773,10 +782,11 @@
           "required": [
             "run_id"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Resume Training using the local fovux-mcp server."
       },
       {
-        "name": "fovux_eval_run",
+        "name": "fovux_run_eval",
         "toolReferenceName": "fovux_eval_run",
         "displayName": "Run Evaluation",
         "modelDescription": "Evaluate a YOLO model checkpoint against a validation dataset and return mAP metrics. Use to test performance of a trained model. DO NOT use during active training on the same run (wait until it is paused or completed).",
@@ -861,10 +871,11 @@
             "checkpoint",
             "dataset_path"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Run Evaluation using the local fovux-mcp server."
       },
       {
-        "name": "fovux_eval_compare",
+        "name": "fovux_compare_eval",
         "toolReferenceName": "fovux_eval_compare",
         "displayName": "Compare Evaluations",
         "modelDescription": "Evaluate multiple checkpoints on the same dataset side-by-side and rank them by mAP50. Use to choose the best model architecture or epoch checkpoint. DO NOT use to compare training run telemetry (use fovux_run_compare instead).",
@@ -940,10 +951,11 @@
             "checkpoints",
             "dataset_path"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Compare Evaluations using the local fovux-mcp server."
       },
       {
-        "name": "fovux_run_compare",
+        "name": "fovux_compare_run",
         "toolReferenceName": "fovux_run_compare",
         "displayName": "Compare Training Runs",
         "modelDescription": "Compare training runs on shared loss, metrics, and parameters, producing a markdown report and comparison charts. Use to trace training history and compare hyperparameter sets. DO NOT use to run fresh validation evaluations (use fovux_eval_compare instead).",
@@ -972,7 +984,8 @@
               "description": "Optional output markdown filepath to write the report to."
             }
           }
-        }
+        },
+        "userDescription": "Run Fovux Compare Training Runs using the local fovux-mcp server."
       },
       {
         "name": "fovux_export_onnx",
@@ -1034,7 +1047,8 @@
           "required": [
             "checkpoint"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Export to ONNX using the local fovux-mcp server."
       },
       {
         "name": "fovux_export_tflite",
@@ -1079,7 +1093,8 @@
           "required": [
             "checkpoint"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Export to TFLite using the local fovux-mcp server."
       },
       {
         "name": "fovux_quantize_int8",
@@ -1122,10 +1137,11 @@
             "checkpoint",
             "calibration_dataset"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Quantize INT8 using the local fovux-mcp server."
       },
       {
-        "name": "fovux_deployment_advise",
+        "name": "fovux_advise_deployment",
         "toolReferenceName": "fovux_deployment_advise",
         "displayName": "Deployment Advice",
         "modelDescription": "Analyze deployment readiness for an exported model on a target platform profile. Checks formats, sizes, compatibility, quantization options, and generates integration code snippets. Use to guide edge deployment planning. DO NOT use for general model profiling (use fovux_model_profile instead).",
@@ -1174,10 +1190,11 @@
             "model_path",
             "target_profile"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Deployment Advice using the local fovux-mcp server."
       },
       {
-        "name": "fovux_model_profile",
+        "name": "fovux_profile_model",
         "toolReferenceName": "fovux_model_profile",
         "displayName": "Profile Model",
         "modelDescription": "Profile a YOLO model checkpoint to measure parameters, FLOPs, layer count, memory footprint, and disk size. Use to assess if a model can fit on hardware resource budgets. DO NOT use to assess platform-specific deployment features (use fovux_deployment_advise instead).",
@@ -1210,10 +1227,11 @@
           "required": [
             "checkpoint"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Profile Model using the local fovux-mcp server."
       },
       {
-        "name": "fovux_run_delete",
+        "name": "fovux_delete_run",
         "toolReferenceName": "fovux_run_delete",
         "displayName": "Delete Run",
         "modelDescription": "Delete a training run from registry and optionally clean up its directory in the filesystem. Use to free up disk space by deleting failed or junk runs. DO NOT use on currently running training processes unless force=True.",
@@ -1250,10 +1268,11 @@
           "required": [
             "run_id"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Delete Run using the local fovux-mcp server."
       },
       {
-        "name": "fovux_run_tag",
+        "name": "fovux_tag_run",
         "toolReferenceName": "fovux_run_tag",
         "displayName": "Tag Run",
         "modelDescription": "Replace or add tags to a training run for filtering, grouping, and workspace organization. Use to mark runs as 'baseline', 'candidate', etc. DO NOT use to start or configure runs (set tags in fovux_train_start instead).",
@@ -1288,10 +1307,11 @@
           "required": [
             "run_id"
           ]
-        }
+        },
+        "userDescription": "Run Fovux Tag Run using the local fovux-mcp server."
       },
       {
-        "name": "fovux_doctor",
+        "name": "fovux_run_doctor",
         "toolReferenceName": "fovux_doctor",
         "displayName": "System Doctor",
         "modelDescription": "Run a comprehensive diagnostic health check covering CUDA, GPU availability, disk limits, dependencies, and local Fovux server status. Use to diagnose setup issues, GPU driver failures, or connection errors. DO NOT use for training parameters or dataset inspection.",
@@ -1303,7 +1323,8 @@
         "inputSchema": {
           "type": "object",
           "properties": {}
-        }
+        },
+        "userDescription": "Run Fovux System Doctor using the local fovux-mcp server."
       }
     ],
     "viewsContainers": {

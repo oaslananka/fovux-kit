@@ -9,9 +9,10 @@ import type { GranularToolDefinition } from "./types";
 
 export const GRANULAR_TOOLS: GranularToolDefinition[] = [
   {
-    name: "fovux_dataset_inspect",
+    name: "fovux_inspect_dataset",
     toolReferenceName: "fovux_dataset_inspect",
     displayName: "Inspect Dataset",
+    userDescription: "Run Fovux Inspect Dataset using the local fovux-mcp server.",
     modelDescription:
       "Produce comprehensive statistics and quality metrics for a dataset. Use when you need to check class balance, Gini index, image sizes, or get an auto-fix recommendation plan. DO NOT use for deep structural checks (use fovux_dataset_validate instead) or perceptual duplicate search (use fovux_dataset_find_duplicates).",
     tags: ["dataset"],
@@ -49,9 +50,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_dataset_validate",
+    name: "fovux_validate_dataset",
     toolReferenceName: "fovux_dataset_validate",
     displayName: "Validate Dataset",
+    userDescription: "Run Fovux Validate Dataset using the local fovux-mcp server.",
     modelDescription:
       "Validate a YOLO/COCO dataset for structural correctness. Checks data.yaml, image-label pairing, and annotation format. Use to ensure the dataset is ready for training. DO NOT use if you only want descriptive statistics (use fovux_dataset_inspect instead).",
     tags: ["dataset"],
@@ -97,9 +99,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_dataset_find_duplicates",
+    name: "fovux_find_dataset_duplicates",
     toolReferenceName: "fovux_dataset_find_duplicates",
     displayName: "Find Dataset Duplicates",
+    userDescription: "Run Fovux Find Dataset Duplicates using the local fovux-mcp server.",
     modelDescription:
       "Detect duplicate or near-duplicate images in a YOLO dataset using perceptual hashing. Use to clean redundant training data and resolve split leakage. DO NOT use for general file comparison or structural validation.",
     tags: ["dataset"],
@@ -138,9 +141,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_annotation_quality_check",
+    name: "fovux_check_annotation_quality",
     toolReferenceName: "fovux_annotation_quality_check",
     displayName: "Annotation Quality Check",
+    userDescription: "Run Fovux Annotation Quality Check using the local fovux-mcp server.",
     modelDescription:
       "Run targeted heuristic checks for common bounding box anomalies (out of bounds, extremely tiny, highly overlapping, empty). Use to clean up annotation quality before training. DO NOT use for general dataset structure (use fovux_dataset_validate).",
     tags: ["dataset"],
@@ -167,9 +171,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_train_start",
+    name: "fovux_start_train",
     toolReferenceName: "fovux_train_start",
     displayName: "Start Training",
+    userDescription: "Run Fovux Start Training using the local fovux-mcp server.",
     modelDescription:
       "Launch a new YOLO training run as a non-blocking background subprocess. Use this to start training after preflight/validation checks are successful. DO NOT use if there is an active training run unless force=True or max_concurrent_runs is increased.",
     tags: ["training"],
@@ -265,9 +270,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_train_preflight",
+    name: "fovux_preflight_train",
     toolReferenceName: "fovux_train_preflight",
     displayName: "Training Preflight Check",
+    userDescription: "Run Fovux Training Preflight Check using the local fovux-mcp server.",
     modelDescription:
       "Run safety and diagnostic preflight checks before launching training. Checks dataset validity, model source, device availability, disk budgets, and run directory collisions. Use to prevent runtime training failures. DO NOT use to launch training (use fovux_train_start instead).",
     tags: ["training"],
@@ -324,9 +330,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_train_status",
+    name: "fovux_get_train_status",
     toolReferenceName: "fovux_train_status",
     displayName: "Training Status",
+    userDescription: "Run Fovux Training Status using the local fovux-mcp server.",
     modelDescription:
       "Get current metrics and process state for an ongoing or completed YOLO training run. Use to check if training is complete or monitor loss. DO NOT use to stop training (use fovux_train_stop instead).",
     tags: ["training"],
@@ -345,9 +352,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_train_stop",
+    name: "fovux_stop_train",
     toolReferenceName: "fovux_train_stop",
     displayName: "Stop Training",
+    userDescription: "Run Fovux Stop Training using the local fovux-mcp server.",
     modelDescription:
       "Stop a running YOLO training run by its run ID. Use to abort training that is overfitting or taking too long. DO NOT use for idle or completed runs.",
     tags: ["training"],
@@ -371,9 +379,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_train_resume",
+    name: "fovux_resume_train",
     toolReferenceName: "fovux_train_resume",
     displayName: "Resume Training",
+    userDescription: "Run Fovux Resume Training using the local fovux-mcp server.",
     modelDescription:
       "Resume a stopped or failed training run from its last checkpoint (weights/last.pt). Use when training was interrupted (e.g. system reboot or timeout). DO NOT use for starting a clean run (use fovux_train_start instead).",
     tags: ["training"],
@@ -397,9 +406,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_eval_run",
+    name: "fovux_run_eval",
     toolReferenceName: "fovux_eval_run",
     displayName: "Run Evaluation",
+    userDescription: "Run Fovux Run Evaluation using the local fovux-mcp server.",
     modelDescription:
       "Evaluate a YOLO model checkpoint against a validation dataset and return mAP metrics. Use to test performance of a trained model. DO NOT use during active training on the same run (wait until it is paused or completed).",
     tags: ["evaluation"],
@@ -466,9 +476,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_eval_compare",
+    name: "fovux_compare_eval",
     toolReferenceName: "fovux_eval_compare",
     displayName: "Compare Evaluations",
+    userDescription: "Run Fovux Compare Evaluations using the local fovux-mcp server.",
     modelDescription:
       "Evaluate multiple checkpoints on the same dataset side-by-side and rank them by mAP50. Use to choose the best model architecture or epoch checkpoint. DO NOT use to compare training run telemetry (use fovux_run_compare instead).",
     tags: ["evaluation"],
@@ -530,9 +541,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_run_compare",
+    name: "fovux_compare_run",
     toolReferenceName: "fovux_run_compare",
     displayName: "Compare Training Runs",
+    userDescription: "Run Fovux Compare Training Runs using the local fovux-mcp server.",
     modelDescription:
       "Compare training runs on shared loss, metrics, and parameters, producing a markdown report and comparison charts. Use to trace training history and compare hyperparameter sets. DO NOT use to run fresh validation evaluations (use fovux_eval_compare instead).",
     tags: ["evaluation"],
@@ -558,6 +570,7 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     name: "fovux_export_onnx",
     toolReferenceName: "fovux_export_onnx",
     displayName: "Export to ONNX",
+    userDescription: "Run Fovux Export to ONNX using the local fovux-mcp server.",
     modelDescription:
       "Export a PyTorch YOLO checkpoint to ONNX format with configurable opset and parity verification. Use for cross-platform CPU/GPU inference or browser deployment. DO NOT use for mobile android deployment (use fovux_export_tflite instead).",
     tags: ["export"],
@@ -616,6 +629,7 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     name: "fovux_export_tflite",
     toolReferenceName: "fovux_export_tflite",
     displayName: "Export to TFLite",
+    userDescription: "Run Fovux Export to TFLite using the local fovux-mcp server.",
     modelDescription:
       "Export a YOLO checkpoint to TensorFlow Lite format. Use for mobile (Android/iOS) and Raspberry Pi edge deployments. DO NOT use for high-performance server GPU hosting (use fovux_export_onnx or TensorRT instead).",
     tags: ["export"],
@@ -658,6 +672,7 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     name: "fovux_quantize_int8",
     toolReferenceName: "fovux_quantize_int8",
     displayName: "Quantize INT8",
+    userDescription: "Run Fovux Quantize INT8 using the local fovux-mcp server.",
     modelDescription:
       "Quantize a model to INT8 precision using a calibration dataset. Use to speed up inference and shrink model sizes on CPU/edge targets. DO NOT use if you cannot provide a calibration dataset (which prevents accurate quantization).",
     tags: ["export"],
@@ -691,9 +706,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_deployment_advise",
+    name: "fovux_advise_deployment",
     toolReferenceName: "fovux_deployment_advise",
     displayName: "Deployment Advice",
+    userDescription: "Run Fovux Deployment Advice using the local fovux-mcp server.",
     modelDescription:
       "Analyze deployment readiness for an exported model on a target platform profile. Checks formats, sizes, compatibility, quantization options, and generates integration code snippets. Use to guide edge deployment planning. DO NOT use for general model profiling (use fovux_model_profile instead).",
     tags: ["export"],
@@ -735,9 +751,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_model_profile",
+    name: "fovux_profile_model",
     toolReferenceName: "fovux_model_profile",
     displayName: "Profile Model",
+    userDescription: "Run Fovux Profile Model using the local fovux-mcp server.",
     modelDescription:
       "Profile a YOLO model checkpoint to measure parameters, FLOPs, layer count, memory footprint, and disk size. Use to assess if a model can fit on hardware resource budgets. DO NOT use to assess platform-specific deployment features (use fovux_deployment_advise instead).",
     tags: ["system"],
@@ -767,9 +784,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_run_delete",
+    name: "fovux_delete_run",
     toolReferenceName: "fovux_run_delete",
     displayName: "Delete Run",
+    userDescription: "Run Fovux Delete Run using the local fovux-mcp server.",
     modelDescription:
       "Delete a training run from registry and optionally clean up its directory in the filesystem. Use to free up disk space by deleting failed or junk runs. DO NOT use on currently running training processes unless force=True.",
     tags: ["system"],
@@ -803,9 +821,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_run_tag",
+    name: "fovux_tag_run",
     toolReferenceName: "fovux_run_tag",
     displayName: "Tag Run",
+    userDescription: "Run Fovux Tag Run using the local fovux-mcp server.",
     modelDescription:
       "Replace or add tags to a training run for filtering, grouping, and workspace organization. Use to mark runs as 'baseline', 'candidate', etc. DO NOT use to start or configure runs (set tags in fovux_train_start instead).",
     tags: ["system"],
@@ -830,9 +849,10 @@ export const GRANULAR_TOOLS: GranularToolDefinition[] = [
     },
   },
   {
-    name: "fovux_doctor",
+    name: "fovux_run_doctor",
     toolReferenceName: "fovux_doctor",
     displayName: "System Doctor",
+    userDescription: "Run Fovux System Doctor using the local fovux-mcp server.",
     modelDescription:
       "Run a comprehensive diagnostic health check covering CUDA, GPU availability, disk limits, dependencies, and local Fovux server status. Use to diagnose setup issues, GPU driver failures, or connection errors. DO NOT use for training parameters or dataset inspection.",
     tags: ["system"],

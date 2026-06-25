@@ -180,6 +180,20 @@ def tool_contracts() -> None:
     )
 
 
+def studio_lm_tools() -> None:
+    """Verify Studio Language Model Tool metadata and backend mappings."""
+    _run(
+        [
+            "uv",
+            "run",
+            "--project",
+            "fovux-mcp",
+            "python",
+            str(ROOT / "scripts" / "check_studio_lm_tools.py"),
+        ]
+    )
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -222,6 +236,7 @@ def mcp_docs() -> None:
     http_security_policy()
     agent_policy()
     tool_contracts()
+    studio_lm_tools()
     task_docs()
     test_strategy()
     _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
@@ -299,6 +314,7 @@ def build_parser() -> argparse.ArgumentParser:
             "http-security-policy",
             "agent-policy",
             "tool-contracts",
+            "studio-lm-tools",
             "test-strategy",
             "mcp-audit",
             "mcp-build",
@@ -339,6 +355,8 @@ def main() -> int:
         agent_policy()
     elif args.mode == "tool-contracts":
         tool_contracts()
+    elif args.mode == "studio-lm-tools":
+        studio_lm_tools()
     elif args.mode == "test-strategy":
         test_strategy()
     elif args.mode == "mcp-audit":

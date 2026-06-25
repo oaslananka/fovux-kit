@@ -35,21 +35,25 @@ export function registerFovuxLanguageModelTool(context: vscode.ExtensionContext)
       };
     },
     async invoke(_options) {
-      const result = await new EmbeddedMcpClient().callTool<any>(
-        _options.input.tool,
-        _options.input.args ?? {}
-      );
-      const summary = formatToolOutputSummary(_options.input.tool, result);
-      const parts = [];
-      if (summary) {
-        parts.push(new vscode.LanguageModelTextPart(summary));
+      try {
+        const result = await new EmbeddedMcpClient().callTool<any>(
+          _options.input.tool,
+          _options.input.args ?? {}
+        );
+        const summary = formatToolOutputSummary(_options.input.tool, result);
+        const parts = [];
+        if (summary) {
+          parts.push(new vscode.LanguageModelTextPart(summary));
+        }
+        parts.push(new vscode.LanguageModelTextPart(JSON.stringify(result, null, 2)));
+        return new vscode.LanguageModelToolResult(parts);
+      } catch (error) {
+        throw new Error(formatActionableToolError(_options.input.tool, error));
       }
-      parts.push(new vscode.LanguageModelTextPart(JSON.stringify(result, null, 2)));
-      return new vscode.LanguageModelToolResult(parts);
     },
   };
 
-  context.subscriptions.push(vscode.lm.registerTool("fovux_callTool", genericTool));
+  context.subscriptions.push(vscode.lm.registerTool("fovux_call_tool", genericTool));
 
   // Register granular tools
   for (const definition of GRANULAR_TOOLS) {
@@ -67,15 +71,19 @@ export function registerFovuxLanguageModelTool(context: vscode.ExtensionContext)
         };
       },
       async invoke(options) {
-        const client = new EmbeddedMcpClient();
-        const result = await client.callTool<any>(definition.mcpToolName, options.input);
-        const summary = formatToolOutputSummary(definition.mcpToolName, result);
-        const parts = [];
-        if (summary) {
-          parts.push(new vscode.LanguageModelTextPart(summary));
+        try {
+          const client = new EmbeddedMcpClient();
+          const result = await client.callTool<any>(definition.mcpToolName, options.input);
+          const summary = formatToolOutputSummary(definition.mcpToolName, result);
+          const parts = [];
+          if (summary) {
+            parts.push(new vscode.LanguageModelTextPart(summary));
+          }
+          parts.push(new vscode.LanguageModelTextPart(JSON.stringify(result, null, 2)));
+          return new vscode.LanguageModelToolResult(parts);
+        } catch (error) {
+          throw new Error(formatActionableToolError(definition.mcpToolName, error));
         }
-        parts.push(new vscode.LanguageModelTextPart(JSON.stringify(result, null, 2)));
-        return new vscode.LanguageModelToolResult(parts);
       },
     };
 
@@ -215,6 +223,19 @@ function getConfirmationMessage(
   }
 
   return markdown;
+}
+
+function formatActionableToolError(mcpToolName: string, error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  const redacted = raw
+    .replace(/Bearer\s+[A-Za-z0-9._~+\/=:-]+/gi, "Bearer [REDACTED]")
+    .replace(/[A-Za-z]:\\[^\s`"]+/g, "[LOCAL_PATH]")
+    .replace(/\/[^\s`"]{2,}(?:\/[^\s`"]+)*/g, "[LOCAL_PATH]");
+  return [
+    `Fovux tool ${mcpToolName} failed.`,
+    `Reason: ${redacted.slice(0, 800)}`,
+    "Next steps: verify the fovux-mcp server is running, check required paths in Fovux Studio, and retry with corrected arguments. Do not expose bearer tokens or full private paths in chat.",
+  ].join("\n");
 }
 
 function formatToolOutputSummary(mcpToolName: string, result: any): string | undefined {
