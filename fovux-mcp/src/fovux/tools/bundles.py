@@ -17,6 +17,7 @@ from typing import Any
 import tomli_w
 
 from fovux.config import clear_config_cache, load_config
+from fovux.core.audit import AUDIT_SCHEMA_VERSION, normalize_audit_record
 from fovux.core.doctor import collect_doctor_report
 from fovux.core.errors import FovuxError
 from fovux.core.paths import FovuxPaths, get_fovux_home
@@ -144,20 +145,8 @@ def list_audit_events(limit: int = 100, offset: int = 0) -> dict[str, Any]:
         registry = get_registry(paths.runs_db)
         records = registry.list_audit_events(limit=limit, offset=offset)
 
-        events = []
-        for record in records:
-            events.append(
-                {
-                    "id": record.id,
-                    "actor": record.actor,
-                    "action": record.action,
-                    "entity_type": record.entity_type,
-                    "entity_id": record.entity_id,
-                    "created_at": record.created_at.isoformat() + "Z",
-                    "details": json.loads(str(record.details_json or "{}")),
-                }
-            )
-        return {"events": events}
+        events = [normalize_audit_record(record) for record in records]
+        return {"schema_version": AUDIT_SCHEMA_VERSION, "events": events}
 
 
 @mcp.tool()
@@ -344,6 +333,14 @@ def generate_support_bundle(destination_path: str | None = None) -> dict[str, An
         except Exception as exc:
             failed_ops = [{"error": f"Failed to list failed operations: {exc}"}]
 
+        recent_events = []
+        try:
+            recent_events = [
+                normalize_audit_record(record) for record in registry.list_audit_events(limit=100)
+            ]
+        except Exception as exc:
+            recent_events = [{"error": f"Failed to list audit events: {exc}"}]
+
         # Manifest
         manifest = {
             "generated_at": datetime.now(UTC).isoformat() + "Z",
@@ -352,6 +349,8 @@ def generate_support_bundle(destination_path: str | None = None) -> dict[str, An
             "doctor_report": doctor_report,
             "package_versions": package_versions,
             "failed_operations": failed_ops,
+            "audit_schema_version": AUDIT_SCHEMA_VERSION,
+            "recent_audit_events": recent_events,
         }
 
         # Set up output path

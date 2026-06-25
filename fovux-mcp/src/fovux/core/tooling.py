@@ -64,7 +64,14 @@ def tool_event(
                 error_code=exc.code,
                 error_message=exc.message,
             )
-            _log_audit(tool_name, run_id, context, "failed", exc.message)
+            _log_audit(
+                tool_name,
+                run_id,
+                context,
+                "failed",
+                exc.message,
+                round(perf_counter() - started_at, 6),
+            )
             raise
         except FileNotFoundError as exc:
             checkpoint_error = FovuxCheckpointNotFoundError(str(exc))
@@ -74,7 +81,14 @@ def tool_event(
                 error_code=checkpoint_error.code,
                 error_message=checkpoint_error.message,
             )
-            _log_audit(tool_name, run_id, context, "failed", checkpoint_error.message)
+            _log_audit(
+                tool_name,
+                run_id,
+                context,
+                "failed",
+                checkpoint_error.message,
+                round(perf_counter() - started_at, 6),
+            )
             raise checkpoint_error from exc
         except (RuntimeError, AssertionError) as exc:
             library_error = FovuxError(f"Underlying library error in {tool_name}: {exc}")
@@ -84,7 +98,14 @@ def tool_event(
                 error_code=library_error.code,
                 error_message=library_error.message,
             )
-            _log_audit(tool_name, run_id, context, "failed", library_error.message)
+            _log_audit(
+                tool_name,
+                run_id,
+                context,
+                "failed",
+                library_error.message,
+                round(perf_counter() - started_at, 6),
+            )
             raise library_error from exc
         except Exception as exc:
             bound.error(
@@ -93,11 +114,24 @@ def tool_event(
                 error_type=type(exc).__name__,
                 error_message=str(exc),
             )
-            _log_audit(tool_name, run_id, context, "failed", str(exc))
+            _log_audit(
+                tool_name,
+                run_id,
+                context,
+                "failed",
+                str(exc),
+                round(perf_counter() - started_at, 6),
+            )
             raise FovuxError(f"Unexpected error in {tool_name}: {exc}") from exc
         else:
             bound.info("tool_end", duration_seconds=round(perf_counter() - started_at, 6))
-            _log_audit(tool_name, run_id, context, "success")
+            _log_audit(
+                tool_name,
+                run_id,
+                context,
+                "success",
+                duration_seconds=round(perf_counter() - started_at, 6),
+            )
     finally:
         reset_active_tool(active_token, roots_token)
 
@@ -108,10 +142,13 @@ def _log_audit(
     context: dict[str, object],
     status: str,
     error_msg: str | None = None,
+    duration_seconds: float | None = None,
 ) -> None:
     try:
         import uuid
 
+        from fovux.config import load_config
+        from fovux.core.audit import build_audit_details
         from fovux.core.paths import FovuxPaths, get_fovux_home
         from fovux.core.runs import get_registry
         from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
@@ -136,19 +173,23 @@ def _log_audit(
         paths = FovuxPaths(get_fovux_home())
         registry = get_registry(paths.runs_db)
 
-        # Log to SQLite runs.db
+        policy_mode = getattr(load_config(), "policy_mode", "developer").lower()
         registry.log_audit_event(
             actor="client",
             action=tool_name,
             entity_type="tool",
             entity_id=run_id or f"op_{uuid.uuid4().hex[:8]}",
-            details={
-                "risk_level": risk_level,
-                "resolved_target_paths": resolved_paths,
-                "challenge_id": context.get("challenge_id"),
-                "status": status,
-                "error": error_msg,
-            },
+            details=build_audit_details(
+                tool_id=tool_name,
+                run_id=run_id,
+                status=status,
+                risk_level=risk_level,
+                policy_mode=policy_mode,
+                paths=resolved_paths,
+                challenge_id=context.get("challenge_id"),
+                error=error_msg,
+                duration_seconds=duration_seconds,
+            ),
         )
     except Exception:  # noqa: S110
         pass

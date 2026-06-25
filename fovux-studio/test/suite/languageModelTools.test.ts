@@ -68,7 +68,7 @@ describe("Fovux Language Model Tools", () => {
     registerFovuxLanguageModelTool(context as any);
 
     const mockLm = vscode.lm as any;
-    expect(mockLm.registeredTools.has("fovux_callTool")).toBe(true);
+    expect(mockLm.registeredTools.has("fovux_call_tool")).toBe(true);
 
     for (const tool of GRANULAR_TOOLS) {
       expect(mockLm.registeredTools.has(tool.name)).toBe(true);
@@ -79,7 +79,7 @@ describe("Fovux Language Model Tools", () => {
     it("generates structured pre-invocation summary for train_start", () => {
       registerFovuxLanguageModelTool(context as any);
       const mockLm = vscode.lm as any;
-      const tool = mockLm.registeredTools.get("fovux_train_start");
+      const tool = mockLm.registeredTools.get("fovux_start_train");
 
       const prepared = tool.prepareInvocation({
         input: {
@@ -105,7 +105,7 @@ describe("Fovux Language Model Tools", () => {
     it("generates structured pre-invocation summary for run_delete", () => {
       registerFovuxLanguageModelTool(context as any);
       const mockLm = vscode.lm as any;
-      const tool = mockLm.registeredTools.get("fovux_run_delete");
+      const tool = mockLm.registeredTools.get("fovux_delete_run");
 
       const prepared = tool.prepareInvocation({
         input: {
@@ -123,7 +123,7 @@ describe("Fovux Language Model Tools", () => {
     it("uses default fallback message for non-risky tools", () => {
       registerFovuxLanguageModelTool(context as any);
       const mockLm = vscode.lm as any;
-      const tool = mockLm.registeredTools.get("fovux_dataset_inspect");
+      const tool = mockLm.registeredTools.get("fovux_inspect_dataset");
 
       const prepared = tool.prepareInvocation({
         input: {
@@ -136,10 +136,10 @@ describe("Fovux Language Model Tools", () => {
       );
     });
 
-    it("supports risky tools called through the generic fovux_callTool fallback", () => {
+    it("supports risky tools called through the generic fovux_call_tool fallback", () => {
       registerFovuxLanguageModelTool(context as any);
       const mockLm = vscode.lm as any;
-      const tool = mockLm.registeredTools.get("fovux_callTool");
+      const tool = mockLm.registeredTools.get("fovux_call_tool");
 
       const prepared = tool.prepareInvocation({
         input: {
@@ -170,7 +170,7 @@ describe("Fovux Language Model Tools", () => {
 
       registerFovuxLanguageModelTool(context as any);
       const mockLm = vscode.lm as any;
-      const tool = mockLm.registeredTools.get("fovux_dataset_inspect");
+      const tool = mockLm.registeredTools.get("fovux_inspect_dataset");
 
       const result = await tool.invoke({
         input: { dataset_path: "/my/data" },
@@ -194,7 +194,7 @@ describe("Fovux Language Model Tools", () => {
 
       registerFovuxLanguageModelTool(context as any);
       const mockLm = vscode.lm as any;
-      const tool = mockLm.registeredTools.get("fovux_eval_run");
+      const tool = mockLm.registeredTools.get("fovux_run_eval");
 
       const result = await tool.invoke({
         input: { checkpoint: "best.pt", dataset_path: "/my/data" },

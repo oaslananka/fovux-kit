@@ -253,7 +253,7 @@
         "name": "fovux_call_tool",
         "toolReferenceName": "fovux",
         "displayName": "Call Fovux MCP Tool",
-        "modelDescription": "(Advanced/Fallback only) Call a generic fovux-mcp tool. PREFER using the specific granular tools (e.g. fovux_train_start, fovux_dataset_inspect) whenever possible. Only use fovux_callTool if no specific tool covers the required operation.",
+        "modelDescription": "(Advanced/Fallback only) Call a generic fovux-mcp tool. PREFER using the specific granular tools (e.g. fovux_train_start, fovux_dataset_inspect) whenever possible. Only use fovux_call_tool if no specific tool covers the required operation.",
         "icon": "$(eye)",
         "tags": [
           "fovux",

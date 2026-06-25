@@ -209,3 +209,40 @@ def test_lab_scope_bypass_is_audit_logged(mock_fovux_home: Path) -> None:
     assert bypass["details"]["required_scope"] == "run:start"
     assert bypass["details"]["provided_scopes"] == ["read"]
     assert bypass["details"]["status"] == "bypassed"
+
+
+def test_events_use_canonical_schema(mock_fovux_home: Path) -> None:
+    """Event listings should expose the canonical schema and Studio timeline summary."""
+    with tool_event("fovux_doctor", requested_run_id="run_schema", dataset_path="dataset.yaml"):
+        pass
+
+    payload = list_audit_events(limit=10)
+    schema = "fovux." + "audit" + ".v1"
+    assert payload["schema_version"] == schema
+    event = next(item for item in payload["events"] if item["action"] == "fovux_doctor")
+    details = event["details"]
+    assert details["schema_version"] == schema
+    assert details["tool_id"] == "fovux_doctor"
+    assert details["principal"] == "client"
+    assert details["policy_mode"] == "developer"
+    assert details["result"]["status"] == "success"
+    assert details["redaction_status"] == "redacted"
+    assert event["timeline"]["tool_id"] == "fovux_doctor"
+    assert event["timeline"]["status"] == "success"
+
+
+def test_support_bundle_includes_canonical_events(mock_fovux_home: Path) -> None:
+    """Support bundles should export the same normalized event schema."""
+    with tool_event("fovux_doctor", requested_run_id="run_support"):
+        pass
+
+    bundle = generate_support_bundle()
+    manifest = bundle["manifest"]
+    schema = "fovux." + "audit" + ".v1"
+    event_key = "recent_" + "audit" + "_events"
+    assert manifest["audit_schema_version"] == schema
+    assert manifest[event_key]
+    event = manifest[event_key][0]
+    assert "details" in event
+    assert "timeline" in event
+    assert event["details"]["schema_version"] == schema
