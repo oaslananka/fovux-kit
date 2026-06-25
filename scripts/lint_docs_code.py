@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -58,7 +59,7 @@ def _check_python(doc_path: Path, index: int, body: str) -> list[str]:
         handle.write(body)
         temp_path = Path(handle.name)
     try:
-        result = subprocess.run(  # noqa: S603 - fixed executable and temp file path
+        result = subprocess.run(
             [sys.executable, "-m", "py_compile", str(temp_path)],
             check=False,
             capture_output=True,
@@ -72,7 +73,9 @@ def _check_python(doc_path: Path, index: int, body: str) -> list[str]:
 
 
 def _check_bash(doc_path: Path, index: int, body: str) -> list[str]:
-    result = subprocess.run(  # noqa: S603 - fixed executable, syntax-only check
+    if os.name == "nt":
+        return []
+    result = subprocess.run(
         ["bash", "-n", "-c", body],
         check=False,
         capture_output=True,
