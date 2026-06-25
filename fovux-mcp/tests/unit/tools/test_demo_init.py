@@ -27,4 +27,4 @@ def test_demo_init_public_wrapper_returns_json(tmp_fovux_home: Path) -> None:
 
     assert payload["run_id"] == "demo_run_01"
     assert payload["dataset_path"].endswith("sample_dataset")
-    assert payload["model_path"].endswith("models/yolov8n.pt")
+    assert Path(str(payload["model_path"])).parts[-2:] == ("models", "yolov8n.pt")
