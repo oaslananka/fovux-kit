@@ -45,7 +45,8 @@ def build_audit_details(
 
 def audit_timeline_summary(*, action: str, details: Mapping[str, Any]) -> dict[str, Any]:
     """Return a compact activity-timeline item for Studio."""
-    result = details.get("result") if isinstance(details.get("result"), dict) else {}
+    raw_result = details.get("result")
+    result = raw_result if isinstance(raw_result, dict) else {}
     return {
         "title": action,
         "status": result.get("status", details.get("status", "unknown")),

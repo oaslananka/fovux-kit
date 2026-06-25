@@ -475,7 +475,7 @@ async def request_challenge(
         tool_name=name,
         args_hash=args_hash,
         risk_level=policy.category,
-        resolved_paths=list(effect_summary["resolved_paths"]),
+        resolved_paths=cast(list[str], effect_summary["resolved_paths"]),
     )
     challenges[record.challenge_id] = record
 
