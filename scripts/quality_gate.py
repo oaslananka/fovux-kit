@@ -279,6 +279,11 @@ def mcp_threat_model() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_mcp_threat_model.py")])
 
 
+def mcp_apps_strategy() -> None:
+    """Verify MCP Apps product strategy decision and review signals."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_mcp_apps_strategy.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -432,6 +437,7 @@ def build_parser() -> argparse.ArgumentParser:
             "license-boundaries",
             "api-stability-plan",
             "governance-lifecycle",
+            "mcp-apps-strategy",
             "supply-chain-publishing",
             "mcp-threat-model",
             "studio-e2e-smoke",
@@ -509,6 +515,8 @@ def main() -> int:
         api_stability_plan()
     elif args.mode == "governance-lifecycle":
         governance_lifecycle()
+    elif args.mode == "mcp-apps-strategy":
+        mcp_apps_strategy()
     elif args.mode == "supply-chain-publishing":
         supply_chain_publishing()
     elif args.mode == "mcp-threat-model":

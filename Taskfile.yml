@@ -115,6 +115,7 @@ tasks:
       - cmd: python scripts/check_license_boundaries.py
       - cmd: python scripts/check_api_stability_plan.py
       - cmd: python scripts/check_governance_lifecycle.py
+      - cmd: python scripts/check_mcp_apps_strategy.py
       - cmd: python scripts/check_supply_chain_publishing.py
       - cmd: python scripts/check_mcp_threat_model.py
       - cmd: cd fovux-mcp && uv run python scripts/check_tool_docs.py
