@@ -363,13 +363,40 @@ function TrainingLauncherApp(): JSX.Element {
         setStatus(null);
         return;
       }
+      setStatus("Running training preflight...");
+      const preflight = await invokeTool<Record<string, unknown>>(
+        clientConfig,
+        "train_preflight",
+        payload
+      );
+      const blockers = Array.isArray(preflight.blockers)
+        ? preflight.blockers.map(String)
+        : [];
+      const nextActions = Array.isArray(preflight.next_actions)
+        ? preflight.next_actions.map(String)
+        : [];
+      if ((preflight.ready === false || blockers.length > 0) && !force) {
+        setError(
+          [
+            "Training preflight blocked launch.",
+            ...blockers.map((item) => `- ${item}`),
+            ...nextActions.map((item) => `Next: ${item}`),
+          ].join("\n")
+        );
+        setStatus(null);
+        return;
+      }
+      const launchPayload = { ...payload };
+      if (preflight.ready === false || blockers.length > 0) {
+        launchPayload.preflight_approval_reason = `Studio force override after preflight blockers: ${blockers.join("; ")}`;
+      }
       setStatus("Launching training run...");
-      const challenge = await requestChallenge(clientConfig, "train_start", payload);
+      const challenge = await requestChallenge(clientConfig, "train_start", launchPayload);
       const challengeId = await confirmChallenge(challenge);
       const result = await invokeTool<{ run_id: string; run_path: string }>(
         clientConfig,
         "train_start",
-        { ...payload, challenge_id: challengeId }
+        { ...launchPayload, challenge_id: challengeId }
       );
       const nextRecentDatasets = [
         datasetPath.trim(),

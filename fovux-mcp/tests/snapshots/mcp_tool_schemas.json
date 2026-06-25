@@ -2586,6 +2586,17 @@
             ],
             "default": null
           },
+          "preflight_approval_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "tags": {
             "anyOf": [
               {

@@ -209,6 +209,11 @@ def guided_workflow() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_guided_workflow.py")])
 
 
+def train_preflight_gate() -> None:
+    """Verify train_preflight-first guided and agent training contracts."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_train_preflight_gate.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -255,6 +260,7 @@ def mcp_docs() -> None:
     tool_contracts()
     studio_lm_tools()
     guided_workflow()
+    train_preflight_gate()
     task_docs()
     test_strategy()
     _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
@@ -336,6 +342,7 @@ def build_parser() -> argparse.ArgumentParser:
             "tool-contracts",
             "studio-lm-tools",
             "guided-workflow",
+            "train-preflight-gate",
             "test-strategy",
             "mcp-audit",
             "mcp-build",
@@ -384,6 +391,8 @@ def main() -> int:
         studio_lm_tools()
     elif args.mode == "guided-workflow":
         guided_workflow()
+    elif args.mode == "train-preflight-gate":
+        train_preflight_gate()
     elif args.mode == "test-strategy":
         test_strategy()
     elif args.mode == "mcp-audit":

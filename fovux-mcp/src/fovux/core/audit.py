@@ -20,6 +20,7 @@ def build_audit_details(
     challenge_id: object | None = None,
     error: str | None = None,
     duration_seconds: float | None = None,
+    approval_reason: object | None = None,
 ) -> dict[str, Any]:
     """Return canonical audit details shared by tools, listings, and bundles."""
     return {
@@ -36,6 +37,7 @@ def build_audit_details(
         "result": {"status": status, "error": error},
         "duration_seconds": duration_seconds,
         "redaction_status": "redacted",
+        "approval": {"required": approval_reason is not None, "reason": approval_reason},
         "status": status,
         "error": error,
     }

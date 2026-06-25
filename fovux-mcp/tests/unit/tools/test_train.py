@@ -921,6 +921,10 @@ def test_train_preflight_tool(fake_fovux_home, tmp_path):
         name="test_preflight_run",
     )
     assert result["dataset_valid"] is False
+    assert result["ready"] is False
+    assert "Dataset check failed." in result["blockers"]
+    assert result["override_required"] is True
+    assert any("train_preflight" in action for action in result["next_actions"])
     assert "Dataset path does not exist" in result["warnings"][0]
 
     # 2. Valid path but invalid format
@@ -932,6 +936,8 @@ def test_train_preflight_tool(fake_fovux_home, tmp_path):
         name="test_preflight_run_bad",
     )
     assert result["dataset_valid"] is False
+    assert result["ready"] is False
+    assert "Dataset check failed." in result["blockers"]
     assert any("Dataset YAML format invalid" in w for w in result["warnings"])
 
     # 3. Model format warning
@@ -940,6 +946,8 @@ def test_train_preflight_tool(fake_fovux_home, tmp_path):
         model="invalid_model",
     )
     assert result["model_valid"] is False
+    assert result["ready"] is False
+    assert "Model check failed." in result["blockers"]
     assert any("Model name/path must end with .pt" in w for w in result["warnings"])
 
 
@@ -957,6 +965,8 @@ def test_train_preflight_resource_limits(fake_fovux_home, tmp_path):
         max_disk_usage_gb=999999.0,  # Ask for impossible amount of space
     )
     assert result["disk_space_valid"] is False
+    assert result["ready"] is False
+    assert "Disk-space check failed." in result["blockers"]
     assert any("Available disk space" in w for w in result["warnings"])
 
 

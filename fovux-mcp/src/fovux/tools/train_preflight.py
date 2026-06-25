@@ -163,6 +163,29 @@ def _run_train_preflight(inp: TrainPreflightInput) -> TrainPreflightOutput:
         concurrency_valid = False
         warnings.append(f"Active runs limit reached ({active_count}/{inp.max_concurrent_runs}).")
 
+    blockers: list[str] = []
+    if not dataset_valid:
+        blockers.append("Dataset check failed.")
+    if not model_valid:
+        blockers.append("Model check failed.")
+    if not device_available:
+        blockers.append("Device check failed.")
+    if not disk_space_valid:
+        blockers.append("Disk-space check failed.")
+    if not output_path_valid:
+        blockers.append("Output path check failed.")
+    if not concurrency_valid:
+        blockers.append("Concurrency check failed.")
+    ready = not blockers
+    next_actions = (
+        ["Call train_start with the same reviewed inputs."]
+        if ready
+        else [
+            "Resolve every blocker, then run train_preflight again.",
+            "Use explicit override only after a human reviews blockers and risk.",
+        ]
+    )
+
     return TrainPreflightOutput(
         dataset_valid=dataset_valid,
         dataset_classes_count=dataset_classes_count,
@@ -177,5 +200,12 @@ def _run_train_preflight(inp: TrainPreflightInput) -> TrainPreflightOutput:
         resolved_run_dir=str(run_dir),
         concurrency_valid=concurrency_valid,
         active_runs_count=active_count,
+        ready=ready,
+        blockers=blockers,
         warnings=warnings,
+        next_actions=next_actions,
+        override_required=not ready,
+        override_hint=None
+        if ready
+        else "Enable force only after reviewing every blocker and the approval prompt.",
     )

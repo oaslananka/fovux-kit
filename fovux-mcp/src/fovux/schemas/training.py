@@ -72,6 +72,7 @@ class TrainStartInput(BaseModel):
     tags: list[str] = Field(default_factory=list)
     options: TrainingOptions = Field(default_factory=lambda: TrainingOptions())
     extra_args: dict[str, Any] = Field(default_factory=dict)
+    preflight_approval_reason: str | None = None
 
     # Resource budgets
     max_runtime_seconds: int | None = Field(default=None, gt=0)
@@ -143,6 +144,7 @@ class TrainPreflightInput(BaseModel):
     tags: list[str] = Field(default_factory=list)
     options: TrainingOptions = Field(default_factory=lambda: TrainingOptions())
     extra_args: dict[str, Any] = Field(default_factory=dict)
+    preflight_approval_reason: str | None = None
 
     # Resource budgets
     max_runtime_seconds: int | None = Field(default=None, gt=0)
@@ -202,7 +204,12 @@ class TrainPreflightOutput(BaseModel):
     resolved_run_dir: str
     concurrency_valid: bool
     active_runs_count: int
+    ready: bool = False
+    blockers: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    next_actions: list[str] = Field(default_factory=list)
+    override_required: bool = False
+    override_hint: str | None = None
 
 
 class TrainStartOutput(BaseModel):

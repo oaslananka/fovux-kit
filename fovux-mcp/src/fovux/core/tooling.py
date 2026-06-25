@@ -189,6 +189,7 @@ def _log_audit(
                 challenge_id=context.get("challenge_id"),
                 error=error_msg,
                 duration_seconds=duration_seconds,
+                approval_reason=context.get("preflight_approval_reason"),
             ),
         )
     except Exception:  # noqa: S110

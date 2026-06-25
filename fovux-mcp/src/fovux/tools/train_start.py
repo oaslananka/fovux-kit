@@ -50,6 +50,7 @@ def train_start(
     max_runtime_seconds: int | None = None,
     max_disk_usage_gb: float | None = None,
     device_policy: str = "any",
+    preflight_approval_reason: str | None = None,
 ) -> dict[str, Any]:
     """Launch a YOLO training run as a non-blocking background subprocess.
 
@@ -72,6 +73,7 @@ def train_start(
         max_runtime_seconds=max_runtime_seconds,
         max_disk_usage_gb=max_disk_usage_gb,
         device_policy=device_policy,  # type: ignore[arg-type]
+        preflight_approval_reason=preflight_approval_reason,
     )
     with tool_event(
         "train_start",
@@ -80,6 +82,7 @@ def train_start(
         requested_run_id=name,
         force=force,
         max_concurrent_runs=max_concurrent_runs,
+        preflight_approval_reason=preflight_approval_reason,
     ) as logger:
         output = _run_train_start(inp)
         logger.info("train_start_spawned", run_id=output.run_id, pid=output.pid)
