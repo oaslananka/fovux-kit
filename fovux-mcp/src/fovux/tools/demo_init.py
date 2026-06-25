@@ -125,6 +125,13 @@ def _run_demo_init(inp: DemoInitInput) -> DemoInitOutput:
         validation_result={"status": "passed", "readiness_score": 95},
     )
 
+    (target / "README.md").write_text(
+        "# Fovux Demo Workspace\n\n"
+        "Open sample_dataset/data.yaml, inspect the dataset, review demo_run_01, "
+        "and export demo_model.onnx without network access.\n",
+        encoding="utf-8",
+    )
+
     return DemoInitOutput(
         dataset_path=dataset_dir,
         run_id=run_id,

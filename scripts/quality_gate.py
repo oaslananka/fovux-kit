@@ -209,6 +209,11 @@ def guided_workflow() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_guided_workflow.py")])
 
 
+def first_run_onboarding() -> None:
+    """Verify first-run demo workspace and onboarding contracts."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_first_run_onboarding.py")])
+
+
 def train_preflight_gate() -> None:
     """Verify train_preflight-first guided and agent training contracts."""
     _run([sys.executable, str(ROOT / "scripts" / "check_train_preflight_gate.py")])
@@ -359,6 +364,7 @@ def build_parser() -> argparse.ArgumentParser:
             "tool-contracts",
             "studio-lm-tools",
             "guided-workflow",
+            "first-run-onboarding",
             "train-preflight-gate",
             "test-strategy",
             "dataset-intelligence",
@@ -411,6 +417,8 @@ def main() -> int:
         studio_lm_tools()
     elif args.mode == "guided-workflow":
         guided_workflow()
+    elif args.mode == "first-run-onboarding":
+        first_run_onboarding()
     elif args.mode == "train-preflight-gate":
         train_preflight_gate()
     elif args.mode == "test-strategy":

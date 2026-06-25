@@ -102,6 +102,7 @@ tasks:
       - cmd: uv run --project fovux-mcp python scripts/check_tool_contracts.py
       - cmd: uv run --project fovux-mcp python scripts/check_studio_lm_tools.py
       - cmd: python scripts/check_guided_workflow.py
+      - cmd: python scripts/check_first_run_onboarding.py
       - cmd: python scripts/check_train_preflight_gate.py
       - cmd: python scripts/check_task_docs.py
       - cmd: python scripts/check_test_strategy.py
