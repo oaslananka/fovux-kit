@@ -12,6 +12,7 @@ import { openAnnotationEditor } from "./commands/openAnnotationEditor";
 import { openDashboard } from "./commands/openDashboard";
 import { openDatasetInspector } from "./commands/openDatasetInspector";
 import { openExportWizard } from "./commands/openExportWizard";
+import { openGuidedWorkflow } from "./commands/openGuidedWorkflow";
 import { openTimeline } from "./commands/openTimeline";
 import { openTrainingLauncher } from "./commands/openTrainingLauncher";
 import { copyRunId, deleteRun, resumeRun, stopRun, tagRun } from "./commands/runActions";
@@ -113,6 +114,7 @@ export function activate(context: vscode.ExtensionContext): void {
       return openTrainingLauncher(context, typeof datasetPath === "string" ? datasetPath : "");
     }),
     vscode.commands.registerCommand("fovux.openDashboard", () => openDashboard(context)),
+    vscode.commands.registerCommand("fovux.openGuidedWorkflow", () => openGuidedWorkflow(context)),
     vscode.commands.registerCommand("fovux.openDatasetInspector", (datasetPath?: string) =>
       openDatasetInspector(context, typeof datasetPath === "string" ? datasetPath : undefined)
     ),

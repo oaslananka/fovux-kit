@@ -93,6 +93,11 @@
         "icon": "$(graph)"
       },
       {
+        "command": "fovux.openGuidedWorkflow",
+        "title": "Fovux: Open Guided Workflow",
+        "category": "Fovux"
+      },
+      {
         "command": "fovux.openTimeline",
         "title": "Fovux: Open Run Timeline",
         "category": "Fovux",

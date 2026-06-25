@@ -14,6 +14,7 @@ export default defineConfig([
   {
     entry: {
       "webviews/dashboard/main": "src/webviews/dashboard/main.tsx",
+      "webviews/guidedWorkflow/main": "src/webviews/guidedWorkflow/main.tsx",
       "webviews/datasetInspector/main": "src/webviews/datasetInspector/main.tsx",
       "webviews/exportWizard/main": "src/webviews/exportWizard/main.tsx",
       "webviews/compareRuns/main": "src/webviews/compareRuns/main.tsx",
