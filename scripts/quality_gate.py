@@ -264,6 +264,11 @@ def supply_chain_publishing() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_supply_chain_publishing.py")])
 
 
+def mcp_threat_model() -> None:
+    """Verify MCP-specific threat model and tool security review checklist."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_mcp_threat_model.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -417,6 +422,7 @@ def build_parser() -> argparse.ArgumentParser:
             "license-boundaries",
             "api-stability-plan",
             "supply-chain-publishing",
+            "mcp-threat-model",
             "studio-e2e-smoke",
             "mcp-audit",
             "mcp-build",
@@ -491,6 +497,8 @@ def main() -> int:
         api_stability_plan()
     elif args.mode == "supply-chain-publishing":
         supply_chain_publishing()
+    elif args.mode == "mcp-threat-model":
+        mcp_threat_model()
     elif args.mode == "studio-e2e-smoke":
         studio_e2e_smoke()
     elif args.mode == "mcp-audit":
