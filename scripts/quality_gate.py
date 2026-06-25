@@ -214,6 +214,11 @@ def train_preflight_gate() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_train_preflight_gate.py")])
 
 
+def dashboard_resilience() -> None:
+    """Verify Studio dashboard fallback, run actions, and comparison contracts."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_dashboard_resilience.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -358,6 +363,7 @@ def build_parser() -> argparse.ArgumentParser:
             "test-strategy",
             "dataset-intelligence",
             "review-queue",
+            "dashboard-resilience",
             "mcp-audit",
             "mcp-build",
             "mcp-security",
@@ -413,6 +419,8 @@ def main() -> int:
         dataset_intelligence()
     elif args.mode == "review-queue":
         review_queue()
+    elif args.mode == "dashboard-resilience":
+        dashboard_resilience()
     elif args.mode == "mcp-audit":
         mcp_audit()
     elif args.mode == "mcp-build":

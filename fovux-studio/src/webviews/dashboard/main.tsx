@@ -189,6 +189,12 @@ function DashboardApp(): JSX.Element {
     [selectedRunIds, seriesByRun]
   );
 
+  const connectionStatus = initial.isServerReachable
+    ? error
+      ? "Metric stream degraded: reconnecting via polling fallback."
+      : "Metric polling fallback active; dashboard will keep refreshing run state."
+    : "Backend " + "disconnected: using cached/offline dashboard state until the local server reconnects.";
+
   const latestRows = selectedRunIds
     .map((runId) => seriesByRun[runId]?.at(-1))
     .filter((payload): payload is MetricPayload => payload !== undefined);
@@ -469,6 +475,7 @@ function DashboardApp(): JSX.Element {
 
         {/* Right column: active runs, charts */}
         <div style={rightColStyle}>
+          <p style={resilienceStatusStyle}>{connectionStatus}</p>
           {error ? <p style={errorStyle}>{error}</p> : null}
 
           {runs.length > 0 ? (
@@ -560,6 +567,7 @@ function toChartSeries(
 }
 
 function readMetric(metrics: Record<string, number>, keys: string[]): number | undefined {
+  // Malformed metric payloads are ignored so charts stay resilient during reconnects.
   for (const key of keys) {
     const value = metrics[key];
     if (typeof value === "number") {
@@ -800,6 +808,14 @@ const datasetItemStyle: CSSProperties = {
 
 const datasetIconStyle: CSSProperties = {
   fontSize: "18px",
+};
+
+const resilienceStatusStyle: CSSProperties = {
+  padding: "10px 12px",
+  borderRadius: "10px",
+  border: "1px solid var(--vscode-panel-border)",
+  color: "var(--vscode-descriptionForeground)",
+  background: "var(--vscode-editorWidget-background)",
 };
 
 const errorStyle: CSSProperties = {
