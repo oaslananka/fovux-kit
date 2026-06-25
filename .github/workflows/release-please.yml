@@ -136,10 +136,10 @@ jobs:
                   --repo "$GITHUB_REPOSITORY" \
                   --workflow "$workflow" \
                   --branch "$branch" \
-                  --json databaseId,headSha,createdAt \
+                  --json databaseId,headSha,createdAt,event \
                   --limit 20 \
                   | jq -r --arg sha "$sha" --arg started_at "$started_at" \
-                    '[.[] | select(.headSha == $sha and .createdAt >= $started_at)] | sort_by(.createdAt) | reverse | .[0].databaseId // empty'
+                    '[.[] | select(.headSha == $sha and .createdAt >= $started_at and .event == "workflow_dispatch")] | sort_by(.createdAt) | reverse | .[0].databaseId // empty'
               )"
               if [[ -n "$run_id" ]]; then
                 break
