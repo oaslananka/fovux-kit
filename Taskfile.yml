@@ -105,6 +105,7 @@ tasks:
       - cmd: python scripts/check_train_preflight_gate.py
       - cmd: python scripts/check_task_docs.py
       - cmd: python scripts/check_test_strategy.py
+      - cmd: python scripts/check_dataset_intelligence.py
       - cmd: cd fovux-mcp && uv run python scripts/check_tool_docs.py
       - cmd: cd fovux-mcp && uv run mkdocs build --strict
       - cmd: cd fovux-mcp && uv run python ../scripts/lint_docs_code.py ..

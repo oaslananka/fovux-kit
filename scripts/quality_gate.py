@@ -224,6 +224,11 @@ def test_strategy() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_test_strategy.py")])
 
 
+def dataset_intelligence() -> None:
+    """Verify dataset validation, inspection, remediation, and golden fixtures."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_dataset_intelligence.py")])
+
+
 def mcp_check() -> None:
     """Run the locked backend validation used locally and in CI."""
     check_versions()
@@ -263,6 +268,7 @@ def mcp_docs() -> None:
     train_preflight_gate()
     task_docs()
     test_strategy()
+    dataset_intelligence()
     _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
     _run(["uv", "run", "mkdocs", "build", "--strict"], cwd=MCP_DIR)
     _run(["uv", "run", "python", "../scripts/lint_docs_code.py", ".."], cwd=MCP_DIR)
@@ -344,6 +350,7 @@ def build_parser() -> argparse.ArgumentParser:
             "guided-workflow",
             "train-preflight-gate",
             "test-strategy",
+            "dataset-intelligence",
             "mcp-audit",
             "mcp-build",
             "mcp-security",
@@ -395,6 +402,8 @@ def main() -> int:
         train_preflight_gate()
     elif args.mode == "test-strategy":
         test_strategy()
+    elif args.mode == "dataset-intelligence":
+        dataset_intelligence()
     elif args.mode == "mcp-audit":
         mcp_audit()
     elif args.mode == "mcp-build":
