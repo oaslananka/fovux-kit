@@ -72,9 +72,8 @@ def _check_python(doc_path: Path, index: int, body: str) -> list[str]:
 
 
 def _check_bash(doc_path: Path, index: int, body: str) -> list[str]:
-    result = subprocess.run(  # noqa: S603 - fixed executable, syntax-only stdin check
-        ["bash", "-n"],
-        input=body,
+    result = subprocess.run(  # noqa: S603 - fixed executable, syntax-only check
+        ["bash", "-n", "-c", body],
         check=False,
         capture_output=True,
         text=True,
