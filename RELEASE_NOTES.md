@@ -1,6 +1,6 @@
 # Fovux 1.4.0 Release Notes
 
-Fovux 1.3.0 is the current reviewed release baseline for the local-first edge-AI computer vision
+Fovux 1.4.0 is the current reviewed release baseline for the local-first edge-AI computer vision
 workbench. It consolidates the expanded MCP tool registry, active-learning queue workflow, policy and
 audit tools, support/reproducibility bundles, and Studio guarded-tool UX.
 
@@ -9,9 +9,9 @@ audit tools, support/reproducibility bundles, and Studio guarded-tool UX.
 
 | Release item | Current status | Required GitHub Release evidence |
 | ------------ | -------------- | -------------------------------- |
-| Python package | `fovux-mcp` `1.3.0` published on PyPI | Wheel, sdist, SHA256 checksums, SPDX SBOM, provenance attestation, and PyPI registry smoke result |
-| npm wrapper | `fovux-mcp` `1.3.0` published on npm | npm provenance, package metadata check, wrapper CLI smoke result, and registry verification evidence JSON |
-| VS Code extension | `oaslananka.fovuxstudiokit` `1.2.0` published on VS Marketplace and Open VSX | VSIX artifact/status, package-size check, marketplace verification, Open VSX verification, SBOM, checksums, and provenance attestation |
+| Python package | `fovux-mcp` `1.4.0` published on PyPI | Wheel, sdist, SHA256 checksums, SPDX SBOM, provenance attestation, and PyPI registry smoke result |
+| npm wrapper | `fovux-mcp` `1.4.0` published on npm | npm provenance, package metadata check, wrapper CLI smoke result, and registry verification evidence JSON |
+| VS Code extension | `oaslananka.fovuxstudiokit` `1.3.0` published on VS Marketplace and Open VSX | VSIX artifact/status, package-size check, marketplace verification, Open VSX verification, SBOM, checksums, and provenance attestation |
 
 GitHub release notes for every future release must explicitly include:
 
