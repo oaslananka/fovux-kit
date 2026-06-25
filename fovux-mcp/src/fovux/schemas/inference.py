@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -91,6 +91,7 @@ class BenchmarkLatencyInput(BaseModel):
     num_warmup: int = 10
     num_iterations: int = 100
     threads: int = 4
+    baseline_path: Path | None = None
 
 
 class BatchDetectionSummary(BaseModel):
@@ -143,6 +144,13 @@ class BenchmarkLatencyOutput(BaseModel):
     latency_std_ms: float
     throughput_fps: float
     peak_memory_mb: float
+    num_warmup: int = 0
+    batch_size: int = 1
+    input_shape: list[int] = Field(default_factory=list)
+    environment: dict[str, Any] = Field(default_factory=dict)
+    artifact: dict[str, Any] = Field(default_factory=dict)
+    comparison: dict[str, Any] = Field(default_factory=dict)
+    reproducibility_notes: list[str] = Field(default_factory=list)
 
 
 class InferEnsembleInput(BaseModel):

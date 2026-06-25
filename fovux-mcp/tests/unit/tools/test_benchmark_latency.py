@@ -155,3 +155,53 @@ def test_benchmark_tensorrt_reports_runtime_requirement(tmp_path: Path) -> None:
 
     with pytest.raises(FovuxInferenceError, match="TensorRT benchmarking"):
         _run_benchmark_latency(BenchmarkLatencyInput(model_path=model_path, backend="tensorrt"))
+
+
+def test_benchmark_output_includes_reproducibility_context(tmp_path: Path) -> None:
+    """Benchmark output should include environment, artifact, and baseline comparison data."""
+    model_path = _artifact(tmp_path)
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text('{"latency_p95_ms": 15.0}', encoding="utf-8")
+
+    class _SessionOptions:
+        intra_op_num_threads = 0
+
+    class _Session:
+        def get_inputs(self) -> list[SimpleNamespace]:
+            return [SimpleNamespace(name="images")]
+
+        def run(self, *_args: object, **_kwargs: object) -> list[np.ndarray]:
+            return [np.zeros((1, 1), dtype=np.float32)]
+
+    fake_ort = SimpleNamespace(
+        SessionOptions=_SessionOptions,
+        InferenceSession=lambda *_args, **_kwargs: _Session(),
+    )
+
+    with (
+        patch.object(benchmark_module.importlib, "import_module", return_value=fake_ort),
+        patch.object(
+            benchmark_module.time,
+            "perf_counter",
+            side_effect=[0.0, 0.010, 0.020, 0.050],
+        ),
+    ):
+        output = _run_benchmark_latency(
+            BenchmarkLatencyInput(
+                model_path=model_path,
+                backend="onnxruntime",
+                imgsz=8,
+                num_warmup=1,
+                num_iterations=2,
+                baseline_path=baseline_path,
+            )
+        )
+
+    assert output.num_warmup == 1
+    assert output.batch_size == 1
+    assert output.input_shape == [1, 3, 8, 8]
+    assert output.environment["backend"] == "onnxruntime"
+    assert output.artifact["sha256"]
+    assert output.comparison["enabled"] is True
+    assert output.comparison["status"] == "regression"
+    assert output.reproducibility_notes

@@ -309,6 +309,17 @@
             "default": "onnxruntime",
             "type": "string"
           },
+          "baseline_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "batch_size": {
             "default": 1,
             "type": "integer"

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
+import json
+import platform
+import sys
 import time
 import tracemalloc
 from pathlib import Path
@@ -27,6 +31,7 @@ def benchmark_latency(
     num_warmup: int = 10,
     num_iterations: int = 100,
     threads: int = 4,
+    baseline_path: str | None = None,
 ) -> dict[str, Any]:
     """Benchmark p50/p95/p99 latency and throughput for a local model artifact."""
     inp = BenchmarkLatencyInput(
@@ -38,6 +43,7 @@ def benchmark_latency(
         num_warmup=num_warmup,
         num_iterations=num_iterations,
         threads=threads,
+        baseline_path=Path(baseline_path) if baseline_path else None,
     )
     with tool_event(
         "benchmark_latency",
@@ -66,19 +72,80 @@ def _run_benchmark_latency(inp: BenchmarkLatencyInput) -> BenchmarkLatencyOutput
 
     latency = np.asarray(timings_ms, dtype=float)
     mean_ms = float(latency.mean()) if latency.size else 0.0
+    p50_ms = float(np.percentile(latency, 50)) if latency.size else 0.0
+    p95_ms = float(np.percentile(latency, 95)) if latency.size else 0.0
+    p99_ms = float(np.percentile(latency, 99)) if latency.size else 0.0
 
     return BenchmarkLatencyOutput(
         backend=inp.backend,
         device=inp.device,
         num_iterations=inp.num_iterations,
-        latency_p50_ms=float(np.percentile(latency, 50)) if latency.size else 0.0,
-        latency_p95_ms=float(np.percentile(latency, 95)) if latency.size else 0.0,
-        latency_p99_ms=float(np.percentile(latency, 99)) if latency.size else 0.0,
+        latency_p50_ms=p50_ms,
+        latency_p95_ms=p95_ms,
+        latency_p99_ms=p99_ms,
         latency_mean_ms=mean_ms,
         latency_std_ms=float(latency.std()) if latency.size else 0.0,
         throughput_fps=(inp.batch_size * 1000.0 / mean_ms) if mean_ms else 0.0,
         peak_memory_mb=peak_memory_mb,
+        num_warmup=inp.num_warmup,
+        batch_size=inp.batch_size,
+        input_shape=[inp.batch_size, 3, inp.imgsz, inp.imgsz],
+        environment=_collect_environment(inp),
+        artifact=_collect_artifact(model_path),
+        comparison=_compare_baseline(p95_ms, inp.baseline_path),
+        reproducibility_notes=[
+            "Warmup iterations are excluded from latency percentiles.",
+            "p50/p95/p99 are computed from measured iteration samples.",
+            "Compare p95 against a checked-in baseline to detect regressions.",
+        ],
     )
+
+
+def _collect_environment(inp: BenchmarkLatencyInput) -> dict[str, Any]:
+    return {
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "processor": platform.processor(),
+        "backend": inp.backend,
+        "device": inp.device,
+        "threads": inp.threads,
+        "numpy": np.__version__,
+    }
+
+
+def _collect_artifact(model_path: Path) -> dict[str, Any]:
+    digest = hashlib.sha256(model_path.read_bytes()).hexdigest()
+    return {
+        "path": str(model_path),
+        "name": model_path.name,
+        "suffix": model_path.suffix.lower(),
+        "size_bytes": model_path.stat().st_size,
+        "sha256": digest,
+    }
+
+
+def _compare_baseline(current_p95_ms: float, baseline_path: Path | None) -> dict[str, Any]:
+    if baseline_path is None:
+        return {"enabled": False}
+    path = baseline_path.expanduser().resolve()
+    if not path.exists():
+        return {"enabled": True, "status": "missing_baseline", "path": str(path)}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    baseline_p95 = data.get("latency_p95_ms")
+    if not isinstance(baseline_p95, int | float):
+        return {"enabled": True, "status": "invalid_baseline", "path": str(path)}
+    delta = current_p95_ms - float(baseline_p95)
+    ratio = current_p95_ms / float(baseline_p95) if baseline_p95 else 0.0
+    return {
+        "enabled": True,
+        "status": "regression" if ratio > 1.10 else "ok",
+        "baseline_p95_ms": float(baseline_p95),
+        "current_p95_ms": current_p95_ms,
+        "delta_p95_ms": delta,
+        "ratio": ratio,
+        "threshold_ratio": 1.10,
+        "path": str(path),
+    }
 
 
 def _benchmark_onnxruntime(

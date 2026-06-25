@@ -234,6 +234,11 @@ def deployment_profiles() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_deployment_profiles.py")])
 
 
+def benchmark_reproducibility() -> None:
+    """Verify reproducible benchmark output, baseline comparison, and evidence fields."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_benchmark_reproducibility.py")])
+
+
 def studio_e2e_smoke() -> None:
     """Verify Studio e2e smoke-test and release evidence contracts."""
     _run([sys.executable, str(ROOT / "scripts" / "check_studio_e2e_smoke.py")])
@@ -387,6 +392,7 @@ def build_parser() -> argparse.ArgumentParser:
             "dashboard-resilience",
             "export-matrix",
             "deployment-profiles",
+            "benchmark-reproducibility",
             "studio-e2e-smoke",
             "mcp-audit",
             "mcp-build",
@@ -451,6 +457,8 @@ def main() -> int:
         export_matrix()
     elif args.mode == "deployment-profiles":
         deployment_profiles()
+    elif args.mode == "benchmark-reproducibility":
+        benchmark_reproducibility()
     elif args.mode == "studio-e2e-smoke":
         studio_e2e_smoke()
     elif args.mode == "mcp-audit":

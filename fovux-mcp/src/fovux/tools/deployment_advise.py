@@ -13,7 +13,6 @@ from fovux.core.validation import ensure_writable_output
 from fovux.schemas.inference import BenchmarkLatencyInput
 from fovux.schemas.management import DeploymentAdviseInput, DeploymentAdviseOutput
 from fovux.server import mcp
-from fovux.tools.benchmark_latency import _run_benchmark_latency
 
 
 @mcp.tool()
@@ -303,6 +302,8 @@ def _run_benchmarking(model_path: Path, format_type: str) -> dict[str, Any]:
             num_iterations=10,
             threads=2,
         )
+        from fovux.tools.benchmark_latency import _run_benchmark_latency
+
         bench_out = _run_benchmark_latency(bench_input)
         return {
             "latency_p50_ms": bench_out.latency_p50_ms,
