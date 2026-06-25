@@ -12,6 +12,30 @@ GitHub milestones, not in package changelog sections.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.3.0...fovux-mcp-v1.4.0) (2026-06-25)
+
+
+### Features
+
+* improve benchmarks ([4238747](https://github.com/oaslananka/fovux-kit/commit/423874702772394e0c316eccc1481dff74b8f9e5))
+* improve onboarding ([8d28e41](https://github.com/oaslananka/fovux-kit/commit/8d28e418199d4660dfc056430d5df2f42d599871))
+
+
+### Bug Fixes
+
+* enforce documentation coverage gates ([97d8c14](https://github.com/oaslananka/fovux-kit/commit/97d8c14df7a719ef70fef2b70b898350f6a2da0f))
+* formalize agent policy safeguards ([901830f](https://github.com/oaslananka/fovux-kit/commit/901830fa311d553ec0e9b25138bd3e152b2a148a))
+* harden Studio local API security boundaries ([33a87bc](https://github.com/oaslananka/fovux-kit/commit/33a87bc4fd2b60d8a8c6a0872c9242801982ed43))
+* remove Python datetime test deprecations ([72a62f4](https://github.com/oaslananka/fovux-kit/commit/72a62f494571daa9681ea91c434de598fa3b4479))
+* require preflight before guided training ([90696cf](https://github.com/oaslananka/fovux-kit/commit/90696cf03b7e5338b84fce523c686da2dcb791bf))
+
+
+### Documentation
+
+* align release evidence and roadmap boundaries ([7bdc397](https://github.com/oaslananka/fovux-kit/commit/7bdc39778018cd9a8953e7dbd95c229c5bba4c90))
+* align release truth and drift gates ([a65f318](https://github.com/oaslananka/fovux-kit/commit/a65f3186a33000da523e75b25e8b6febac9b3f7c))
+* formalize Studio local API transport decision ([b1c0285](https://github.com/oaslananka/fovux-kit/commit/b1c0285e9a24d1057a23bf55b0c044d3e1a089a5))
+
 ## [1.3.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.2.0...fovux-mcp-v1.3.0) (2026-06-23)
 
 
