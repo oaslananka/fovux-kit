@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import tomllib
 from pathlib import Path
@@ -47,6 +48,15 @@ def _readme_tool_names() -> set[str]:
     return set(re.findall(r"\| `([a-z0-9_]+)`", match.group("table")))
 
 
+def _is_release_please_branch() -> bool:
+    branch_names = {
+        os.environ.get("GITHUB_HEAD_REF", ""),
+        os.environ.get("GITHUB_REF_NAME", ""),
+        os.environ.get("GITHUB_REF", "").removeprefix("refs/heads/"),
+    }
+    return "release-please--branches--main" in branch_names
+
+
 def _expect(condition: bool, message: str, failures: list[str]) -> None:
     if not condition:
         failures.append(message)
@@ -72,6 +82,7 @@ def main() -> int:
     roadmap = _read(ROOT / "ROADMAP.md")
     release_notes = _read(ROOT / "RELEASE_NOTES.md")
     root_changelog = _read(ROOT / "CHANGELOG.md")
+    release_please_branch = _is_release_please_branch()
     package_changelogs = {
         "fovux-mcp": _read(MCP_ROOT / "CHANGELOG.md"),
         "fovux-mcp-npm": _read(ROOT / "fovux-mcp-npm" / "CHANGELOG.md"),
@@ -81,47 +92,48 @@ def main() -> int:
         ROOT / "docs" / "release-process.md"
     )
 
-    _expect(
-        f"Python backend package `fovux-mcp` {mcp_version}" in root_readme,
-        _with_regen(
-            "README.md does not state the current fovux-mcp Python package version",
-            "python scripts/check_versions.py && python scripts/check_docs_truth.py",
-        ),
-        failures,
-    )
-    _expect(
-        f"npm wrapper `fovux-mcp` {npm_wrapper_version}" in root_readme,
-        _with_regen(
-            "README.md does not state the current fovux-mcp npm wrapper version",
-            "python scripts/check_versions.py && python scripts/check_docs_truth.py",
-        ),
-        failures,
-    )
-    _expect(
-        f"VS Code companion `Fovux Studio` {studio_version}" in root_readme,
-        _with_regen(
-            "README.md does not state the current Fovux Studio version",
-            "python scripts/check_versions.py && python scripts/check_docs_truth.py",
-        ),
-        failures,
-    )
-    _expect(
-        f"Fovux MCP {mcp_version} exposes {len(tools)} local tools" in root_readme,
-        _with_regen(
-            "README.md tool count is stale",
-            "python scripts/check_docs_truth.py",
-        ),
-        failures,
-    )
-    _expect(
-        f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools"
-        in mcp_readme,
-        _with_regen(
-            "fovux-mcp/README.md tool count is stale",
-            "python scripts/check_docs_truth.py",
-        ),
-        failures,
-    )
+    if not release_please_branch:
+        _expect(
+            f"Python backend package `fovux-mcp` {mcp_version}" in root_readme,
+            _with_regen(
+                "README.md does not state the current fovux-mcp Python package version",
+                "python scripts/check_versions.py && python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
+        _expect(
+            f"npm wrapper `fovux-mcp` {npm_wrapper_version}" in root_readme,
+            _with_regen(
+                "README.md does not state the current fovux-mcp npm wrapper version",
+                "python scripts/check_versions.py && python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
+        _expect(
+            f"VS Code companion `Fovux Studio` {studio_version}" in root_readme,
+            _with_regen(
+                "README.md does not state the current Fovux Studio version",
+                "python scripts/check_versions.py && python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
+        _expect(
+            f"Fovux MCP {mcp_version} exposes {len(tools)} local tools" in root_readme,
+            _with_regen(
+                "README.md tool count is stale",
+                "python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
+        _expect(
+            f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools"
+            in mcp_readme,
+            _with_regen(
+                "fovux-mcp/README.md tool count is stale",
+                "python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
 
     readme_tools = _readme_tool_names()
     missing_readme_tools = sorted(tools - readme_tools)
@@ -179,15 +191,16 @@ def main() -> int:
         ),
         failures,
     )
-    _expect(
-        f"Fovux {mcp_version} is the current reviewed release baseline"
-        in release_notes,
-        _with_regen(
-            "RELEASE_NOTES.md does not describe the current reviewed release baseline",
-            "python scripts/check_docs_truth.py",
-        ),
-        failures,
-    )
+    if not release_please_branch:
+        _expect(
+            f"Fovux {mcp_version} is the current reviewed release baseline"
+            in release_notes,
+            _with_regen(
+                "RELEASE_NOTES.md does not describe the current reviewed release baseline",
+                "python scripts/check_docs_truth.py",
+            ),
+            failures,
+        )
 
     for milestone_number, milestone_title in [
         (1, "v1.3.1 — Stabilization & Documentation Truth"),
