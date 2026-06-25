@@ -229,6 +229,11 @@ def export_matrix() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_export_matrix.py")])
 
 
+def deployment_profiles() -> None:
+    """Verify deployment advice target profiles and guidance contract."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_deployment_profiles.py")])
+
+
 def studio_e2e_smoke() -> None:
     """Verify Studio e2e smoke-test and release evidence contracts."""
     _run([sys.executable, str(ROOT / "scripts" / "check_studio_e2e_smoke.py")])
@@ -381,6 +386,7 @@ def build_parser() -> argparse.ArgumentParser:
             "review-queue",
             "dashboard-resilience",
             "export-matrix",
+            "deployment-profiles",
             "studio-e2e-smoke",
             "mcp-audit",
             "mcp-build",
@@ -443,6 +449,8 @@ def main() -> int:
         dashboard_resilience()
     elif args.mode == "export-matrix":
         export_matrix()
+    elif args.mode == "deployment-profiles":
+        deployment_profiles()
     elif args.mode == "studio-e2e-smoke":
         studio_e2e_smoke()
     elif args.mode == "mcp-audit":
