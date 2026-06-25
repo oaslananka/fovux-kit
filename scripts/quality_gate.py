@@ -224,6 +224,11 @@ def dashboard_resilience() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_dashboard_resilience.py")])
 
 
+def export_matrix() -> None:
+    """Verify YOLO export target matrix and implemented Fovux export surfaces."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_export_matrix.py")])
+
+
 def studio_e2e_smoke() -> None:
     """Verify Studio e2e smoke-test and release evidence contracts."""
     _run([sys.executable, str(ROOT / "scripts" / "check_studio_e2e_smoke.py")])
@@ -375,6 +380,7 @@ def build_parser() -> argparse.ArgumentParser:
             "dataset-intelligence",
             "review-queue",
             "dashboard-resilience",
+            "export-matrix",
             "studio-e2e-smoke",
             "mcp-audit",
             "mcp-build",
@@ -435,6 +441,8 @@ def main() -> int:
         review_queue()
     elif args.mode == "dashboard-resilience":
         dashboard_resilience()
+    elif args.mode == "export-matrix":
+        export_matrix()
     elif args.mode == "studio-e2e-smoke":
         studio_e2e_smoke()
     elif args.mode == "mcp-audit":
