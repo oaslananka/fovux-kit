@@ -1,0 +1,2694 @@
+{
+  "schema_version": 1,
+  "source": "fovux.core.tool_registry + FastMCP list_tools + HTTP_TOOL_POLICIES",
+  "studio_lm_tool_count": 20,
+  "studio_mcp_mappings": [
+    "annotation_quality_check",
+    "dataset_find_duplicates",
+    "dataset_inspect",
+    "dataset_validate",
+    "deployment_advise",
+    "eval_compare",
+    "eval_run",
+    "export_onnx",
+    "export_tflite",
+    "fovux_doctor",
+    "model_profile",
+    "quantize_int8",
+    "run_compare",
+    "run_delete",
+    "run_tag",
+    "train_preflight",
+    "train_resume",
+    "train_start",
+    "train_status",
+    "train_stop"
+  ],
+  "studio_only_tools": [],
+  "tool_count": 47,
+  "tools": [
+    {
+      "annotations": null,
+      "callable": "fovux.tools.active_learning_queue_list:active_learning_queue_list",
+      "component": "fovux-mcp",
+      "description": "Retrieve review queue items from the local SQLite index.",
+      "docs_page": "fovux-mcp/docs/tools/active_learning_queue_list.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 20.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          },
+          "status": {
+            "default": "pending",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "active_learning_queue_list",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.active_learning_queue_rank:active_learning_queue_rank",
+      "component": "fovux-mcp",
+      "description": "Rank unlabeled images by uncertainty and insert them into the review queue.",
+      "docs_page": "fovux-mcp/docs/tools/active_learning_queue_rank.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint": {
+            "type": "string"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "limit": {
+            "default": 50,
+            "type": "integer"
+          },
+          "strategy": {
+            "default": "entropy",
+            "type": "string"
+          },
+          "unlabeled_pool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkpoint",
+          "unlabeled_pool",
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "active_learning_queue_rank",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.active_learning_queue_submit:active_learning_queue_submit",
+      "component": "fovux-mcp",
+      "description": "Submit label corrections for an image and save it into the target dataset split.",
+      "docs_page": "fovux-mcp/docs/tools/active_learning_queue_submit.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "dataset:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "corrected_labels": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "dataset_split": {
+            "default": "train",
+            "type": "string"
+          },
+          "entry_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry_id",
+          "corrected_labels"
+        ],
+        "type": "object"
+      },
+      "name": "active_learning_queue_submit",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.active_learning_select:active_learning_select",
+      "component": "fovux-mcp",
+      "description": "Select the most uncertain images from an unlabeled pool.",
+      "docs_page": "fovux-mcp/docs/tools/active_learning_select.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "budget": {
+            "default": 100,
+            "type": "integer"
+          },
+          "checkpoint": {
+            "type": "string"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "strategy": {
+            "default": "entropy",
+            "type": "string"
+          },
+          "unlabeled_pool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkpoint",
+          "unlabeled_pool"
+        ],
+        "type": "object"
+      },
+      "name": "active_learning_select",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.annotation_quality_check:annotation_quality_check",
+      "component": "fovux-mcp",
+      "description": "Inspect YOLO annotations for out-of-bounds boxes, empty labels, and overlap issues.",
+      "docs_page": "fovux-mcp/docs/tools/annotation_quality_check.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 20.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "dataset_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "annotation_quality_check",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.benchmark_latency:benchmark_latency",
+      "component": "fovux-mcp",
+      "description": "Benchmark p50/p95/p99 latency and throughput for a local model artifact.",
+      "docs_page": "fovux-mcp/docs/tools/benchmark_latency.md",
+      "http_policy": {
+        "category": "long_running",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "backend": {
+            "default": "onnxruntime",
+            "type": "string"
+          },
+          "batch_size": {
+            "default": 1,
+            "type": "integer"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "model_path": {
+            "type": "string"
+          },
+          "num_iterations": {
+            "default": 100,
+            "type": "integer"
+          },
+          "num_warmup": {
+            "default": 10,
+            "type": "integer"
+          },
+          "threads": {
+            "default": 4,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_path"
+        ],
+        "type": "object"
+      },
+      "name": "benchmark_latency",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.dataset_augment:dataset_augment",
+      "component": "fovux-mcp",
+      "description": "Augment a YOLO dataset with deterministic local transforms.",
+      "docs_page": "fovux-mcp/docs/tools/dataset_augment.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "dataset:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_path": {
+            "type": "string"
+          },
+          "multiplier": {
+            "default": 3,
+            "type": "integer"
+          },
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "techniques": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "dataset_augment",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.dataset_convert:dataset_convert",
+      "component": "fovux-mcp",
+      "description": "Convert a dataset between YOLO, COCO, and VOC formats.\n\nclass_map renames classes: {'cat': 'feline'}. Use copy_images=True to copy images.",
+      "docs_page": "fovux-mcp/docs/tools/dataset_convert.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "dataset:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "class_map": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "copy_images": {
+            "default": false,
+            "type": "boolean"
+          },
+          "source_format": {
+            "default": "auto",
+            "type": "string"
+          },
+          "source_path": {
+            "type": "string"
+          },
+          "target_format": {
+            "type": "string"
+          },
+          "target_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_path",
+          "target_path",
+          "target_format"
+        ],
+        "type": "object"
+      },
+      "name": "dataset_convert",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.dataset_find_duplicates:dataset_find_duplicates",
+      "component": "fovux-mcp",
+      "description": "Find duplicate or near-duplicate images using perceptual hashing (phash/dhash/whash/avg).\n\nReturns duplicate groups sorted by size. Hamming threshold controls sensitivity.",
+      "docs_page": "fovux-mcp/docs/tools/dataset_find_duplicates.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "across_splits": {
+            "default": true,
+            "type": "boolean"
+          },
+          "algorithm": {
+            "default": "phash",
+            "type": "string"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "hamming_threshold": {
+            "default": 5,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "dataset_find_duplicates",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.dataset_inspect:dataset_inspect",
+      "component": "fovux-mcp",
+      "description": "Produce comprehensive statistics and quality metrics for a dataset.\n\nReturns Gini coefficient, Gini-based quality score, label anomaly audits,\nleakage/duplicate reports, and suggested auto-fix plan actions.",
+      "docs_page": "fovux-mcp/docs/tools/dataset_inspect.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 20.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_path": {
+            "type": "string"
+          },
+          "format": {
+            "default": "auto",
+            "type": "string"
+          },
+          "include_samples": {
+            "default": true,
+            "type": "boolean"
+          },
+          "max_images_analyzed": {
+            "default": 10000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "dataset_inspect",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.dataset_split:dataset_split",
+      "component": "fovux-mcp",
+      "description": "Create or re-create train/val/test splits with optional class stratification.\n\nWrites a split_manifest.json for reproducibility. Supports YOLO output format.",
+      "docs_page": "fovux-mcp/docs/tools/dataset_split.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "dataset:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_path": {
+            "type": "string"
+          },
+          "output_format": {
+            "default": "yolo",
+            "type": "string"
+          },
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "overwrite": {
+            "default": false,
+            "type": "boolean"
+          },
+          "seed": {
+            "default": 42,
+            "type": "integer"
+          },
+          "stratify_by_class": {
+            "default": true,
+            "type": "boolean"
+          },
+          "test_ratio": {
+            "default": 0.1,
+            "type": "number"
+          },
+          "train_ratio": {
+            "default": 0.7,
+            "type": "number"
+          },
+          "val_ratio": {
+            "default": 0.2,
+            "type": "number"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "dataset_split",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.dataset_validate:dataset_validate",
+      "component": "fovux-mcp",
+      "description": "Deep integrity check: readable images, bbox bounds [0,1], class ID range, orphans.\n\nReturns a list of errors/warnings and an optional bash remediation script.",
+      "docs_page": "fovux-mcp/docs/tools/dataset_validate.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "check_bbox_bounds": {
+            "default": true,
+            "type": "boolean"
+          },
+          "check_class_id_range": {
+            "default": true,
+            "type": "boolean"
+          },
+          "check_image_readable": {
+            "default": true,
+            "type": "boolean"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "format": {
+            "default": "auto",
+            "type": "string"
+          },
+          "strict": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "dataset_validate",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.demo_init:demo_init",
+      "component": "fovux-mcp",
+      "description": "Initialize a demo workspace with lightweight dataset, mock runs, and models.",
+      "docs_page": "fovux-mcp/docs/tools/demo_init.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "dataset:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "target_path": {
+            "default": "demo_workspace",
+            "description": "Target directory path (absolute or relative to FOVUX_HOME).",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "demo_init",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.deployment_advise:deployment_advise",
+      "component": "fovux-mcp",
+      "description": "Analyze deployment readiness, preflight checks, parity, and benchmarks.",
+      "docs_page": "fovux-mcp/docs/tools/deployment_advise.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "export:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "model_path": {
+            "type": "string"
+          },
+          "target_profile": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_path",
+          "target_profile"
+        ],
+        "type": "object"
+      },
+      "name": "deployment_advise",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.distill_model:distill_model",
+      "component": "fovux-mcp",
+      "description": "Start a student-model training run with distillation metadata.",
+      "docs_page": "fovux-mcp/docs/tools/distill_model.md",
+      "http_policy": {
+        "category": "long_running",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 120.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "alpha": {
+            "default": 0.7,
+            "type": "number"
+          },
+          "batch": {
+            "default": 16,
+            "type": "integer"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "epochs": {
+            "default": 100,
+            "type": "integer"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "student_model": {
+            "default": "yolov8n.pt",
+            "type": "string"
+          },
+          "teacher_checkpoint": {
+            "type": "string"
+          },
+          "temperature": {
+            "default": 4.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "teacher_checkpoint",
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "distill_model",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.eval_compare:eval_compare",
+      "component": "fovux-mcp",
+      "description": "Evaluate multiple checkpoints on the same dataset and rank them.",
+      "docs_page": "fovux-mcp/docs/tools/eval_compare.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 20.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch": {
+            "default": 16,
+            "type": "integer"
+          },
+          "checkpoints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "iou": {
+            "default": 0.45,
+            "type": "number"
+          },
+          "split": {
+            "default": "val",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkpoints",
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "eval_compare",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.eval_error_analysis:eval_error_analysis",
+      "component": "fovux-mcp",
+      "description": "Analyze model errors: confusion matrix entries and worst false-positive/negative images.",
+      "docs_page": "fovux-mcp/docs/tools/eval_error_analysis.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint": {
+            "type": "string"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "iou": {
+            "default": 0.45,
+            "type": "number"
+          },
+          "split": {
+            "default": "val",
+            "type": "string"
+          },
+          "top_n": {
+            "default": 10,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "checkpoint",
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "eval_error_analysis",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.eval_per_class:eval_per_class",
+      "component": "fovux-mcp",
+      "description": "Return per-class evaluation stats sorted by a chosen metric.",
+      "docs_page": "fovux-mcp/docs/tools/eval_per_class.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ascending": {
+            "default": true,
+            "type": "boolean"
+          },
+          "batch": {
+            "default": 16,
+            "type": "integer"
+          },
+          "checkpoint": {
+            "type": "string"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "iou": {
+            "default": 0.45,
+            "type": "number"
+          },
+          "sort_by": {
+            "default": "map50",
+            "type": "string"
+          },
+          "split": {
+            "default": "val",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkpoint",
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "eval_per_class",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.eval_run:eval_run",
+      "component": "fovux-mcp",
+      "description": "Run YOLO validation and return aggregate metrics plus a per-class breakdown.",
+      "docs_page": "fovux-mcp/docs/tools/eval_run.md",
+      "http_policy": {
+        "category": "long_running",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 120.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch": {
+            "default": 16,
+            "type": "integer"
+          },
+          "checkpoint": {
+            "type": "string"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "iou": {
+            "default": 0.45,
+            "type": "number"
+          },
+          "split": {
+            "default": "val",
+            "type": "string"
+          },
+          "task": {
+            "default": "detect",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkpoint",
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "eval_run",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.export_onnx:export_onnx",
+      "component": "fovux-mcp",
+      "description": "Export a YOLO .pt checkpoint to ONNX format with an optional roundtrip parity check.",
+      "docs_page": "fovux-mcp/docs/tools/export_onnx.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "export:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 120.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "dynamic": {
+            "default": false,
+            "type": "boolean"
+          },
+          "half": {
+            "default": false,
+            "type": "boolean"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "opset": {
+            "default": 17,
+            "type": "integer"
+          },
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "parity_check": {
+            "default": true,
+            "type": "boolean"
+          },
+          "parity_tolerance": {
+            "default": 0.001,
+            "type": "number"
+          },
+          "simplify": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "checkpoint"
+        ],
+        "type": "object"
+      },
+      "name": "export_onnx",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.bundles:export_reproducibility_bundle",
+      "component": "fovux-mcp",
+      "description": "Export a reproducibility bundle zip file for a training run.",
+      "docs_page": "fovux-mcp/docs/tools/export_reproducibility_bundle.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "destination_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "export_reproducibility_bundle",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.export_tflite:export_tflite",
+      "component": "fovux-mcp",
+      "description": "Export a YOLO .pt checkpoint to TFLite format.",
+      "docs_page": "fovux-mcp/docs/tools/export_tflite.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "export:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 120.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "half": {
+            "default": false,
+            "type": "boolean"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "int8": {
+            "default": false,
+            "type": "boolean"
+          },
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "checkpoint"
+        ],
+        "type": "object"
+      },
+      "name": "export_tflite",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.fovux_doctor:fovux_doctor",
+      "component": "fovux-mcp",
+      "description": "Report the local Fovux environment health, including GPU and HTTP status.",
+      "docs_page": "fovux-mcp/docs/tools/fovux_doctor.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 20.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "name": "fovux_doctor",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.bundles:generate_support_bundle",
+      "component": "fovux-mcp",
+      "description": "Generate a redacted support bundle zip file for diagnostics.",
+      "docs_page": "fovux-mcp/docs/tools/generate_support_bundle.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "destination_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "type": "object"
+      },
+      "name": "generate_support_bundle",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.bundles:get_policy_status",
+      "component": "fovux-mcp",
+      "description": "Retrieve the current local security policy status and allowed tools.",
+      "docs_page": "fovux-mcp/docs/tools/get_policy_status.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 4,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 10.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_policy_status",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.infer_batch:infer_batch",
+      "component": "fovux-mcp",
+      "description": "Run inference over all images in a directory and persist a structured manifest.",
+      "docs_page": "fovux-mcp/docs/tools/infer_batch.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 120.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_size": {
+            "default": 32,
+            "type": "integer"
+          },
+          "checkpoint": {
+            "type": "string"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "export_format": {
+            "default": "json",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "input_dir": {
+            "type": "string"
+          },
+          "output_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "save_annotated": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "checkpoint",
+          "input_dir"
+        ],
+        "type": "object"
+      },
+      "name": "infer_batch",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.infer_ensemble:infer_ensemble",
+      "component": "fovux-mcp",
+      "description": "Run ensemble inference and return fused detections.",
+      "docs_page": "fovux-mcp/docs/tools/infer_ensemble.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "fusion_method": {
+            "default": "wbf",
+            "type": "string"
+          },
+          "image_path": {
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "checkpoints",
+          "image_path"
+        ],
+        "type": "object"
+      },
+      "name": "infer_ensemble",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.infer_image:infer_image",
+      "component": "fovux-mcp",
+      "description": "Run inference on a single image and return structured detections.",
+      "docs_page": "fovux-mcp/docs/tools/infer_image.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint": {
+            "type": "string"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "image_path": {
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "iou": {
+            "default": 0.45,
+            "type": "number"
+          },
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "save_image": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "checkpoint",
+          "image_path"
+        ],
+        "type": "object"
+      },
+      "name": "infer_image",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.infer_rtsp:infer_rtsp",
+      "component": "fovux-mcp",
+      "description": "Run RTSP inference with frame skipping, reconnection, and optional video save.",
+      "docs_page": "fovux-mcp/docs/tools/infer_rtsp.md",
+      "http_policy": {
+        "category": "long_running",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 120.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint": {
+            "type": "string"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "duration_seconds": {
+            "default": 30,
+            "type": "integer"
+          },
+          "frame_skip": {
+            "default": 0,
+            "type": "integer"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "max_reconnect_attempts": {
+            "default": 10,
+            "type": "integer"
+          },
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "rtsp_url": {
+            "type": "string"
+          },
+          "save_video": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "checkpoint",
+          "rtsp_url"
+        ],
+        "type": "object"
+      },
+      "name": "infer_rtsp",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.bundles:list_audit_events",
+      "component": "fovux-mcp",
+      "description": "Retrieve audit event logs from the local database.",
+      "docs_page": "fovux-mcp/docs/tools/list_audit_events.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "list_audit_events",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.model_compare_visual:model_compare_visual",
+      "component": "fovux-mcp",
+      "description": "Compare two checkpoints visually on a single image.",
+      "docs_page": "fovux-mcp/docs/tools/model_compare_visual.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint_a": {
+            "type": "string"
+          },
+          "checkpoint_b": {
+            "type": "string"
+          },
+          "conf": {
+            "default": 0.25,
+            "type": "number"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "image_path": {
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "checkpoint_a",
+          "checkpoint_b",
+          "image_path"
+        ],
+        "type": "object"
+      },
+      "name": "model_compare_visual",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.model_list:model_list",
+      "component": "fovux-mcp",
+      "description": "List discovered models under ~/.fovux/models and run weight directories.",
+      "docs_page": "fovux-mcp/docs/tools/model_list.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 4,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 20.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 50,
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "model_list",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.model_profile:model_profile",
+      "component": "fovux-mcp",
+      "description": "Profile a checkpoint for parameter count, GFLOPs, layers, and rough memory footprint.",
+      "docs_page": "fovux-mcp/docs/tools/model_profile.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "checkpoint"
+        ],
+        "type": "object"
+      },
+      "name": "model_profile",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.quantize_int8:quantize_int8",
+      "component": "fovux-mcp",
+      "description": "Produce an INT8-quantized ONNX model using a calibration dataset.",
+      "docs_page": "fovux-mcp/docs/tools/quantize_int8.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "dataset:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 120.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "calibration_dataset": {
+            "type": "string"
+          },
+          "checkpoint": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "checkpoint",
+          "calibration_dataset"
+        ],
+        "type": "object"
+      },
+      "name": "quantize_int8",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.quantize_report:quantize_report",
+      "component": "fovux-mcp",
+      "description": "Compare accuracy and file size between original and INT8-quantized checkpoints.",
+      "docs_page": "fovux-mcp/docs/tools/quantize_report.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_path": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "max_map50_drop": {
+            "default": 0.01,
+            "type": "number"
+          },
+          "original_checkpoint": {
+            "type": "string"
+          },
+          "quantized_checkpoint": {
+            "type": "string"
+          },
+          "split": {
+            "default": "val",
+            "type": "string"
+          },
+          "strict": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "original_checkpoint",
+          "quantized_checkpoint",
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "quantize_report",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.run_archive:run_archive",
+      "component": "fovux-mcp",
+      "description": "Archive a terminal run under FOVUX_HOME/archive.",
+      "docs_page": "fovux-mcp/docs/tools/run_archive.md",
+      "http_policy": {
+        "category": "destructive",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "destructive",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "delete_original": {
+            "default": true,
+            "type": "boolean"
+          },
+          "dry_run": {
+            "default": false,
+            "type": "boolean"
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "run_archive",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.run_compare:run_compare",
+      "component": "fovux-mcp",
+      "description": "Compare training runs on shared metrics and write markdown plus a PNG chart.",
+      "docs_page": "fovux-mcp/docs/tools/run_compare.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "run_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "type": "object"
+      },
+      "name": "run_compare",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.run_delete:run_delete",
+      "component": "fovux-mcp",
+      "description": "Delete a non-running training run and optionally remove its run directory.",
+      "docs_page": "fovux-mcp/docs/tools/run_delete.md",
+      "http_policy": {
+        "category": "destructive",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "destructive",
+        "requires_confirmation": true,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "delete_files": {
+            "default": true,
+            "type": "boolean"
+          },
+          "dry_run": {
+            "default": false,
+            "type": "boolean"
+          },
+          "force": {
+            "default": false,
+            "type": "boolean"
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "run_delete",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.run_tag:run_tag",
+      "component": "fovux-mcp",
+      "description": "Replace tags on a run for filtering and Studio organization.",
+      "docs_page": "fovux-mcp/docs/tools/run_tag.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 20.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "type": "string"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "run_tag",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.bundles:set_policy_mode",
+      "component": "fovux-mcp",
+      "description": "Set the local security policy mode (safe, developer, automation, lab).",
+      "docs_page": "fovux-mcp/docs/tools/set_policy_mode.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "admin",
+        "requires_confirmation": true,
+        "timeout_seconds": 10.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "type": "object"
+      },
+      "name": "set_policy_mode",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.sync_to_mlflow:sync_to_mlflow",
+      "component": "fovux-mcp",
+      "description": "Sync one Fovux run's params and metrics to an optional MLflow server.",
+      "docs_page": "fovux-mcp/docs/tools/sync_to_mlflow.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "export:write",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mlflow_tracking_uri": {
+            "default": "http://localhost:5000",
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "sync_to_mlflow",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.train_adjust:train_adjust",
+      "component": "fovux-mcp",
+      "description": "Write a control request for a running training worker.",
+      "docs_page": "fovux-mcp/docs/tools/train_adjust.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "learning_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "mosaic": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "train_adjust",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.train_preflight:train_preflight",
+      "component": "fovux-mcp",
+      "description": "Perform preflight checks and return a diagnostic training compatibility summary.",
+      "docs_page": "fovux-mcp/docs/tools/train_preflight.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 2,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch": {
+            "default": 16,
+            "type": "integer"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "device_policy": {
+            "default": "any",
+            "type": "string"
+          },
+          "epochs": {
+            "default": 100,
+            "type": "integer"
+          },
+          "force": {
+            "default": false,
+            "type": "boolean"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "max_concurrent_runs": {
+            "default": 1,
+            "type": "integer"
+          },
+          "max_disk_usage_gb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "max_runtime_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "model": {
+            "default": "yolov8n.pt",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "task": {
+            "default": "detect",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "train_preflight",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.train_resume:train_resume",
+      "component": "fovux-mcp",
+      "description": "Resume a stopped or failed training run from its last checkpoint.",
+      "docs_page": "fovux-mcp/docs/tools/train_resume.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "epochs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "train_resume",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.train_start:train_start",
+      "component": "fovux-mcp",
+      "description": "Launch a YOLO training run as a non-blocking background subprocess.\n\nReturns immediately with a run_id for monitoring via train_status.",
+      "docs_page": "fovux-mcp/docs/tools/train_start.md",
+      "http_policy": {
+        "category": "long_running",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 60.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch": {
+            "default": 16,
+            "type": "integer"
+          },
+          "dataset_path": {
+            "type": "string"
+          },
+          "device": {
+            "default": "auto",
+            "type": "string"
+          },
+          "device_policy": {
+            "default": "any",
+            "type": "string"
+          },
+          "epochs": {
+            "default": 100,
+            "type": "integer"
+          },
+          "extra_args": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "force": {
+            "default": false,
+            "type": "boolean"
+          },
+          "imgsz": {
+            "default": 640,
+            "type": "integer"
+          },
+          "max_concurrent_runs": {
+            "default": 1,
+            "type": "integer"
+          },
+          "max_disk_usage_gb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "max_runtime_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "model": {
+            "default": "yolov8n.pt",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "task": {
+            "default": "detect",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "type": "object"
+      },
+      "name": "train_start",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.train_status:train_status",
+      "component": "fovux-mcp",
+      "description": "Return the current status and latest metrics for a training run.",
+      "docs_page": "fovux-mcp/docs/tools/train_status.md",
+      "http_policy": {
+        "category": "read_only",
+        "concurrency_limit": 4,
+        "enabled": true,
+        "required_scope": "read",
+        "requires_confirmation": false,
+        "timeout_seconds": 20.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "train_status",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    },
+    {
+      "annotations": null,
+      "callable": "fovux.tools.train_stop:train_stop",
+      "component": "fovux-mcp",
+      "description": "Stop a running training run by sending a termination signal to its subprocess.",
+      "docs_page": "fovux-mcp/docs/tools/train_stop.md",
+      "http_policy": {
+        "category": "mutating",
+        "concurrency_limit": 1,
+        "enabled": true,
+        "required_scope": "run:start",
+        "requires_confirmation": true,
+        "timeout_seconds": 30.0
+      },
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "force": {
+            "default": false,
+            "type": "boolean"
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
+      "name": "train_stop",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "owner": "oaslananka",
+      "title": null
+    }
+  ]
+}

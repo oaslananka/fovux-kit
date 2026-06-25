@@ -161,6 +161,20 @@ def http_security_policy() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_http_security_policy.py")])
 
 
+def tool_contracts() -> None:
+    """Verify MCP tool schemas and cross-surface tool mappings."""
+    _run(
+        [
+            "uv",
+            "run",
+            "--project",
+            "fovux-mcp",
+            "python",
+            str(ROOT / "scripts" / "check_tool_contracts.py"),
+        ]
+    )
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -201,6 +215,7 @@ def mcp_docs() -> None:
     docs_truth()
     mcp_transport_decision()
     http_security_policy()
+    tool_contracts()
     task_docs()
     test_strategy()
     _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
@@ -276,6 +291,7 @@ def build_parser() -> argparse.ArgumentParser:
             "docs-truth",
             "mcp-transport-decision",
             "http-security-policy",
+            "tool-contracts",
             "test-strategy",
             "mcp-audit",
             "mcp-build",
@@ -312,6 +328,8 @@ def main() -> int:
         mcp_transport_decision()
     elif args.mode == "http-security-policy":
         http_security_policy()
+    elif args.mode == "tool-contracts":
+        tool_contracts()
     elif args.mode == "test-strategy":
         test_strategy()
     elif args.mode == "mcp-audit":

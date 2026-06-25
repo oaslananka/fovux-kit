@@ -105,7 +105,7 @@ Use the VS Code Command Palette (`Cmd/Ctrl+Shift+P`) and type `Fovux:` to discov
 
 Fovux MCP 1.3.0 exposes 47 local tools across dataset inspection, validation, active learning, training, evaluation, export, quantization, inference, benchmarking, run management, policy/audit, and support-bundle workflows.
 
-The package README and MkDocs site contain the generated complete tool list; CI now fails if a registered tool is missing from docs or the MkDocs navigation.
+The generated complete tool list lives in [`fovux-mcp/README.md`](fovux-mcp/README.md) and the MkDocs site; CI now fails if a registered tool is missing from docs, the schema snapshot, policy metadata, Studio mappings, or the MkDocs navigation.
 
 ## Architecture
 
