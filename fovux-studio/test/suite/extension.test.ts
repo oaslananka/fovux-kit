@@ -140,6 +140,9 @@ describe("Fovux Studio extension", () => {
       expect(panel.options["enableScripts"]).toBe(true);
       expect(panel.options["localResourceRoots"]).toEqual([{ path: "/extension" }]);
     }
+    expect(createdPanels.map((entry) => entry.panel.webview.html).join("\n")).toContain(
+      "HTTP server is offline"
+    );
   });
 
   it("lists run directories in the runs tree provider", () => {

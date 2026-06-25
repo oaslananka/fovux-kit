@@ -224,6 +224,11 @@ def dashboard_resilience() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_dashboard_resilience.py")])
 
 
+def studio_e2e_smoke() -> None:
+    """Verify Studio e2e smoke-test and release evidence contracts."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_studio_e2e_smoke.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -370,6 +375,7 @@ def build_parser() -> argparse.ArgumentParser:
             "dataset-intelligence",
             "review-queue",
             "dashboard-resilience",
+            "studio-e2e-smoke",
             "mcp-audit",
             "mcp-build",
             "mcp-security",
@@ -429,6 +435,8 @@ def main() -> int:
         review_queue()
     elif args.mode == "dashboard-resilience":
         dashboard_resilience()
+    elif args.mode == "studio-e2e-smoke":
+        studio_e2e_smoke()
     elif args.mode == "mcp-audit":
         mcp_audit()
     elif args.mode == "mcp-build":
