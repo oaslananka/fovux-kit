@@ -229,6 +229,11 @@ def dataset_intelligence() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_dataset_intelligence.py")])
 
 
+def review_queue() -> None:
+    """Verify review queue rank/list/submit and Studio queue mode contracts."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_review_queue.py")])
+
+
 def mcp_check() -> None:
     """Run the locked backend validation used locally and in CI."""
     check_versions()
@@ -269,6 +274,7 @@ def mcp_docs() -> None:
     task_docs()
     test_strategy()
     dataset_intelligence()
+    review_queue()
     _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
     _run(["uv", "run", "mkdocs", "build", "--strict"], cwd=MCP_DIR)
     _run(["uv", "run", "python", "../scripts/lint_docs_code.py", ".."], cwd=MCP_DIR)
@@ -351,6 +357,7 @@ def build_parser() -> argparse.ArgumentParser:
             "train-preflight-gate",
             "test-strategy",
             "dataset-intelligence",
+            "review-queue",
             "mcp-audit",
             "mcp-build",
             "mcp-security",
@@ -404,6 +411,8 @@ def main() -> int:
         test_strategy()
     elif args.mode == "dataset-intelligence":
         dataset_intelligence()
+    elif args.mode == "review-queue":
+        review_queue()
     elif args.mode == "mcp-audit":
         mcp_audit()
     elif args.mode == "mcp-build":
