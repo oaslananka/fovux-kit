@@ -259,6 +259,11 @@ def api_stability_plan() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_api_stability_plan.py")])
 
 
+def supply_chain_publishing() -> None:
+    """Verify trusted publishing, provenance, attestations, and consumer verification docs."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_supply_chain_publishing.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -411,6 +416,7 @@ def build_parser() -> argparse.ArgumentParser:
             "int8-workflow",
             "license-boundaries",
             "api-stability-plan",
+            "supply-chain-publishing",
             "studio-e2e-smoke",
             "mcp-audit",
             "mcp-build",
@@ -483,6 +489,8 @@ def main() -> int:
         license_boundaries()
     elif args.mode == "api-stability-plan":
         api_stability_plan()
+    elif args.mode == "supply-chain-publishing":
+        supply_chain_publishing()
     elif args.mode == "studio-e2e-smoke":
         studio_e2e_smoke()
     elif args.mode == "mcp-audit":
