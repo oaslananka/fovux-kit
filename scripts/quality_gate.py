@@ -254,6 +254,11 @@ def studio_e2e_smoke() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_studio_e2e_smoke.py")])
 
 
+def api_stability_plan() -> None:
+    """Verify API stability, plugin capability, and 2.0 migration planning docs."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_api_stability_plan.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -405,6 +410,7 @@ def build_parser() -> argparse.ArgumentParser:
             "benchmark-reproducibility",
             "int8-workflow",
             "license-boundaries",
+            "api-stability-plan",
             "studio-e2e-smoke",
             "mcp-audit",
             "mcp-build",
@@ -475,6 +481,8 @@ def main() -> int:
         int8_workflow()
     elif args.mode == "license-boundaries":
         license_boundaries()
+    elif args.mode == "api-stability-plan":
+        api_stability_plan()
     elif args.mode == "studio-e2e-smoke":
         studio_e2e_smoke()
     elif args.mode == "mcp-audit":
