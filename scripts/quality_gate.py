@@ -284,6 +284,11 @@ def mcp_apps_strategy() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_mcp_apps_strategy.py")])
 
 
+def workbench_readiness() -> None:
+    """Verify final workbench roadmap readiness and closure gates."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_workbench_readiness.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -438,6 +443,7 @@ def build_parser() -> argparse.ArgumentParser:
             "api-stability-plan",
             "governance-lifecycle",
             "mcp-apps-strategy",
+            "workbench-readiness",
             "supply-chain-publishing",
             "mcp-threat-model",
             "studio-e2e-smoke",
@@ -517,6 +523,8 @@ def main() -> int:
         governance_lifecycle()
     elif args.mode == "mcp-apps-strategy":
         mcp_apps_strategy()
+    elif args.mode == "workbench-readiness":
+        workbench_readiness()
     elif args.mode == "supply-chain-publishing":
         supply_chain_publishing()
     elif args.mode == "mcp-threat-model":
