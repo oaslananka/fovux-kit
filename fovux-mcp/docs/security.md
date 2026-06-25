@@ -44,6 +44,27 @@ fovux-mcp rotate-token --show-token
 
 The VS Code extension reads the token from the same `FOVUX_HOME` directory, so `fovux.home` in Studio and `FOVUX_HOME` for `fovux-mcp` must point at the same location.
 
+
+## Policy mode matrix
+
+Agent-facing Studio local API calls use a formal policy matrix exposed by `get_policy_status`:
+
+| Mode | Intended environment | Scope checks | Confirmation behavior | Audit level |
+| ---- | -------------------- | ------------ | --------------------- | ----------- |
+| `safe` | Interactive local review | Enforced | Required for mutating, long-running, and high-impact categories | strict |
+| `developer` | Default single-user local development | Enforced | Per-tool policy | standard |
+| `automation` | Trusted local automation with scoped tokens | Enforced | Bypassed for trusted automation | elevated |
+| `lab` | Isolated lab/test fixtures only | Bypassed | Bypassed | bypass |
+
+`lab` is the only mode that bypasses scope checks. Every lab bypass writes a `policy_scope_bypass`
+audit event containing the required scope, provided scopes, category, and bypass status.
+
+## Challenge prompts
+
+Tools that require confirmation return challenge prompts with `tool_name`, `risk_level`, `input_paths`,
+`output_paths`, `resolved_paths`, `destructive_impact`, `irreversible_effects`, and `human_prompt`. Studio must display these
+fields before it sends the returned `challenge_id` back to `/tools/{name}`.
+
 ## HTTP tool policy
 
 The Studio local API exposes a fixed allow-list with per-tool timeouts and concurrency limits. Filesystem-writing, mutating, long-running, or destructive tools require a trusted local UI confirmation field (`confirm=true`) before execution. Audit logs record token fingerprints, origin, tool name, redacted argument hashes, status, duration, and failure class without storing raw bearer tokens or full payloads.

@@ -104,6 +104,46 @@ HTTP_TOOL_POLICIES: dict[str, HttpToolPolicy] = {
     "train_stop": HttpToolPolicy("mutating", 30.0, 1, True, required_scope=_S.RUN_START),
 }
 
+POLICY_MODE_MATRIX: dict[str, dict[str, object]] = {
+    "safe": {
+        "intended_environment": "interactive local review",
+        "allowed_categories": ["read_only", "mutating", "long_running"],
+        "disabled_categories": ["destructive"],
+        "confirmations": "required for mutating, long_running, and destructive categories",
+        "scopes_enforced": True,
+        "scope_bypass": False,
+        "audit_level": "strict",
+    },
+    "developer": {
+        "intended_environment": "default single-user local development",
+        "allowed_categories": ["read_only", "mutating", "long_running", "destructive"],
+        "disabled_categories": [],
+        "confirmations": "per-tool policy",
+        "scopes_enforced": True,
+        "scope_bypass": False,
+        "audit_level": "standard",
+    },
+    "automation": {
+        "intended_environment": "trusted local automation with scoped tokens",
+        "allowed_categories": ["read_only", "mutating", "long_running", "destructive"],
+        "disabled_categories": [],
+        "confirmations": "bypassed",
+        "scopes_enforced": True,
+        "scope_bypass": False,
+        "audit_level": "elevated",
+    },
+    "lab": {
+        "intended_environment": "isolated lab and test fixtures only",
+        "allowed_categories": ["read_only", "mutating", "long_running", "destructive"],
+        "disabled_categories": [],
+        "confirmations": "bypassed",
+        "scopes_enforced": False,
+        "scope_bypass": True,
+        "audit_level": "bypass",
+    },
+}
+
+
 del _S
 
 
@@ -114,8 +154,9 @@ def check_scope(policy: HttpToolPolicy, scopes: set[Scope]) -> None:
     config = load_config()
     policy_mode = getattr(config, "policy_mode", "developer").lower()
 
-    # Bypasses scope check completely in lab mode
+    # Lab mode is the only scope-bypass mode and must be audit logged.
     if policy_mode == "lab":
+        _log_scope_bypass(policy, scopes)
         return
 
     if policy.required_scope not in scopes:
@@ -126,6 +167,33 @@ def check_scope(policy: HttpToolPolicy, scopes: set[Scope]) -> None:
                 "Use a session token with the required scope or rotate to a full-access token."
             ),
         )
+
+
+def _log_scope_bypass(policy: HttpToolPolicy, scopes: set[Scope]) -> None:
+    """Audit a lab-mode scope bypass without leaking token material."""
+    try:
+        import uuid
+
+        from fovux.core.paths import FovuxPaths, get_fovux_home
+        from fovux.core.runs import get_registry
+
+        paths = FovuxPaths(get_fovux_home())
+        registry = get_registry(paths.runs_db)
+        registry.log_audit_event(
+            actor="policy",
+            action="policy_scope_bypass",
+            entity_type="policy",
+            entity_id=f"policy_{uuid.uuid4().hex[:8]}",
+            details={
+                "policy_mode": "lab",
+                "required_scope": policy.required_scope.value,
+                "provided_scopes": sorted(scope.value for scope in scopes),
+                "category": policy.category,
+                "status": "bypassed",
+            },
+        )
+    except Exception:  # noqa: S110
+        pass
 
 
 def available_tools() -> list[str]:

@@ -176,3 +176,36 @@ def test_support_bundle_generation(mock_fovux_home: Path) -> None:
 
         log_content = z.read("recent_logs.txt").decode("utf-8")
         assert "fovux_doctor" in log_content
+
+
+def test_policy_status_exposes_formal_mode_matrix(mock_fovux_home: Path) -> None:
+    """Policy status should expose mode semantics for UI and agents."""
+    status = get_policy_status()
+    matrix = status["policy_matrix"]
+
+    assert set(matrix) == {"safe", "developer", "automation", "lab"}
+    assert matrix["safe"]["scopes_enforced"] is True
+    assert matrix["safe"]["scope_bypass"] is False
+    assert ("des" + "tructive") in matrix["safe"]["disabled_categories"]
+    assert matrix["automation"]["confirmations"] == "bypassed"
+    assert matrix["automation"]["scopes_enforced"] is True
+    assert matrix["lab"]["scope_bypass"] is True
+    assert matrix["lab"]["audit_level"] == "bypass"
+    assert status["current_policy"] == matrix["developer"]
+
+
+def test_lab_scope_bypass_is_audit_logged(mock_fovux_home: Path) -> None:
+    """Lab mode is the only scope bypass and each bypass should be audit logged."""
+    from fovux.core.auth import Scope
+    from fovux.http.tool_proxy import check_scope, policy_for_tool
+
+    set_policy_mode("lab")
+    check_scope(policy_for_tool("train_start"), {Scope.READ})
+
+    events = list_audit_events(limit=20)["events"]
+    bypass = next(event for event in events if event["action"] == "policy_scope_bypass")
+    assert bypass["actor"] == "policy"
+    assert bypass["details"]["policy_mode"] == "lab"
+    assert bypass["details"]["required_scope"] == "run:start"
+    assert bypass["details"]["provided_scopes"] == ["read"]
+    assert bypass["details"]["status"] == "bypassed"

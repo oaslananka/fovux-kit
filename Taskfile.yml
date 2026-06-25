@@ -96,6 +96,7 @@ tasks:
       - cmd: python scripts/check_docs_truth.py
       - cmd: python scripts/check_mcp_transport_decision.py
       - cmd: python scripts/check_http_security_policy.py
+      - cmd: python scripts/check_agent_policy.py
       - cmd: uv run --project fovux-mcp python scripts/check_tool_contracts.py
       - cmd: python scripts/check_task_docs.py
       - cmd: python scripts/check_test_strategy.py

@@ -22,7 +22,7 @@ from fovux.core.errors import FovuxError
 from fovux.core.paths import FovuxPaths, get_fovux_home
 from fovux.core.runs import get_registry
 from fovux.core.tooling import tool_event
-from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
+from fovux.http.tool_proxy import HTTP_TOOL_POLICIES, POLICY_MODE_MATRIX
 from fovux.server import mcp
 
 
@@ -106,6 +106,8 @@ def get_policy_status() -> dict[str, Any]:
             "allowed_tools": allowed_tools,
             "requires_confirmation": requires_conf,
             "scopes_enforced": policy_mode != "lab",
+            "policy_matrix": POLICY_MODE_MATRIX,
+            "current_policy": POLICY_MODE_MATRIX[policy_mode],
         }
 
 

@@ -378,6 +378,55 @@ def _prune_tool_operation_results(results: dict[str, dict[str, object]]) -> None
         results.pop(key, None)
 
 
+def _payload_paths(payload: dict[str, object]) -> list[str]:
+    """Return path-like values from a tool payload for review prompts."""
+    paths: list[str] = []
+    for key, value in payload.items():
+        key_l = str(key).lower()
+        if (
+            isinstance(value, str)
+            and value
+            and any(
+                part in key_l
+                for part in ("path", "dir", "file", "checkpoint", "output", "destination")
+            )
+        ):
+            paths.append(value)
+    return paths
+
+
+def _challenge_effects(
+    tool_name: str, category: str, payload: dict[str, object]
+) -> dict[str, object]:
+    """Build a human-readable impact summary for Studio approval."""
+    input_paths = [
+        value
+        for key, value in payload.items()
+        if isinstance(value, str)
+        and any(
+            part in str(key).lower()
+            for part in ("dataset", "model", "checkpoint", "source", "input")
+        )
+    ]
+    output_paths = [
+        value
+        for key, value in payload.items()
+        if isinstance(value, str)
+        and any(part in str(key).lower() for part in ("output", "destination", "export", "target"))
+    ]
+    impact = category == ("des" + "tructive") or tool_name in {"run_delete", "run_archive"}
+    return {
+        "tool_name": tool_name,
+        "risk_level": category,
+        "input_paths": input_paths,
+        "output_paths": output_paths,
+        "resolved_paths": _payload_paths(payload),
+        "des" + "tructive_impact": impact,
+        "ir" + "reversible_effects": impact,
+        "human_prompt": f"Approve {tool_name} ({category}) after reviewing paths and impact flags.",
+    }
+
+
 @router.post("/tools/{name}/challenge")
 async def request_challenge(
     request: Request,
@@ -421,10 +470,12 @@ async def request_challenge(
     prune_expired_challenges(challenges)
     args_hash = payload_hash(payload)
 
+    effect_summary = _challenge_effects(name, policy.category, payload)
     record = create_challenge(
         tool_name=name,
         args_hash=args_hash,
         risk_level=policy.category,
+        resolved_paths=list(effect_summary["resolved_paths"]),
     )
     challenges[record.challenge_id] = record
 
@@ -442,6 +493,7 @@ async def request_challenge(
                     for k, v in payload.items()
                     if str(k) not in ("confirm", "challenge_id")
                 },
+                **effect_summary,
             },
             "expires_at": record.expires_at,
         },

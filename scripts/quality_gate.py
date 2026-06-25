@@ -161,6 +161,11 @@ def http_security_policy() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_http_security_policy.py")])
 
 
+def agent_policy() -> None:
+    """Verify agent policy modes, approval prompts, and bypass auditing."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_agent_policy.py")])
+
+
 def tool_contracts() -> None:
     """Verify MCP tool schemas and cross-surface tool mappings."""
     _run(
@@ -215,6 +220,7 @@ def mcp_docs() -> None:
     docs_truth()
     mcp_transport_decision()
     http_security_policy()
+    agent_policy()
     tool_contracts()
     task_docs()
     test_strategy()
@@ -291,6 +297,7 @@ def build_parser() -> argparse.ArgumentParser:
             "docs-truth",
             "mcp-transport-decision",
             "http-security-policy",
+            "agent-policy",
             "tool-contracts",
             "test-strategy",
             "mcp-audit",
@@ -328,6 +335,8 @@ def main() -> int:
         mcp_transport_decision()
     elif args.mode == "http-security-policy":
         http_security_policy()
+    elif args.mode == "agent-policy":
+        agent_policy()
     elif args.mode == "tool-contracts":
         tool_contracts()
     elif args.mode == "test-strategy":
