@@ -259,6 +259,11 @@ def api_stability_plan() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_api_stability_plan.py")])
 
 
+def governance_lifecycle() -> None:
+    """Verify issue lifecycle, ADR template, contributor ladder, and governance automation."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_governance_lifecycle.py")])
+
+
 def supply_chain_publishing() -> None:
     """Verify trusted publishing, provenance, attestations, and consumer verification docs."""
     _run([sys.executable, str(ROOT / "scripts" / "check_supply_chain_publishing.py")])
@@ -421,6 +426,7 @@ def build_parser() -> argparse.ArgumentParser:
             "int8-workflow",
             "license-boundaries",
             "api-stability-plan",
+            "governance-lifecycle",
             "supply-chain-publishing",
             "mcp-threat-model",
             "studio-e2e-smoke",
@@ -495,6 +501,8 @@ def main() -> int:
         license_boundaries()
     elif args.mode == "api-stability-plan":
         api_stability_plan()
+    elif args.mode == "governance-lifecycle":
+        governance_lifecycle()
     elif args.mode == "supply-chain-publishing":
         supply_chain_publishing()
     elif args.mode == "mcp-threat-model":
