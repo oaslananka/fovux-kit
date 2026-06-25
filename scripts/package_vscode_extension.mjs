@@ -29,10 +29,14 @@ function parseArgs(argv) {
     const value = argv[index + 1];
     if (key === "--extension-dir" && value) options.extensionDir = value;
     else if (key === "--out" && value) options.out = value;
+    else if (key === "--max-size-bytes" && value) options.maxSizeBytes = Number(value);
     else throw new Error(`Unknown or incomplete argument: ${key}`);
     index += 1;
   }
   if (!options.out) throw new Error("--out is required");
+  if (options.maxSizeBytes !== undefined && (!Number.isFinite(options.maxSizeBytes) || options.maxSizeBytes <= 0)) {
+    throw new Error("--max-size-bytes must be a positive number");
+  }
   return options;
 }
 
@@ -395,6 +399,11 @@ async function main() {
   await mkdir(dirname(outPath), { recursive: true });
   await writeFile(outPath, makeZip(entries));
   const size = (await stat(outPath)).size;
+  if (options.maxSizeBytes !== undefined && size > options.maxSizeBytes) {
+    throw new Error(
+      `VSIX_PACKAGE_TOO_LARGE ${size} bytes exceeds ${options.maxSizeBytes} bytes.`,
+    );
+  }
   console.log(
     `Packaged ${manifest.publisher}.${manifest.name} v${manifest.version} to ${outPath} (${size} bytes).`,
   );

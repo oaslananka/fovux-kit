@@ -333,7 +333,8 @@ jobs:
           package_name="${{ steps.meta.outputs.name }}"
           node scripts/package_vscode_extension.mjs \
             --extension-dir "${VSCODE_DIRECTORY}" \
-            --out "${VSCODE_DIRECTORY}/out/${package_name}.vsix"
+            --out "${VSCODE_DIRECTORY}/out/${package_name}.vsix" \
+            --max-size-bytes 5000000
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:

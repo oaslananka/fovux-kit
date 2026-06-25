@@ -254,6 +254,11 @@ def studio_e2e_smoke() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_studio_e2e_smoke.py")])
 
 
+def studio_release_evidence() -> None:
+    """Verify Studio VSIX evidence, size gate, and rollback playbook."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_studio_release_evidence.py")])
+
+
 def api_stability_plan() -> None:
     """Verify API stability, plugin capability, and 2.0 migration planning docs."""
     _run([sys.executable, str(ROOT / "scripts" / "check_api_stability_plan.py")])
@@ -430,6 +435,7 @@ def build_parser() -> argparse.ArgumentParser:
             "supply-chain-publishing",
             "mcp-threat-model",
             "studio-e2e-smoke",
+            "studio-release-evidence",
             "mcp-audit",
             "mcp-build",
             "mcp-security",
@@ -509,6 +515,8 @@ def main() -> int:
         mcp_threat_model()
     elif args.mode == "studio-e2e-smoke":
         studio_e2e_smoke()
+    elif args.mode == "studio-release-evidence":
+        studio_release_evidence()
     elif args.mode == "mcp-audit":
         mcp_audit()
     elif args.mode == "mcp-build":
