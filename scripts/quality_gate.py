@@ -244,6 +244,11 @@ def int8_workflow() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_int8_workflow.py")])
 
 
+def license_boundaries() -> None:
+    """Verify licensing and third-party integration boundary documentation."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_license_boundaries.py")])
+
+
 def studio_e2e_smoke() -> None:
     """Verify Studio e2e smoke-test and release evidence contracts."""
     _run([sys.executable, str(ROOT / "scripts" / "check_studio_e2e_smoke.py")])
@@ -399,6 +404,7 @@ def build_parser() -> argparse.ArgumentParser:
             "deployment-profiles",
             "benchmark-reproducibility",
             "int8-workflow",
+            "license-boundaries",
             "studio-e2e-smoke",
             "mcp-audit",
             "mcp-build",
@@ -467,6 +473,8 @@ def main() -> int:
         benchmark_reproducibility()
     elif args.mode == "int8-workflow":
         int8_workflow()
+    elif args.mode == "license-boundaries":
+        license_boundaries()
     elif args.mode == "studio-e2e-smoke":
         studio_e2e_smoke()
     elif args.mode == "mcp-audit":
