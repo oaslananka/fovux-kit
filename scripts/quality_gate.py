@@ -156,6 +156,11 @@ def mcp_transport_decision() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_mcp_transport_decision.py")])
 
 
+def mcp_client_compatibility() -> None:
+    """Verify MCP client compatibility matrix and raw JSON-RPC smoke coverage."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_mcp_client_compatibility.py")])
+
+
 def http_security_policy() -> None:
     """Verify the Studio local API security policy contract."""
     _run([sys.executable, str(ROOT / "scripts" / "check_http_security_policy.py")])
@@ -164,6 +169,11 @@ def http_security_policy() -> None:
 def agent_policy() -> None:
     """Verify agent policy modes, approval prompts, and bypass auditing."""
     _run([sys.executable, str(ROOT / "scripts" / "check_agent_policy.py")])
+
+
+def audit_schema() -> None:
+    """Verify structured local activity event schema and exports."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_audit_schema.py")])
 
 
 def tool_contracts() -> None:
@@ -233,8 +243,10 @@ def mcp_docs() -> None:
     """Build the backend docs and lint embedded code blocks."""
     docs_truth()
     mcp_transport_decision()
+    mcp_client_compatibility()
     http_security_policy()
     agent_policy()
+    audit_schema()
     tool_contracts()
     studio_lm_tools()
     task_docs()
@@ -311,8 +323,10 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-docs",
             "docs-truth",
             "mcp-transport-decision",
+            "mcp-client-compatibility",
             "http-security-policy",
             "agent-policy",
+            "audit-schema",
             "tool-contracts",
             "studio-lm-tools",
             "test-strategy",
@@ -349,10 +363,14 @@ def main() -> int:
         docs_truth()
     elif args.mode == "mcp-transport-decision":
         mcp_transport_decision()
+    elif args.mode == "mcp-client-compatibility":
+        mcp_client_compatibility()
     elif args.mode == "http-security-policy":
         http_security_policy()
     elif args.mode == "agent-policy":
         agent_policy()
+    elif args.mode == "audit-schema":
+        audit_schema()
     elif args.mode == "tool-contracts":
         tool_contracts()
     elif args.mode == "studio-lm-tools":

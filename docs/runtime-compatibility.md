@@ -31,7 +31,6 @@ The selected baseline is the latest pnpm 10 release line. pnpm 11 is stable, but
 latest 10.x line preserves the current Node 22/24 support policy while avoiding package-manager
 major-version churn in this compatibility update.
 
-
 ## Python datetime and HTTP test-client policy
 
 The SQLite-backed run registry does not rely on Python's default `sqlite3` datetime adapters or
@@ -43,6 +42,12 @@ HTTP route tests use Starlette's `TestClient` import path and the dev dependency
 `httpx2`, which is the non-deprecated backend expected by the current Starlette test client.
 Compatibility tests run affected modules with `DeprecationWarning` and `StarletteDeprecationWarning`
 promoted to errors.
+
+## MCP client compatibility
+
+MCP client compatibility results live in [`mcp-client-compatibility.md`](mcp-client-compatibility.md).
+That page tracks client, OS, transport, install method, smoke command, status, known limitations,
+raw JSON-RPC coverage, and the manual GUI checklist.
 
 ## Source Checks
 
