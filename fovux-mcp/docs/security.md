@@ -1,13 +1,26 @@
 # Security Model
 
-Fovux v1.0.0 keeps `stdio` as the MCP transport and treats the optional Studio HTTP server as a local, authenticated control plane.
+Fovux keeps `stdio` as the MCP transport and treats the Fovux Studio local API as a local, authenticated control plane.
 
-## HTTP auth
+## Studio local API auth
 
 - `GET /health` is the only unauthenticated endpoint.
-- All other HTTP routes require `Authorization: Bearer <token>`.
+- All other Studio local API routes require `Authorization: Bearer <token>`.
+- If an `Origin` header is present, it must be a trusted VS Code webview, VS Code CDN, or localhost origin; otherwise the request is rejected with `403 Forbidden` before tool execution.
 - The bearer token is stored at `FOVUX_HOME/auth.token`.
 - On Unix-like systems the token file is created with restrictive permissions when possible.
+
+
+## Local bind and remote mode
+
+The Studio local API is designed for same-machine use. The CLI refuses non-local bind hosts unless
+`--allow-nonlocal-bind` is supplied explicitly. That flag is an operational escape hatch, not a
+remote-server security model.
+
+A remote or multi-user Fovux server must not rely on the local bearer token alone. Before remote mode
+can be supported, it needs a separate OAuth/OIDC resource-server design with TLS termination, audience
+binding, scoped access tokens, token revocation, protected resource metadata, audit correlation, and
+reverse-proxy/network ACL guidance.
 
 ## Token lifecycle
 

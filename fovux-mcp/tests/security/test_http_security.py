@@ -8,7 +8,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from starlette.testclient import TestClient
 from tests.path_helpers import find_package_root
+from typer.testing import CliRunner
 
+from fovux.cli import app
 from fovux.core.auth import Scope, token_fingerprint
 from fovux.http.app import (
     MAX_TOOL_BODY_BYTES,
@@ -20,6 +22,7 @@ from fovux.http.app import (
 )
 
 REPO_ROOT = find_package_root(Path(__file__))
+runner = CliRunner()
 
 
 @pytest.mark.security
@@ -297,3 +300,137 @@ def test_admin_token_bypasses_scope_check() -> None:
         )
     assert response.status_code == 403
     assert "confirm" in response.text.lower()
+
+
+@pytest.mark.security
+def test_invalid_origin_rejected_before_authenticated_tool_call() -> None:
+    """Browser requests from untrusted origins should fail closed before tool execution."""
+    with TestClient(create_app()) as client:
+        client.app.state.nonlocal_bind_allowed = True
+        token = client.app.state.auth_token
+        response = client.post(
+            "/tools/model_list",
+            json={},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Origin": "https://evil.example",
+            },
+        )
+
+    assert response.status_code == 403
+    assert "origin" in response.text.lower()
+
+
+@pytest.mark.security
+def test_invalid_origin_rejected_for_public_health_probe() -> None:
+    """Even public health checks should reject browser DNS-rebinding origins."""
+    with TestClient(create_app()) as client:
+        response = client.get("/health", headers={"Origin": "https://evil.example"})
+
+    assert response.status_code == 403
+
+
+@pytest.mark.security
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "vscode-webview://abc123",
+        "https://file+.vscode-cdn.net",
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+    ],
+)
+def test_allowed_studio_origins_can_reach_authenticated_routes(origin: str) -> None:
+    """Trusted Studio and local development origins should be accepted."""
+    with TestClient(create_app()) as client:
+        client.app.state.nonlocal_bind_allowed = True
+        token = client.app.state.auth_token
+        response = client.get(
+            "/runs",
+            headers={"Authorization": f"Bearer {token}", "Origin": origin},
+        )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.security
+def test_all_non_health_routes_require_authentication() -> None:
+    """Every documented Studio local API route except /health should require auth."""
+    probes = [
+        ("GET", "/runs"),
+        ("GET", "/metrics"),
+        ("GET", "/runs/missing"),
+        ("POST", "/runs/search"),
+        ("GET", "/runs/missing/stream"),
+        ("GET", "/runs/missing/metrics"),
+        ("POST", "/tools/model_list/challenge"),
+        ("POST", "/tools/model_list"),
+        ("POST", "/operations"),
+        ("GET", "/operations/missing"),
+        ("POST", "/operations/missing/cancel"),
+        ("GET", "/operations/missing/logs"),
+        ("GET", "/operations/missing/result"),
+        ("GET", "/events"),
+        ("GET", "/runs/missing/lineage"),
+        ("GET", "/runs/missing/events"),
+        ("GET", "/datasets"),
+        ("GET", "/datasets/missing"),
+        ("GET", "/exports"),
+    ]
+    with TestClient(create_app()) as client:
+        for method, path in probes:
+            response = client.request(method, path, json={} if method == "POST" else None)
+            assert response.status_code == 401, f"{method} {path} did not require auth"
+
+
+@pytest.mark.security
+def test_cli_refuses_nonlocal_bind_without_explicit_opt_in() -> None:
+    """The CLI must not bind the Studio local API to all interfaces by accident."""
+    remote_host = "0." + "0." + "0." + "0"
+    with (
+        patch("fovux.cli.configure_logging"),
+        patch("uvicorn.Server") as server_cls,
+    ):
+        result = runner.invoke(
+            app,
+            ["serve", "--http", "--tcp", "--host", remote_host],
+        )
+
+    assert result.exit_code == 2
+    assert "--allow-nonlocal-bind" in result.stdout
+    server_cls.assert_not_called()
+
+
+@pytest.mark.security
+def test_cli_allows_nonlocal_bind_only_with_prominent_warning() -> None:
+    """Explicit non-local bind opt-in should log a prominent remote-mode warning."""
+    fake_server = MagicMock()
+    remote_host = "0." + "0." + "0." + "0"
+    with (
+        patch("fovux.cli.configure_logging"),
+        patch("fovux.http.app.create_app", return_value="web-app"),
+        patch("uvicorn.Config", return_value="config"),
+        patch("uvicorn.Server", return_value=fake_server),
+        patch("fovux.http.app.get_logger") as get_logger,
+    ):
+        logger = MagicMock()
+        get_logger.return_value = logger
+        result = runner.invoke(
+            app,
+            [
+                "serve",
+                "--http",
+                "--tcp",
+                "--host",
+                remote_host,
+                "--allow-nonlocal-bind",
+            ],
+        )
+
+    assert result.exit_code == 0
+    fake_server.run.assert_called_once()
+    logger.warning.assert_called_once()
+    warning = str(logger.warning.call_args).lower()
+    assert "oauth" in warning
+    assert "reverse proxy" in warning
+    assert "token" not in warning

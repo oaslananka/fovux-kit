@@ -16,6 +16,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -80,6 +81,8 @@ if not isinstance(sys.stderr, ThreadLocalStream):
 
 
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+_ALLOWED_ORIGIN_HOST_SUFFIX = ".vscode-cdn.net"
+_ALLOWED_ORIGIN_SCHEMES = {"https", "vscode-webview"}
 DEFAULT_TOOL_RATE_LIMIT = 100
 TOOL_RATE_LIMITS = {"train_start": 5}
 MAX_TOOL_BODY_BYTES = 1024 * 1024
@@ -90,6 +93,38 @@ def set_nonlocal_bind_allowed(value: bool) -> None:
     """Set whether non-local IP addresses are allowed to bind."""
     global _NON_LOCAL_BIND_ALLOWED
     _NON_LOCAL_BIND_ALLOWED = value
+
+
+def is_local_bind_host(host: str) -> bool:
+    """Return whether a bind host is local-only."""
+    normalized = host.strip().lower().strip("[]")
+    return normalized in _LOCAL_HOSTS
+
+
+def _is_allowed_origin(origin: str | None) -> bool:
+    """Return whether a browser Origin is trusted for the Studio local API."""
+    if not origin:
+        return True
+    parsed = urlsplit(origin)
+    scheme = parsed.scheme.lower()
+    host = (parsed.hostname or "").lower()
+    if scheme == "vscode-webview":
+        return True
+    if scheme in {"http", "https"} and host in _LOCAL_HOSTS:
+        return True
+    return scheme == "https" and (
+        host == "vscode-cdn.net" or host.endswith(_ALLOWED_ORIGIN_HOST_SUFFIX)
+    )
+
+
+def _reject_invalid_origin(origin: str) -> JSONResponse:
+    """Build a DNS-rebinding-safe invalid-Origin response."""
+    return JSONResponse(
+        status_code=403,
+        content={
+            "detail": "Origin is not allowed for the Fovux Studio local API.",
+        },
+    )
 
 
 @asynccontextmanager
@@ -129,14 +164,14 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
         Configured FastAPI app instance.
     """
     app = FastAPI(
-        title="Fovux MCP HTTP Transport",
+        title="Fovux Studio Local API",
         version=__version__,
-        description="Local HTTP interface for fovux-studio VS Code extension.",
+        description="Local custom REST/SSE interface for the Fovux Studio VS Code extension.",
         lifespan=_lifespan,
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=r"^(vscode-webview://.*|https://.*\.vscode-cdn\.net)$",
+        allow_origin_regex=r"^(vscode-webview://.*|https://.*\.vscode-cdn\.net|https://vscode-cdn\.net|https?://(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?)$",
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
         max_age=600,
@@ -163,9 +198,13 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
+        origin = request.headers.get("Origin")
+        if not _is_allowed_origin(origin):
+            return _reject_invalid_origin(origin or "")
+
         if (
             request.method.upper() == "OPTIONS"
-            and request.headers.get("Origin")
+            and origin
             and request.headers.get("Access-Control-Request-Method")
         ):
             return await call_next(request)
@@ -273,15 +312,17 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
 
 
 def warn_if_nonlocal_host(host: str) -> None:
-    """Log a warning when HTTP is configured for a non-local bind host."""
-    if host.lower() in _LOCAL_HOSTS:
+    """Log a warning when the Studio local API is configured for a non-local bind host."""
+    if is_local_bind_host(host):
         return
     get_logger(__name__).warning(
-        "http_nonlocal_bind",
+        "studio_api_nonlocal_bind",
         host=host,
         message=(
-            "Fovux HTTP auth is local-first. If this bind is behind a reverse proxy, "
-            "ensure the proxy is private and rate limiting remains effective."
+            "The Fovux Studio local API is local-first. Non-local binding requires "
+            "--allow-nonlocal-bind and must be protected by a private reverse proxy, "
+            "network ACLs, TLS, rate limits, and a future OAuth/OIDC design before any "
+            "remote or multi-user deployment."
         ),
     )
 

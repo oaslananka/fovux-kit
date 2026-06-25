@@ -90,10 +90,17 @@ def serve(
 
         from fovux.http.app import (
             create_app,
+            is_local_bind_host,
             set_nonlocal_bind_allowed,
             warn_if_nonlocal_host,
         )
 
+        if not is_local_bind_host(host) and not allow_nonlocal_bind:
+            console.print(
+                "[red]Refusing to bind the Fovux Studio local API to a non-local host without "
+                "--allow-nonlocal-bind.[/red]"
+            )
+            raise typer.Exit(2)
         if allow_nonlocal_bind:
             set_nonlocal_bind_allowed(True)
         warn_if_nonlocal_host(host)

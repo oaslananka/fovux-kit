@@ -11,13 +11,13 @@ using a STRIDE-inspired framework.
 - **Trust level:** Fully trusted. Only local processes should have access.
 - **Threats:** Unauthorized file access, symlink attacks, path traversal.
 
-### HTTP Transport
+### Fovux Studio Local API
 
-- **Description:** FastAPI server on `127.0.0.1:7823`.
-- **Trust level:** Authenticated via bearer token. Bound to loopback only.
-- **Threats:** Token leakage, localhost bypass (e.g., DNS rebinding).
-- **Container note:** The Docker image listens on the container bridge interface so
-  published ports work; `docker-compose.yml` binds the host side to `127.0.0.1`.
+- **Description:** FastAPI custom REST/SSE server on `127.0.0.1:7823` or a Unix socket.
+- **Trust level:** Same-machine only; authenticated via local bearer token and scoped session tokens.
+- **Threats:** Token leakage, localhost bypass, DNS rebinding, accidental non-local bind exposure.
+- **Controls:** All non-health routes require auth, browser requests with untrusted `Origin` are rejected, and non-local bind hosts require explicit `--allow-nonlocal-bind`.
+- **Container note:** The Docker image listens on the container bridge interface so published ports work; `docker-compose.yml` binds the host side to `127.0.0.1`.
 
 ### Subprocess Training
 
@@ -39,8 +39,8 @@ using a STRIDE-inspired framework.
 
 ## Non-Goals
 
-- **Network-facing deployment.** Fovux is designed for local use only.
-- **Multi-user access control.** Single-user, single-machine assumed.
+- **Network-facing deployment with local bearer auth.** Fovux is designed for local use only.
+- **Multi-user access control without OAuth/OIDC.** Single-user, single-machine is assumed until a separate remote-server authorization design exists.
 - **Encrypted storage.** `FOVUX_HOME` is not encrypted at rest.
 
 ## Mitigations
@@ -49,7 +49,8 @@ using a STRIDE-inspired framework.
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Path traversal in tool inputs | All file paths validated against `FOVUX_HOME` and allowed roots                                              |
 | Token leakage                 | Bearer token stored with restrictive file permissions; rotatable via `fovux-mcp rotate-token`                |
-| DNS rebinding                 | HTTP server binds to `127.0.0.1` by default and does not bind to all interfaces unless explicitly configured |
+| DNS rebinding                 | Studio local API binds locally by default and rejects untrusted browser `Origin` headers before auth/tool execution |
+| Accidental remote exposure     | Non-local bind hosts require `--allow-nonlocal-bind`; remote mode still requires a future OAuth/OIDC resource-server design |
 | Zombie processes              | Training worker writes PID and status atomically; `train_stop` uses process group kill                       |
 | Malicious ONNX                | Only user-provided local models are loaded; no remote model download                                         |
 | CI token exposure             | Protected GitHub Actions secrets injected only into publishing jobs; never committed or logged               |

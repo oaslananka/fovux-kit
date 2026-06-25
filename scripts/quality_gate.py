@@ -156,6 +156,11 @@ def mcp_transport_decision() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_mcp_transport_decision.py")])
 
 
+def http_security_policy() -> None:
+    """Verify the Studio local API security policy contract."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_http_security_policy.py")])
+
+
 def task_docs() -> None:
     """Verify documented Taskfile command references."""
     _run([sys.executable, str(ROOT / "scripts" / "check_task_docs.py")])
@@ -195,6 +200,7 @@ def mcp_docs() -> None:
     """Build the backend docs and lint embedded code blocks."""
     docs_truth()
     mcp_transport_decision()
+    http_security_policy()
     task_docs()
     test_strategy()
     _run(["uv", "run", "python", "scripts/check_tool_docs.py"], cwd=MCP_DIR)
@@ -269,6 +275,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-docs",
             "docs-truth",
             "mcp-transport-decision",
+            "http-security-policy",
             "test-strategy",
             "mcp-audit",
             "mcp-build",
@@ -303,6 +310,8 @@ def main() -> int:
         docs_truth()
     elif args.mode == "mcp-transport-decision":
         mcp_transport_decision()
+    elif args.mode == "http-security-policy":
+        http_security_policy()
     elif args.mode == "test-strategy":
         test_strategy()
     elif args.mode == "mcp-audit":
