@@ -239,6 +239,11 @@ def benchmark_reproducibility() -> None:
     _run([sys.executable, str(ROOT / "scripts" / "check_benchmark_reproducibility.py")])
 
 
+def int8_workflow() -> None:
+    """Verify INT8 calibration, validation, latency comparison, and Studio target guidance."""
+    _run([sys.executable, str(ROOT / "scripts" / "check_int8_workflow.py")])
+
+
 def studio_e2e_smoke() -> None:
     """Verify Studio e2e smoke-test and release evidence contracts."""
     _run([sys.executable, str(ROOT / "scripts" / "check_studio_e2e_smoke.py")])
@@ -393,6 +398,7 @@ def build_parser() -> argparse.ArgumentParser:
             "export-matrix",
             "deployment-profiles",
             "benchmark-reproducibility",
+            "int8-workflow",
             "studio-e2e-smoke",
             "mcp-audit",
             "mcp-build",
@@ -459,6 +465,8 @@ def main() -> int:
         deployment_profiles()
     elif args.mode == "benchmark-reproducibility":
         benchmark_reproducibility()
+    elif args.mode == "int8-workflow":
+        int8_workflow()
     elif args.mode == "studio-e2e-smoke":
         studio_e2e_smoke()
     elif args.mode == "mcp-audit":
