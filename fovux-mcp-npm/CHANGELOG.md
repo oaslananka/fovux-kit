@@ -12,6 +12,13 @@ GitHub milestones, not in package changelog sections.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.1](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-npm-v1.4.0...fovux-mcp-npm-v1.4.1) (2026-07-08)
+
+
+### Miscellaneous Chores
+
+* **fovux-mcp-npm:** Synchronize fovux-mcp versions
+
 ## [1.4.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-npm-v1.3.0...fovux-mcp-npm-v1.4.0) (2026-06-25)
 
 
