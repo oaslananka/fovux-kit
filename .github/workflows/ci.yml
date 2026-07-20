@@ -121,7 +121,7 @@ jobs:
 
       - name: Install backend compatibility environment
         working-directory: fovux-mcp
-        run: uv sync --frozen --extra dev --no-install-project --no-build
+        run: uv sync --frozen --extra dev --no-install-project --no-build-package fovux-mcp
 
       - name: Run filesystem, process, and package smoke tests
         working-directory: fovux-mcp
@@ -129,8 +129,8 @@ jobs:
           PYTHONPATH: src
         run: |
           set -euo pipefail
-          uv run --no-sync python -c "import fovux; print(fovux.__version__)"
-          uv run --no-sync pytest -q --no-header \
+          uv run --no-sync --no-build python -c "import fovux; print(fovux.__version__)"
+          uv run --no-sync --no-build pytest -q --no-header \
             tests/unit/test_config.py \
             tests/unit/test_path_helpers.py \
             tests/unit/test_path_policy.py \
@@ -199,14 +199,19 @@ jobs:
           pnpm rebuild esbuild
           cd ../fovux-mcp-npm
           npm ci --ignore-scripts
-      - name: Run Studio and wrapper smoke tests
+      - name: Typecheck and test Studio
+        working-directory: fovux-studio
         run: |
           set -euo pipefail
-          cd fovux-studio
           pnpm run typecheck
-          pnpm test --run
-          pnpm run build
-          cd ../fovux-mcp-npm
+          pnpm test
+      - name: Build Studio
+        working-directory: fovux-studio
+        run: pnpm run build
+      - name: Validate npm wrapper package
+        working-directory: fovux-mcp-npm
+        run: |
+          set -euo pipefail
           node --check bin/fovux-mcp.js
           npm pack --dry-run
 
@@ -251,8 +256,8 @@ jobs:
         working-directory: fovux-mcp
         run: |
           set -euo pipefail
-          uv sync --frozen --extra dev --no-install-project --no-build
-          PYTHONPATH=src uv run --no-sync pytest -q --no-header \
+          uv sync --frozen --extra dev --no-install-project --no-build-package fovux-mcp
+          PYTHONPATH=src uv run --no-sync --no-build pytest -q --no-header \
             -m "slow or integration or chaos or benchmark" \
             --basetemp="$RUNNER_TEMP/fovux-slow-pytest"
 

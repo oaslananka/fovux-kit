@@ -49,7 +49,7 @@ def test_node_compatibility_is_a_separate_ubuntu_lane() -> None:
     assert "pnpm-lock.yaml" in node
     assert "package-lock.json" in node
     assert "pnpm run typecheck" in node
-    assert "pnpm test --run" in node
+    assert "pnpm test" in node
     assert "npm pack --dry-run" in node
 
 
@@ -102,10 +102,13 @@ def test_compatibility_installs_are_frozen_without_implicit_builds() -> None:
     node = _job_block(workflow, "node-compatibility", "node-required")
     slow = _job_block(workflow, "slow-validation", "renovate-config")
 
-    assert "uv sync --frozen --extra dev --no-install-project --no-build" in compatibility
-    assert "uv run --no-sync python" in compatibility
-    assert "uv run --no-sync pytest" in compatibility
+    compatibility_sync = (
+        "uv sync --frozen --extra dev --no-install-project --no-build-package fovux-mcp"
+    )
+    assert compatibility_sync in compatibility
+    assert "uv run --no-sync --no-build python" in compatibility
+    assert "uv run --no-sync --no-build pytest" in compatibility
     assert "pnpm install --frozen-lockfile --ignore-scripts" in node
     assert "pnpm rebuild esbuild" in node
-    assert "uv sync --frozen --extra dev --no-install-project --no-build" in slow
-    assert "uv run --no-sync pytest" in slow
+    assert compatibility_sync in slow
+    assert "uv run --no-sync --no-build pytest" in slow
