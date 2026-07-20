@@ -106,6 +106,7 @@ jobs:
             ["codeql.yml"]="codeql-required"
             ["scorecard.yml"]="scorecard-required"
             ["release-please.yml"]="release-please"
+            ["dependency-review.yml"]="dependency-review"
           )
 
           create_status() {
@@ -192,7 +193,15 @@ jobs:
             for workflow in "${!workflow_contexts[@]}"; do
               context="${workflow_contexts[$workflow]}"
               create_status "$head_sha" pending "$context" "$workflow release PR check is queued."
-              gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref "$branch"
+              if [[ "$workflow" == "dependency-review.yml" ]]; then
+                gh workflow run "$workflow" \
+                  --repo "$GITHUB_REPOSITORY" \
+                  --ref "$branch" \
+                  -f base-ref="$GITHUB_SHA" \
+                  -f head-ref="$head_sha"
+              else
+                gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref "$branch"
+              fi
             done
             for workflow in "${!workflow_contexts[@]}"; do
               wait_for_workflow "$branch" "$head_sha" "$workflow" "${workflow_contexts[$workflow]}" "$dispatch_started"

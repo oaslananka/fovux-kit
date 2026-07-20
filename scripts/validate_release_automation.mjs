@@ -192,6 +192,9 @@ if (!workflowNames.includes("release-please.yml")) {
     '["codeql.yml"]="codeql-required"',
     '["scorecard.yml"]="scorecard-required"',
     '["release-please.yml"]="release-please"',
+    '["dependency-review.yml"]="dependency-review"',
+    '-f base-ref="$GITHUB_SHA"',
+    '-f head-ref="$head_sha"',
     "publish-npm-wrapper",
     "npm publish --provenance --access public",
   ]) {
@@ -208,6 +211,25 @@ if (!workflowNames.includes("release-please.yml")) {
   ]) {
     if (releaseWorkflow.includes(forbidden)) {
       fail(`release workflow must not reference ${forbidden}`);
+    }
+  }
+}
+
+if (!workflowNames.includes("dependency-review.yml")) {
+  fail("dependency review workflow is required");
+} else {
+  const dependencyReviewWorkflow = await readFile(
+    join(workflowsPath, "dependency-review.yml"),
+    "utf8",
+  );
+  for (const required of [
+    "base-ref:",
+    "head-ref:",
+    "inputs['base-ref']",
+    "inputs['head-ref']",
+  ]) {
+    if (!dependencyReviewWorkflow.includes(required)) {
+      fail(`dependency review workflow must reference ${required}`);
     }
   }
 }
