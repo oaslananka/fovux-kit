@@ -2,14 +2,36 @@
 
 from __future__ import annotations
 
+import json
 import os
-import shlex
 import shutil
 import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 NOT_CONFIGURED_EXIT = 2
+_ALLOWED_EXECUTABLES = frozenset({"snyk", "sonar-scanner"})
+_MAX_ARGUMENT_LENGTH = 2048
+
+
+def _validated_command(command: Sequence[str]) -> tuple[str, ...]:
+    """Validate scanner executable and arguments before OS execution."""
+    if not command:
+        raise ValueError("Scanner command must not be empty")
+    executable = command[0]
+    if executable not in _ALLOWED_EXECUTABLES:
+        raise ValueError(f"Scanner executable is not approved: {executable}")
+
+    validated: list[str] = []
+    for argument in command:
+        if not isinstance(argument, str):
+            raise TypeError("Scanner arguments must be strings")
+        if not argument or len(argument) > _MAX_ARGUMENT_LENGTH:
+            raise ValueError("Scanner arguments must be non-empty and reasonably sized")
+        if not argument.isprintable() or "\r" in argument or "\n" in argument or "\x00" in argument:
+            raise ValueError("Scanner arguments must contain printable single-line text")
+        validated.append(argument)
+    return tuple(validated)
 
 
 def format_command(
@@ -18,13 +40,13 @@ def format_command(
     environ: Mapping[str, str],
     token_names: Sequence[str],
 ) -> str:
-    """Render a command while replacing known token values."""
-    rendered = shlex.join(command)
+    """Render a JSON argument array while replacing known token values."""
+    redacted = list(_validated_command(command))
     for token_name in token_names:
         token = environ.get(token_name, "")
         if token:
-            rendered = rendered.replace(token, "[REDACTED]")
-    return rendered
+            redacted = [argument.replace(token, "[REDACTED]") for argument in redacted]
+    return json.dumps(redacted, ensure_ascii=True)
 
 
 def run_scanner(
@@ -37,12 +59,11 @@ def run_scanner(
     cwd: Path | None = None,
 ) -> int:
     """Run one scanner command with explicit optional-local semantics."""
-    if not command:
-        raise ValueError("Scanner command must not be empty")
-
+    validated = _validated_command(command)
     runtime_env = dict(os.environ if environ is None else environ)
-    executable = command[0]
-    if shutil.which(executable) is None:
+    executable = validated[0]
+    resolved_executable = shutil.which(executable)
+    if resolved_executable is None:
         prefix = "ERROR" if required else "SKIP"
         print(f"{prefix}: {name} executable '{executable}' is not installed")
         return NOT_CONFIGURED_EXIT if required else 0
@@ -53,9 +74,12 @@ def run_scanner(
         print(f"{prefix}: {name} requires {', '.join(missing_tokens)}")
         return NOT_CONFIGURED_EXIT if required else 0
 
-    print(f"RUN: {name}: " + format_command(command, environ=runtime_env, token_names=token_names))
-    result = subprocess.run(  # noqa: S603 - fixed argument arrays, never shell input
-        list(command),
+    print(
+        f"RUN: {name}: " + format_command(validated, environ=runtime_env, token_names=token_names)
+    )
+    resolved_command = [resolved_executable, *validated[1:]]
+    result = subprocess.run(  # noqa: S603
+        resolved_command,
         check=False,
         cwd=cwd,
         env=runtime_env,

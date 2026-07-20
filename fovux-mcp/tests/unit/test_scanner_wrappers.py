@@ -24,22 +24,22 @@ def test_missing_executable_is_explicit_skip(monkeypatch: pytest.MonkeyPatch, ca
 
     result = scanner_runner.run_scanner(
         name="Example",
-        command=("missing-scanner", "scan"),
+        command=("snyk", "test"),
         token_names=(),
         required=False,
         environ={},
     )
 
     assert result == 0
-    assert "SKIP: Example executable 'missing-scanner' is not installed" in capsys.readouterr().out
+    assert "SKIP: Example executable 'snyk' is not installed" in capsys.readouterr().out
 
 
 def test_missing_token_can_be_required(monkeypatch: pytest.MonkeyPatch, capsys: Any) -> None:
-    monkeypatch.setattr(scanner_runner.shutil, "which", lambda _name: "/usr/bin/scanner")
+    monkeypatch.setattr(scanner_runner.shutil, "which", lambda _name: "/usr/bin/snyk")
 
     result = scanner_runner.run_scanner(
         name="Example",
-        command=("scanner", "scan"),
+        command=("snyk", "test"),
         token_names=("EXAMPLE_TOKEN",),
         required=True,
         environ={},
@@ -50,7 +50,7 @@ def test_missing_token_can_be_required(monkeypatch: pytest.MonkeyPatch, capsys: 
 
 
 def test_scanner_exit_code_is_propagated(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(scanner_runner.shutil, "which", lambda _name: "/usr/bin/scanner")
+    monkeypatch.setattr(scanner_runner.shutil, "which", lambda _name: "/usr/bin/snyk")
     observed: dict[str, object] = {}
 
     def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -62,7 +62,7 @@ def test_scanner_exit_code_is_propagated(monkeypatch: pytest.MonkeyPatch) -> Non
 
     result = scanner_runner.run_scanner(
         name="Example",
-        command=("scanner", "scan", "--flag"),
+        command=("snyk", "test", "--flag"),
         token_names=("EXAMPLE_TOKEN",),
         required=False,
         environ={"EXAMPLE_TOKEN": "top-secret"},
@@ -70,7 +70,7 @@ def test_scanner_exit_code_is_propagated(monkeypatch: pytest.MonkeyPatch) -> Non
     )
 
     assert result == 23
-    assert observed["command"] == ["scanner", "scan", "--flag"]
+    assert observed["command"] == ["/usr/bin/snyk", "test", "--flag"]
     assert observed["kwargs"] == {
         "check": False,
         "cwd": REPO_ROOT,
@@ -81,13 +81,35 @@ def test_scanner_exit_code_is_propagated(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_display_command_redacts_environment_tokens() -> None:
     rendered = scanner_runner.format_command(
-        ("scanner", "--header", "Bearer top-secret"),
+        ("snyk", "--header", "Bearer top-secret"),
         environ={"EXAMPLE_TOKEN": "top-secret"},
         token_names=("EXAMPLE_TOKEN",),
     )
 
     assert "top-secret" not in rendered
     assert "[REDACTED]" in rendered
+
+
+def test_unapproved_scanner_executable_is_rejected() -> None:
+    with pytest.raises(ValueError, match="not approved"):
+        scanner_runner.run_scanner(
+            name="Example",
+            command=("bash", "-c", "echo unsafe"),
+            token_names=(),
+            required=False,
+            environ={},
+        )
+
+
+def test_multiline_scanner_argument_is_rejected() -> None:
+    with pytest.raises(ValueError, match="printable single-line"):
+        scanner_runner.run_scanner(
+            name="Example",
+            command=("snyk", "test\nsecond-command"),
+            token_names=(),
+            required=False,
+            environ={},
+        )
 
 
 def test_snyk_runs_open_source_then_code(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -109,11 +131,11 @@ def test_snyk_runs_open_source_then_code(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_sonar_builds_branch_analysis_command(monkeypatch: pytest.MonkeyPatch) -> None:
-    observed: list[tuple[str, ...]] = []
+    observed: list[list[str]] = []
 
     def fake_run_scanner(**kwargs: object) -> int:
         command = kwargs["command"]
-        assert isinstance(command, tuple)
+        assert isinstance(command, list)
         observed.append(command)
         return 0
 
@@ -121,16 +143,16 @@ def test_sonar_builds_branch_analysis_command(monkeypatch: pytest.MonkeyPatch) -
 
     assert run_sonar.main(["--branch", "feature/security"]) == 0
     assert observed == [
-        ("sonar-scanner", "-Dsonar.branch.name=feature/security"),
+        ["sonar-scanner", "-Dsonar.branch.name=feature/security"],
     ]
 
 
 def test_sonar_uses_current_git_branch(monkeypatch: pytest.MonkeyPatch) -> None:
-    observed: list[tuple[str, ...]] = []
+    observed: list[list[str]] = []
 
     def fake_run_scanner(**kwargs: object) -> int:
         command = kwargs["command"]
-        assert isinstance(command, tuple)
+        assert isinstance(command, list)
         observed.append(command)
         return 0
 
@@ -138,15 +160,15 @@ def test_sonar_uses_current_git_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(run_sonar, "run_scanner", fake_run_scanner)
 
     assert run_sonar.main([]) == 0
-    assert observed == [("sonar-scanner", "-Dsonar.branch.name=feature/auto")]
+    assert observed == [["sonar-scanner", "-Dsonar.branch.name=feature/auto"]]
 
 
 def test_sonar_builds_pull_request_analysis_command(monkeypatch: pytest.MonkeyPatch) -> None:
-    observed: list[tuple[str, ...]] = []
+    observed: list[list[str]] = []
 
     def fake_run_scanner(**kwargs: object) -> int:
         command = kwargs["command"]
-        assert isinstance(command, tuple)
+        assert isinstance(command, list)
         observed.append(command)
         return 0
 
@@ -166,12 +188,12 @@ def test_sonar_builds_pull_request_analysis_command(monkeypatch: pytest.MonkeyPa
         == 0
     )
     assert observed == [
-        (
+        [
             "sonar-scanner",
             "-Dsonar.pullrequest.key=138",
             "-Dsonar.pullrequest.branch=feature/security",
             "-Dsonar.pullrequest.base=main",
-        ),
+        ],
     ]
 
 

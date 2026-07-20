@@ -42,7 +42,7 @@ def detect_current_branch(parser: argparse.ArgumentParser) -> str:
     git_executable = shutil.which("git")
     if git_executable is None:
         parser.error("git executable is required to detect the current branch")
-    result = subprocess.run(  # noqa: S603 - resolved executable and fixed arguments
+    result = subprocess.run(  # noqa: S603
         [git_executable, "branch", "--show-current"],
         check=False,
         cwd=REPO_ROOT,
@@ -55,24 +55,24 @@ def detect_current_branch(parser: argparse.ArgumentParser) -> str:
     return branch
 
 
-def build_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> tuple[str, ...]:
-    """Build a SonarScanner command without putting credentials in arguments."""
+def build_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> list[str]:
+    """Build SonarScanner arguments without putting credentials on the command line."""
     branch = args.branch or detect_current_branch(parser)
     _validate_branch(parser, branch, "--branch")
     if args.pull_request is None:
         if args.base is not None:
             parser.error("--base requires --pull-request")
-        return ("sonar-scanner", f"-Dsonar.branch.name={branch}")
+        return ["sonar-scanner", f"-Dsonar.branch.name={branch}"]
 
     if not args.base:
         parser.error("--pull-request requires --base")
     _validate_branch(parser, args.base, "--base")
-    return (
+    return [
         "sonar-scanner",
         f"-Dsonar.pullrequest.key={args.pull_request}",
         f"-Dsonar.pullrequest.branch={branch}",
         f"-Dsonar.pullrequest.base={args.base}",
-    )
+    ]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
