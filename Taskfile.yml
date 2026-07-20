@@ -7,6 +7,7 @@ vars:
   NPM: '{{.NPM | default "npm"}}'
   PNPM: '{{.PNPM | default "corepack pnpm@10.34.1 --ignore-workspace"}}'
   PYTEST_TEMP_ROOT: '{{env "TMPDIR" | default (env "TEMP" | default "/tmp")}}'
+  RENOVATE_VERSION: "43.272.4"
 
 tasks:
   install:
@@ -88,6 +89,14 @@ tasks:
     cmds:
       - python scripts/generate_security_posture.py --strict
 
+
+  deps:renovate:validate:
+    desc: Validate Fovux-specific Renovate policy
+    cmds:
+      - python scripts/validate_renovate_config.py
+      - >-
+        npm exec --yes --package=renovate@{{.RENOVATE_VERSION}} --
+        renovate-config-validator renovate.json
 
   docs:
     desc: Build and lint documentation
