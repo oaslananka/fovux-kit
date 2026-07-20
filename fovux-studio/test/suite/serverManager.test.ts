@@ -1,3 +1,6 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetVscodeMockState, setWorkspaceTrust } from "./helpers/vscodeMock";
@@ -22,6 +25,9 @@ describe("startFovuxServer", () => {
   });
 
   it("shows an information message when the server is already running", async () => {
+    const fovuxHome = await mkdtemp(join(tmpdir(), "fovux-server-manager-"));
+    vi.stubEnv("FOVUX_HOME", fovuxHome);
+    await writeFile(join(fovuxHome, "auth.token"), "test-token", "utf8");
     const vscode = await import("vscode");
     const fetchMock = vi
       .fn()
@@ -29,13 +35,18 @@ describe("startFovuxServer", () => {
       .mockResolvedValueOnce({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
 
-    const { startFovuxServer } = await import("../../src/fovux/serverManager");
+    try {
+      const { startFovuxServer } = await import("../../src/fovux/serverManager");
 
-    await startFovuxServer();
+      await startFovuxServer();
 
-    expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-      "Fovux server is already running."
-    );
-    vi.unstubAllGlobals();
+      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+        "Fovux server is already running."
+      );
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+      await rm(fovuxHome, { recursive: true, force: true });
+    }
   });
 });

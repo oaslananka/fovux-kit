@@ -102,13 +102,13 @@ def test_compatibility_installs_are_frozen_without_implicit_builds() -> None:
     node = _job_block(workflow, "node-compatibility", "node-required")
     slow = _job_block(workflow, "slow-validation", "renovate-config")
 
-    compatibility_sync = (
-        "uv sync --frozen --extra dev --no-install-project --no-build-package fovux-mcp"
-    )
-    assert compatibility_sync in compatibility
+    wheel_only_sync = "uv sync --frozen --extra dev --no-install-project --no-build"
+    assert wheel_only_sync in compatibility
+    assert "matrix.os == 'macos-15' && matrix.python-version == '3.14'" in compatibility
+    assert "--no-build-package fovux-mcp # NOSONAR" in compatibility
     assert "uv run --no-sync --no-build python" in compatibility
     assert "uv run --no-sync --no-build pytest" in compatibility
     assert "pnpm install --frozen-lockfile --ignore-scripts" in node
     assert "pnpm rebuild esbuild" in node
-    assert compatibility_sync in slow
+    assert wheel_only_sync in slow
     assert "uv run --no-sync --no-build pytest" in slow
