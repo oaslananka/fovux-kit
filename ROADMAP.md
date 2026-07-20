@@ -1,10 +1,16 @@
 # Roadmap
 
-This document starts from the current published baseline reviewed on 2026-06-24:
+This roadmap is reviewed against `release-baseline.json`, the machine-readable source of truth for
+published package versions, registry/channel status, release evidence, and milestone state.
 
-- `fovux-mcp` Python package: `1.3.0`
-- `fovux-mcp` npm wrapper: `1.3.0`
-- `fovux-studio`: `1.2.0`
+<!-- release-baseline:start -->
+| Component | Published version | Channel status | Evidence |
+| --- | --- | --- | --- |
+| Python package `fovux-mcp` | `1.4.0` | Published on PyPI | `fovux_mcp-1.4.0-py3-none-any.whl`, `fovux_mcp-1.4.0.tar.gz`, `fovux-mcp-sbom.spdx.json`, `fovux-mcp.sha256` |
+| npm wrapper `fovux-mcp` | `1.4.0` | Published on npm | `npm registry metadata`, `wrapper CLI smoke result`, `fovux-mcp-v1.4.0 source release` |
+| VS Code extension `oaslananka.fovuxstudiokit` | `1.3.0` | Published on VS Marketplace; Open VSX unavailable (404 verified 2026-07-20) | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256` |
+<!-- release-baseline:end -->
+
 - Backend tool registry: 47 local tools
 - Studio Language Model Tools: 20 granular tools plus 1 generic fallback tool
 
@@ -19,8 +25,9 @@ issue-level scope and progress.
 - GitHub Releases must include package versions, VSIX/marketplace status, SBOM/provenance assets,
   checksums, and registry smoke-test evidence before a release is considered verified.
 
-## [v1.3.1 — Stabilization & Documentation Truth](https://github.com/oaslananka/fovux-kit/milestone/1)
+## [v1.3.1 - Stabilization & Documentation Truth](https://github.com/oaslananka/fovux-kit/milestone/1)
 
+**State:** Closed
 **Target:** 2026-07-15
 
 **Theme:** make public documentation, package metadata, CI gates, and registry verification match the
@@ -34,8 +41,9 @@ actual 1.3.0 release state.
 
 **DRI:** @oaslananka
 
-## [v1.4.0 — MCP Conformance & Agent Safety](https://github.com/oaslananka/fovux-kit/milestone/2)
+## [v1.4.0 - MCP Conformance & Agent Safety](https://github.com/oaslananka/fovux-kit/milestone/2)
 
+**State:** Closed
 **Target:** 2026-08-31
 
 **Theme:** make the MCP contract explicit, testable, and safe for agent-driven workflows.
@@ -50,8 +58,25 @@ actual 1.3.0 release state.
 
 **DRI:** @oaslananka
 
-## [v1.5.0 — Studio Workflow & Dataset Intelligence](https://github.com/oaslananka/fovux-kit/milestone/3)
+## [Security & Reliability Stabilization](https://github.com/oaslananka/fovux-kit/milestone/7)
 
+**State:** Open
+**Target:** 2026-08-07
+
+**Theme:** close the post-1.4.0 security, release-truth, testing, licensing, and CI-efficiency gaps
+without promising a package version outside Release Please's semantic-version calculation.
+
+- Keep security and dependency gates green without permanent advisory exceptions.
+- Normalize Apache-2.0 artifacts and package/SBOM license detection.
+- Restore executable mutation testing and meaningful score reporting.
+- Split deterministic quality work from cross-platform compatibility smoke coverage.
+- Keep roadmap, release notes, registry evidence, and GitHub milestone state semantically aligned.
+
+**DRI:** @oaslananka
+
+## [v1.5.0 - Studio Workflow & Dataset Intelligence](https://github.com/oaslananka/fovux-kit/milestone/3)
+
+**State:** Open
 **Target:** 2026-10-15
 
 **Theme:** turn Fovux Studio into a guided end-to-end workflow for dataset quality, training,
@@ -65,8 +90,9 @@ evaluation, and export.
 
 **DRI:** @oaslananka
 
-## [v1.6.0 — Edge Export & Deployment Intelligence](https://github.com/oaslananka/fovux-kit/milestone/4)
+## [v1.6.0 - Edge Export & Deployment Intelligence](https://github.com/oaslananka/fovux-kit/milestone/4)
 
+**State:** Open
 **Target:** 2026-11-30
 
 **Theme:** make export and deployment advice target-aware and reproducible.
@@ -82,8 +108,9 @@ evaluation, and export.
 
 **DRI:** @oaslananka
 
-## [v2.0.0 — Extensibility, Supply Chain & Ecosystem Readiness](https://github.com/oaslananka/fovux-kit/milestone/5)
+## [v2.0.0 - Extensibility, Supply Chain & Ecosystem Readiness](https://github.com/oaslananka/fovux-kit/milestone/5)
 
+**State:** Open
 **Target:** 2027-03-31
 
 **Theme:** stabilize the extension points, release evidence, and supply-chain posture required for a
@@ -99,7 +126,9 @@ larger ecosystem.
 
 **DRI:** @oaslananka
 
-## [Backlog — Research & Product Discovery](https://github.com/oaslananka/fovux-kit/milestone/6)
+## [Backlog - Research & Product Discovery](https://github.com/oaslananka/fovux-kit/milestone/6)
+
+**State:** Open
 
 - Evaluate MCP Apps / interactive MCP UI direction against the Fovux Studio strategy.
 

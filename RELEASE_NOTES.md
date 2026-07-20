@@ -7,11 +7,13 @@ audit tools, support/reproducibility bundles, and Studio guarded-tool UX.
 
 ## Package Versions and Release Evidence
 
-| Release item | Current status | Required GitHub Release evidence |
-| ------------ | -------------- | -------------------------------- |
-| Python package | `fovux-mcp` `1.4.0` published on PyPI | Wheel, sdist, SHA256 checksums, SPDX SBOM, provenance attestation, and PyPI registry smoke result |
-| npm wrapper | `fovux-mcp` `1.4.0` published on npm | npm provenance, package metadata check, wrapper CLI smoke result, and registry verification evidence JSON |
-| VS Code extension | `oaslananka.fovuxstudiokit` `1.3.0` published on VS Marketplace and Open VSX | VSIX artifact/status, package-size check, marketplace verification, Open VSX verification, SBOM, checksums, and provenance attestation |
+<!-- release-baseline:start -->
+| Component | Published version | Channel status | Evidence |
+| --- | --- | --- | --- |
+| Python package `fovux-mcp` | `1.4.0` | Published on PyPI | `fovux_mcp-1.4.0-py3-none-any.whl`, `fovux_mcp-1.4.0.tar.gz`, `fovux-mcp-sbom.spdx.json`, `fovux-mcp.sha256` |
+| npm wrapper `fovux-mcp` | `1.4.0` | Published on npm | `npm registry metadata`, `wrapper CLI smoke result`, `fovux-mcp-v1.4.0 source release` |
+| VS Code extension `oaslananka.fovuxstudiokit` | `1.3.0` | Published on VS Marketplace; Open VSX unavailable (404 verified 2026-07-20) | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256` |
+<!-- release-baseline:end -->
 
 GitHub release notes for every future release must explicitly include:
 
