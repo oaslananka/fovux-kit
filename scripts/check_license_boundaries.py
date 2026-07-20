@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
+SPDX_LICENSE = "Apache-2.0"
 CANONICAL_APACHE_SHA256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
 LICENSE_PATHS = (
     Path("LICENSE"),
@@ -35,9 +36,8 @@ def _load_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def _license_artifact_failures(root: Path) -> list[str]:
+def _canonical_license_failures(root: Path) -> list[str]:
     failures: list[str] = []
-
     for relative in LICENSE_PATHS:
         path = root / relative
         if not path.exists():
@@ -45,8 +45,14 @@ def _license_artifact_failures(root: Path) -> list[str]:
             continue
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         if digest != CANONICAL_APACHE_SHA256:
-            failures.append(f"License file is not canonical Apache-2.0 text: {relative} ({digest})")
+            failures.append(
+                f"License file is not canonical {SPDX_LICENSE} text: {relative} ({digest})"
+            )
+    return failures
 
+
+def _notice_failures(root: Path) -> list[str]:
+    failures: list[str] = []
     for relative in NOTICE_PATHS:
         path = root / relative
         if not path.exists():
@@ -55,81 +61,121 @@ def _license_artifact_failures(root: Path) -> list[str]:
         text = _read(path)
         if "Fovux" not in text or "Copyright 2026 Fovux Contributors" not in text:
             failures.append(f"NOTICE attribution is incomplete: {relative}")
-
-    pyproject_path = root / "fovux-mcp" / "pyproject.toml"
-    try:
-        pyproject = tomllib.loads(_read(pyproject_path))
-        project = pyproject.get("project", {})
-        if not isinstance(project, dict):
-            raise ValueError("[project] must be a table")
-        if project.get("license") != "Apache-2.0":
-            failures.append("fovux-mcp project.license must be Apache-2.0")
-        license_files = project.get("license-files", [])
-        if not isinstance(license_files, list) or not {"LICENSE", "NOTICE"} <= {
-            item for item in license_files if isinstance(item, str)
-        }:
-            failures.append("fovux-mcp project.license-files must include LICENSE and NOTICE")
-    except (OSError, tomllib.TOMLDecodeError, ValueError) as exc:
-        failures.append(f"Cannot validate fovux-mcp/pyproject.toml license metadata: {exc}")
-
-    for relative in (Path("fovux-mcp-npm/package.json"), Path("fovux-studio/package.json")):
-        try:
-            manifest = _load_json(root / relative)
-        except (OSError, json.JSONDecodeError, ValueError) as exc:
-            failures.append(f"Cannot validate {relative} license metadata: {exc}")
-            continue
-        if manifest.get("license") != "Apache-2.0":
-            failures.append(f"{relative} license must be Apache-2.0")
-        if relative.parts[0] == "fovux-mcp-npm":
-            package_files = manifest.get("files", [])
-            if not isinstance(package_files, list) or not {"LICENSE", "NOTICE"} <= {
-                item for item in package_files if isinstance(item, str)
-            }:
-                failures.append("fovux-mcp-npm package files must include LICENSE and NOTICE")
-
-    vscodeignore_path = root / "fovux-studio" / ".vscodeignore"
-    try:
-        ignored_entries = {
-            line.strip()
-            for line in _read(vscodeignore_path).splitlines()
-            if line.strip() and not line.lstrip().startswith("#")
-        }
-        for artifact in ("LICENSE", "NOTICE"):
-            if artifact in ignored_entries:
-                failures.append(f"fovux-studio/.vscodeignore must not exclude {artifact}")
-    except OSError as exc:
-        failures.append(f"Cannot validate fovux-studio/.vscodeignore: {exc}")
-
     return failures
 
 
-def _boundary_documentation_failures(root: Path) -> list[str]:
+def _python_manifest_failures(root: Path) -> list[str]:
+    path = root / "fovux-mcp" / "pyproject.toml"
+    try:
+        pyproject = tomllib.loads(_read(path))
+        project = pyproject.get("project", {})
+        if not isinstance(project, dict):
+            raise ValueError("[project] must be a table")
+    except (OSError, ValueError) as exc:
+        return [f"Cannot validate fovux-mcp/pyproject.toml license metadata: {exc}"]
+
     failures: list[str] = []
+    if project.get("license") != SPDX_LICENSE:
+        failures.append(f"fovux-mcp project.license must be {SPDX_LICENSE}")
+    license_files = project.get("license-files", [])
+    declared_files = (
+        {item for item in license_files if isinstance(item, str)}
+        if isinstance(license_files, list)
+        else set()
+    )
+    if not {"LICENSE", "NOTICE"} <= declared_files:
+        failures.append("fovux-mcp project.license-files must include LICENSE and NOTICE")
+    return failures
+
+
+def _node_manifest_failures(root: Path) -> list[str]:
+    failures: list[str] = []
+    manifests = (
+        Path("fovux-mcp-npm/package.json"),
+        Path("fovux-studio/package.json"),
+    )
+    for relative in manifests:
+        try:
+            manifest = _load_json(root / relative)
+        except (OSError, ValueError) as exc:
+            failures.append(f"Cannot validate {relative} license metadata: {exc}")
+            continue
+        if manifest.get("license") != SPDX_LICENSE:
+            failures.append(f"{relative} license must be {SPDX_LICENSE}")
+        if relative.parts[0] == "fovux-mcp-npm":
+            package_files = manifest.get("files", [])
+            declared_files = (
+                {item for item in package_files if isinstance(item, str)}
+                if isinstance(package_files, list)
+                else set()
+            )
+            if not {"LICENSE", "NOTICE"} <= declared_files:
+                failures.append("fovux-mcp-npm package files must include LICENSE and NOTICE")
+    return failures
+
+
+def _vscodeignore_failures(root: Path) -> list[str]:
+    path = root / "fovux-studio" / ".vscodeignore"
+    try:
+        ignored_entries = {
+            line.strip()
+            for line in _read(path).splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+    except OSError as exc:
+        return [f"Cannot validate fovux-studio/.vscodeignore: {exc}"]
+    return [
+        f"fovux-studio/.vscodeignore must not exclude {artifact}"
+        for artifact in ("LICENSE", "NOTICE")
+        if artifact in ignored_entries
+    ]
+
+
+def _license_artifact_failures(root: Path) -> list[str]:
+    failures = _canonical_license_failures(root)
+    failures.extend(_notice_failures(root))
+    failures.extend(_python_manifest_failures(root))
+    failures.extend(_node_manifest_failures(root))
+    failures.extend(_vscodeignore_failures(root))
+    return failures
+
+
+def _missing_phrases(text: str, phrases: list[str], prefix: str) -> list[str]:
+    return [f"{prefix} {phrase}" for phrase in phrases if phrase not in text]
+
+
+def _boundary_documentation_failures(root: Path) -> list[str]:
     docs = _read(root / "docs" / "licensing-boundaries.md")
-    for phrase in [
-        "Apache-2.0",
-        "Ultralytics",
-        "ONNX",
-        "TensorRT",
-        "CoreML",
-        "OpenVINO",
-        "TFLite",
-        "NCNN",
-        "RKNN",
-        "W&B",
-        "Hugging Face",
-        "no-telemetry",
-    ]:
-        if phrase not in docs:
-            failures.append(f"Licensing docs missing {phrase}")
+    failures = _missing_phrases(
+        docs,
+        [
+            SPDX_LICENSE,
+            "Ultralytics",
+            "ONNX",
+            "TensorRT",
+            "CoreML",
+            "OpenVINO",
+            "TFLite",
+            "NCNN",
+            "RKNN",
+            "W&B",
+            "Hugging Face",
+            "no-telemetry",
+        ],
+        "Licensing docs missing",
+    )
     report_code = _read(root / "fovux-mcp" / "src" / "fovux" / "core" / "doctor.py")
-    for phrase in ["Ultralytics", "AGPL", "NOTICE"]:
-        if phrase not in report_code:
-            failures.append(f"Doctor license notice missing {phrase}")
+    failures.extend(
+        _missing_phrases(
+            report_code, ["Ultralytics", "AGPL", "NOTICE"], "Doctor license notice missing"
+        )
+    )
     bundle = _read(root / "fovux-mcp" / "src" / "fovux" / "tools" / "bundles.py")
-    for phrase in ["package_versions", "Ultralytics"]:
-        if phrase not in bundle:
-            failures.append(f"Support bundle inventory missing {phrase}")
+    failures.extend(
+        _missing_phrases(
+            bundle, ["package_versions", "Ultralytics"], "Support bundle inventory missing"
+        )
+    )
     return failures
 
 
