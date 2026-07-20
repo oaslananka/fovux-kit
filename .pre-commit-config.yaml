@@ -25,7 +25,6 @@ repos:
     hooks:
       - id: gitleaks
 
-
   - repo: https://github.com/semgrep/pre-commit
     rev: v1.170.0
     hooks:
@@ -97,4 +96,18 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
+        always_run: true
+      - id: snyk-maintainer
+        name: Snyk maintainer scan
+        entry: python scripts/run_snyk.py
+        language: system
+        pass_filenames: false
+        stages: [pre-push, manual]
+        always_run: true
+      - id: sonar-maintainer
+        name: Sonar maintainer analysis
+        entry: python scripts/run_sonar.py
+        language: system
+        pass_filenames: false
+        stages: [manual]
         always_run: true

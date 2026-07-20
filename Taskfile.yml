@@ -73,9 +73,35 @@ tasks:
           --cov-report=term-missing --cov-report=html --cov-report=xml
       - cmd: cd fovux-studio && {{.PNPM}} test
 
+  security:semgrep:
+    desc: Validate and run repository-owned Semgrep rules
+    cmds:
+      - semgrep validate .semgrep/rules
+      - semgrep test .semgrep/rules
+      - >-
+        semgrep scan --config .semgrep/rules --metrics=off --error
+        fovux-mcp/src fovux-studio/src fovux-mcp-npm/bin
+
+  security:snyk:
+    desc: Run credential-aware local Snyk scans
+    cmds:
+      - python scripts/run_snyk.py
+
+  security:sonar:
+    desc: Run credential-aware local Sonar analysis
+    cmds:
+      - python scripts/run_sonar.py {{.CLI_ARGS}}
+
+  security:developer:
+    desc: Run deterministic and optional developer security scans
+    cmds:
+      - task: security:semgrep
+      - task: security:snyk
+
   security:
     desc: Security scans
     cmds:
+      - task: security:semgrep
       - cmd: cd fovux-mcp && uv run bandit -r src/fovux -ll
       - cmd: cd fovux-mcp && uv export --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
       - cmd: cd fovux-mcp && uv run pip-audit --requirement requirements-audit.txt

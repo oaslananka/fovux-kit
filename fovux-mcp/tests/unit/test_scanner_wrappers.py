@@ -125,6 +125,22 @@ def test_sonar_builds_branch_analysis_command(monkeypatch: pytest.MonkeyPatch) -
     ]
 
 
+def test_sonar_uses_current_git_branch(monkeypatch: pytest.MonkeyPatch) -> None:
+    observed: list[tuple[str, ...]] = []
+
+    def fake_run_scanner(**kwargs: object) -> int:
+        command = kwargs["command"]
+        assert isinstance(command, tuple)
+        observed.append(command)
+        return 0
+
+    monkeypatch.setattr(run_sonar, "detect_current_branch", lambda _parser: "feature/auto")
+    monkeypatch.setattr(run_sonar, "run_scanner", fake_run_scanner)
+
+    assert run_sonar.main([]) == 0
+    assert observed == [("sonar-scanner", "-Dsonar.branch.name=feature/auto")]
+
+
 def test_sonar_builds_pull_request_analysis_command(monkeypatch: pytest.MonkeyPatch) -> None:
     observed: list[tuple[str, ...]] = []
 
@@ -171,3 +187,31 @@ def test_scanner_outputs_are_ignored() -> None:
         "snyk-results.json",
     ):
         assert ignored in gitignore
+
+
+def test_taskfile_and_pre_commit_use_shared_wrappers() -> None:
+    taskfile = (REPO_ROOT / "Taskfile.yml").read_text(encoding="utf-8")
+    pre_commit = (REPO_ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+
+    assert "security:semgrep:" in taskfile
+    assert "security:snyk:" in taskfile
+    assert "security:sonar:" in taskfile
+    assert "python scripts/run_snyk.py" in taskfile
+    assert "python scripts/run_sonar.py" in taskfile
+    assert "id: snyk-maintainer" in pre_commit
+    assert "entry: python scripts/run_snyk.py" in pre_commit
+    assert "stages: [pre-push, manual]" in pre_commit
+    assert "id: sonar-maintainer" in pre_commit
+    assert "entry: python scripts/run_sonar.py" in pre_commit
+    assert "stages: [manual]" in pre_commit
+
+
+def test_sonar_project_properties_scope_sources_and_reports() -> None:
+    properties = (REPO_ROOT / "sonar-project.properties").read_text(encoding="utf-8")
+
+    assert "sonar.projectKey=oaslananka_fovux-kit" in properties
+    assert "sonar.organization=oaslananka" in properties
+    assert "sonar.sources=fovux-mcp/src,fovux-studio/src,fovux-mcp-npm/bin" in properties
+    assert "sonar.tests=fovux-mcp/tests,fovux-studio/test" in properties
+    assert "sonar.python.coverage.reportPaths=fovux-mcp/coverage.xml" in properties
+    assert "sonar.javascript.lcov.reportPaths=fovux-studio/coverage/lcov.info" in properties
