@@ -29,7 +29,8 @@
   ],
   "prBodyNotes": [
     "Fovux-specific dependency policy is defined in `renovate.json` and extends the shared `oaslananka/.github` baseline.",
-    "Protected runtime, protocol, computer-vision, and security-tooling groups never automerge."
+    "Protected runtime, protocol, computer-vision, and security-tooling groups never automerge.",
+    "GitHub Dependabot owns security-update pull requests during the initial hosted-App rollout; Renovate vulnerability alert sources are disabled to prevent duplicate remediation PRs."
   ],
   "lockFileMaintenance": {
     "enabled": true,
@@ -43,14 +44,7 @@
     ]
   },
   "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": [
-      "security",
-      "priority:p0",
-      "goal:supply-chain"
-    ],
-    "prCreation": "immediate",
-    "vulnerabilityFixStrategy": "highest"
+    "enabled": false
   },
   "packageRules": [
     {
@@ -232,5 +226,6 @@
   ],
   "pre-commit": {
     "enabled": true
-  }
+  },
+  "osvVulnerabilityAlerts": false
 }

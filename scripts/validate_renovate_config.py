@@ -9,6 +9,20 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXPECTED_PRESET = "github>oaslananka/.github:renovate-config"
+SHARED_PRESET_LABELS = {
+    "automerge",
+    "ci",
+    "dependencies",
+    "docker",
+    "github-actions",
+    "javascript",
+    "lockfile",
+    "major",
+    "python",
+    "requires-review",
+    "runtime",
+    "security",
+}
 EXPECTED_MANAGERS = {
     "pep621",
     "npm",
@@ -134,6 +148,16 @@ def _validate_core_policy(config: dict[str, Any]) -> list[str]:
     pre_commit_config = config.get("pre-commit")
     if not isinstance(pre_commit_config, dict) or pre_commit_config.get("enabled") is not True:
         errors.append("pre-commit manager must be explicitly enabled")
+
+    vulnerability_alerts = config.get("vulnerabilityAlerts")
+    if (
+        not isinstance(vulnerability_alerts, dict)
+        or vulnerability_alerts.get("enabled") is not False
+        or config.get("osvVulnerabilityAlerts") is not False
+    ):
+        errors.append(
+            "Renovate vulnerability alerts must stay disabled while Dependabot owns security PRs"
+        )
     return errors
 
 
@@ -148,7 +172,13 @@ def _validate_labels(config: dict[str, Any], labels_path: Path) -> list[str]:
     except OSError as exc:
         return [f"Cannot load label catalog: {exc}"]
     unknown = sorted(collect_configured_labels(config) - known_labels)
-    return [f"Unknown Renovate labels: {unknown}"] if unknown else []
+    missing_shared = sorted(SHARED_PRESET_LABELS - known_labels)
+    errors: list[str] = []
+    if unknown:
+        errors.append(f"Unknown Renovate labels: {unknown}")
+    if missing_shared:
+        errors.append(f"Missing inherited Renovate labels: {missing_shared}")
+    return errors
 
 
 def _validate_protected_packages(config: dict[str, Any]) -> list[str]:

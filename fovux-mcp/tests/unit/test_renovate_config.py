@@ -51,9 +51,13 @@ def test_repository_renovate_policy_has_expected_contract() -> None:
     assert config["prHourlyLimit"] == 2
     assert config["prConcurrentLimit"] == 6
     assert config["pre-commit"] == {"enabled": True}
+    assert config["vulnerabilityAlerts"] == {"enabled": False}
+    assert config["osvVulnerabilityAlerts"] is False
 
     labels = module.collect_configured_labels(config)
-    assert labels <= module.load_label_names(REPO_ROOT / ".github" / "labels.yml")
+    catalog = module.load_label_names(REPO_ROOT / ".github" / "labels.yml")
+    assert labels <= catalog
+    assert module.SHARED_PRESET_LABELS <= catalog
 
     for package in PROTECTED_PACKAGES:
         assert module.package_is_non_automerge(config, package), package
@@ -83,6 +87,33 @@ def test_validator_rejects_unknown_label(tmp_path: Path) -> None:
     assert any("not-a-real-label" in error for error in errors)
 
 
+def test_validator_rejects_duplicate_security_pr_ownership(tmp_path: Path) -> None:
+    module = _load_module()
+    config = copy.deepcopy(_load_config())
+    config["vulnerabilityAlerts"] = {"enabled": True}
+    config["osvVulnerabilityAlerts"] = True
+    _write_fixture_repo(tmp_path, config)
+
+    errors = module.validate_config(tmp_path)
+
+    assert any("Dependabot" in error for error in errors)
+
+
+def test_validator_rejects_missing_shared_preset_label(tmp_path: Path) -> None:
+    module = _load_module()
+    config = copy.deepcopy(_load_config())
+    _write_fixture_repo(tmp_path, config)
+    labels_path = tmp_path / ".github" / "labels.yml"
+    labels_path.write_text(
+        labels_path.read_text(encoding="utf-8").replace("- name: lockfile\n", ""),
+        encoding="utf-8",
+    )
+
+    errors = module.validate_config(tmp_path)
+
+    assert any("lockfile" in error for error in errors)
+
+
 def _write_fixture_repo(root: Path, config: dict[str, object]) -> None:
     (root / ".github").mkdir(parents=True)
     (root / "fovux-mcp").mkdir()
@@ -95,7 +126,10 @@ def _write_fixture_repo(root: Path, config: dict[str, object]) -> None:
         "- name: component:fovux-mcp\n- name: component:fovux-studio\n"
         "- name: component:fovux-mcp-npm\n- name: area:ci\n"
         "- name: area:security\n- name: area:compatibility\n"
-        "- name: area:mcp\n- name: risk:high\n- name: major-update\n",
+        "- name: area:mcp\n- name: risk:high\n- name: major-update\n"
+        "- name: lockfile\n- name: major\n- name: requires-review\n"
+        "- name: javascript\n- name: ci\n- name: github-actions\n"
+        "- name: docker\n- name: automerge\n- name: runtime\n- name: security\n",
         encoding="utf-8",
     )
     for relative_path in (

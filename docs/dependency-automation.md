@@ -19,9 +19,9 @@ Renovate is limited to these manager families:
 
 ## Scheduling and review
 
-Routine updates run in the Monday 02:00–06:00 Europe/Istanbul maintenance window. Vulnerability
-remediation remains immediate. The repository allows at most two new Renovate pull requests per hour
-and six concurrent Renovate pull requests.
+Routine updates run in the Monday 02:00–06:00 Europe/Istanbul maintenance window. GitHub-native
+Dependabot security updates remain immediate. The repository allows at most two new Renovate pull
+requests per hour and six concurrent Renovate pull requests.
 
 Major updates require Dependency Dashboard approval. MCP/FastMCP, Torch/YOLO/CUDA, computer-vision
 runtime, Studio runtime, Node support-policy, and release/security tooling updates never automerge.
@@ -30,13 +30,10 @@ Required branch checks still apply to every bot pull request.
 ## Bot ownership
 
 Renovate owns routine version updates, grouping, lockfile maintenance, GitHub Actions, Docker,
-`.nvmrc`, and pre-commit hooks. GitHub Dependabot security updates remain enabled until Renovate has
-completed both a successful lookup dry-run and a real run that creates a dashboard or pull request
-whose commits trigger all required checks.
-
-When duplicate security pull requests exist, retain the remediation that covers the complete affected
-dependency set and passes `ci-required`, `security-required`, `dependency-review`, and
-`codeql-required`.
+`.nvmrc`, and pre-commit hooks through the installed hosted Renovate GitHub App. Native Dependabot
+security updates remain enabled and own vulnerability-remediation pull requests during the initial
+rollout. Repository-local `vulnerabilityAlerts.enabled=false` and `osvVulnerabilityAlerts=false`
+override the shared preset so the two bots cannot open duplicate security pull requests.
 
 ## Validation
 
@@ -53,23 +50,24 @@ runtime:
 npm exec --yes --package=renovate@43.272.4 -- renovate-config-validator renovate.json
 ```
 
-The CI aggregate runs the deterministic validator. A central Renovate lookup dry-run is separate
-activation evidence because it verifies remote preset resolution, repository discovery, and the bot
-credential.
+The CI aggregate runs the deterministic validator. The hosted Renovate GitHub App resolves the remote
+preset and performs repository discovery; this repository does not store or require `RENOVATE_TOKEN`.
 
 ## Activation procedure
 
-1. Store a dedicated GitHub App token or appropriately scoped bot PAT as `RENOVATE_TOKEN` in the
-   central automation repository. Never use a repository workflow `GITHUB_TOKEN` for mutation.
-2. Dispatch `oaslananka/.github` workflow `renovate-manual.yml` with `dryRun=true` and inspect manager
-   discovery.
-3. Confirm `pep621`, npm/pnpm, GitHub Actions, Dockerfile, NVM, and pre-commit package files are found.
-4. Run once with `dryRun=false` and confirm the Dependency Dashboard or a Renovate PR is created.
-5. Confirm the bot PR receives all required main checks.
-6. Only after that evidence, add a schedule to the central workflow.
-7. Observe two successful cycles before considering any change to security-PR ownership.
+1. Keep the hosted Renovate GitHub App installed with access to `oaslananka/fovux-kit`.
+2. Merge a schema-valid `renovate.json` change to the default branch so the hosted App reprocesses the
+   repository.
+3. Confirm the Dependency Dashboard is created and lists PEP 621/uv, npm/pnpm, GitHub Actions,
+   Dockerfile, NVM, and pre-commit package files.
+4. Confirm the first Renovate pull request receives `ci-required`, `security-required`,
+   `dependency-review`, and `codeql-required`.
+5. Observe two successful cycles before considering any change to security-PR ownership.
+
+No repository or central-workflow token is needed for the hosted App path. The central manual workflow
+is optional self-hosted infrastructure and is not part of Fovux activation.
 
 ## Rollback
 
-Disable the central schedule or revoke the dedicated Renovate credential. Keep `renovate.json` and
-its validator so policy remains reviewable. Do not disable GitHub security alerting during rollback.
+Remove this repository from the hosted Renovate App installation or temporarily set `enabled: false`
+in `renovate.json`. Keep the validator and GitHub security alerting enabled during rollback.
