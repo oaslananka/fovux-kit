@@ -81,3 +81,31 @@ def test_pr_concurrency_cancels_superseded_runs() -> None:
 
     assert "github.event.pull_request.number || github.ref" in workflow
     assert "cancel-in-progress: ${{ github.event_name == 'pull_request' }}" in workflow
+
+
+def test_pnpm_cache_is_initialized_after_pnpm_installation() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    quality = _job_block(workflow, "quality", "compatibility")
+    node = _job_block(workflow, "node-compatibility", "node-required")
+
+    assert "cache: pnpm" not in quality + node
+    assert quality.index("Install quality tools") < quality.index("actions/cache@")
+    assert node.index("Install pnpm") < node.index("actions/cache@")
+    assert "matrix.node-version" in node
+    assert "fovux-studio/pnpm-lock.yaml" in node
+    assert "fovux-mcp-npm/package-lock.json" in node
+
+
+def test_compatibility_installs_are_frozen_without_implicit_builds() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    compatibility = _job_block(workflow, "compatibility", "compatibility-required")
+    node = _job_block(workflow, "node-compatibility", "node-required")
+    slow = _job_block(workflow, "slow-validation", "renovate-config")
+
+    assert "uv sync --frozen --extra dev --no-install-project --no-build" in compatibility
+    assert "uv run --no-sync python" in compatibility
+    assert "uv run --no-sync pytest" in compatibility
+    assert "pnpm install --frozen-lockfile --ignore-scripts" in node
+    assert "pnpm rebuild esbuild" in node
+    assert "uv sync --frozen --extra dev --no-install-project --no-build" in slow
+    assert "uv run --no-sync pytest" in slow
