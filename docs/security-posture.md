@@ -1,6 +1,6 @@
 # Fovux Security Posture Report
 
-Generated on: 2026-06-23 11:39:05 UTC
+Generated on: 2026-07-20 16:27:58 UTC
 
 ## Summary
 - **Visibility:** Public
@@ -9,26 +9,25 @@ Generated on: 2026-06-23 11:39:05 UTC
 - **Dependabot Security Updates:** Enabled
 
 ## Branch & Tag Protection Rulesets
-- **main-protection:** Enforcement `active`
+- **main-ci-solo-maintainer:** Enforcement `active`
   - Deletion prevented: Yes
   - Linear history required: Yes
-  - Commit signatures required: Yes
+  - Commit signatures required: No
   - Required status checks:
     - `ci-required`
     - `security-required`
+    - `dependency-review`
     - `codeql-required`
-    - `scorecard-required`
-    - `release-please`
 - **release-tag-protection:** Enforcement `active`
   - Tag deletion prevented: Yes
   - Tag non-fast-forward prevented: Yes
 
 ## Dependabot Alerts Summary
-- **Total Open Alerts:** 0
+- **Total Open Alerts:** 2
   - **Critical:** 0
-  - **High:** 0
+  - **High:** 1
   - **Medium:** 0
-  - **Low:** 0
+  - **Low:** 1
 
 ## Deployment Environments
 - **copilot:** No protection rules

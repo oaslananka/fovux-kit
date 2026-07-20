@@ -1,56 +1,67 @@
 # Repository Rulesets
 
-These JSON files mirror the repository rulesets that should be applied through
-the GitHub REST API or the repository settings UI.
+These JSON files are the canonical repository ruleset request payloads. Apply them through the
+GitHub REST API and use `scripts/generate_security_posture.py --strict` to detect semantic drift
+between the tracked main policy and the live repository configuration.
 
-## `main-protection`
+## `main-ci-solo-maintainer`
 
-`main.json` targets the default branch with:
+`main.json` targets `refs/heads/main` with:
 
-- branch deletion protection
-- force-push protection
-- required linear history
-- verified commit signatures
-- pull requests required before updates to `main`
-- resolved review threads required before merge
-- required status checks:
-    - `ci-required`
-    - `security-required`
-    - `codeql-required`
-    - `scorecard-required`
-    - `release-please`
+- branch deletion protection;
+- force-push protection;
+- required linear history;
+- pull requests required before updates to `main`;
+- resolved review threads required before merge;
+- strict required status checks:
+  - `ci-required`;
+  - `security-required`;
+  - `dependency-review`;
+  - `codeql-required`;
+- no bypass actors.
 
-The repository currently has one administrator and no separate reviewer pool.
-For that reason, the exported ruleset requires pull requests and review-thread
-resolution, but sets `required_approving_review_count` to `0` and disables code
-owner and last-push approval requirements. When another maintainer or reviewer
-team is added, raise the approval count to `1`, enable code owner review, and
-enable last-push approval.
+The repository currently has one administrator and no independent reviewer pool. Therefore, the
+policy requires pull requests and resolved review threads but sets the mandatory approval count to
+`0`; code-owner and last-push approval are disabled. Add those reviewer controls when a second
+maintainer or reviewer team is available.
+
+Signed commits are not required by this ruleset because contributor signing setup has not yet been
+standardized. `scorecard-required` and `release-please` remain visible checks but are not merge
+requirements: their event coverage and release-only behavior do not provide the same stable PR gate
+contract as the four aggregate checks above.
 
 ## `release-tag-protection`
 
-`release-tags.json` targets release tag patterns and blocks deletion and
-non-fast-forward updates for released tags.
+`release-tags.json` targets the release tag patterns and blocks deletion and non-fast-forward
+updates. It does not block initial tag creation by release automation.
 
 ## Applying
 
-Create a missing ruleset with:
+Discover the existing ruleset IDs first:
 
-```powershell
-gh api --method POST repos/{owner}/{repo}/rulesets --input .github/rulesets/main.json
-gh api --method POST repos/{owner}/{repo}/rulesets --input .github/rulesets/release-tags.json
+```bash
+gh api repos/{owner}/{repo}/rulesets --jq 'map({id,name,enforcement,target})'
 ```
 
-Update an existing ruleset with:
+Update the existing main ruleset rather than creating a duplicate:
 
-```powershell
-gh api --method PUT repos/{owner}/{repo}/rulesets/{ruleset_id} --input .github/rulesets/main.json
-gh api --method PUT repos/{owner}/{repo}/rulesets/{ruleset_id} --input .github/rulesets/release-tags.json
+```bash
+gh api --method PUT repos/{owner}/{repo}/rulesets/{main_ruleset_id} \
+  --input .github/rulesets/main.json
+```
+
+Create the release tag ruleset when it is missing:
+
+```bash
+gh api --method POST repos/{owner}/{repo}/rulesets \
+  --input .github/rulesets/release-tags.json
 ```
 
 After applying, verify:
 
-```powershell
-gh api repos/{owner}/{repo}/rulesets --jq "map({id,name,enforcement,target})"
-gh api repos/{owner}/{repo}/rules/branches/main --jq "map({type,ruleset_source_type,ruleset_source,ruleset_id})"
+```bash
+gh api repos/{owner}/{repo}/rulesets --jq 'map({id,name,enforcement,target})'
+gh api repos/{owner}/{repo}/rules/branches/main \
+  --jq 'map({type,ruleset_source_type,ruleset_source,ruleset_id})'
+python3 scripts/generate_security_posture.py --strict
 ```
