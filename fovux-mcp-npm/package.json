@@ -27,7 +27,9 @@
   "files": [
     "bin/",
     "CHANGELOG.md",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "publishConfig": {
     "access": "public",
