@@ -1,0 +1,36 @@
+rules:
+  - id: fovux.python.subprocess-shell-true
+    message: Avoid subprocess shell execution; pass an argument array with shell=False.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-78
+    pattern: subprocess.$FUNC(..., shell=True, ...)
+
+  - id: fovux.python.dynamic-code-execution
+    message: Dynamic eval/exec execution is forbidden in production code.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-95
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+
+  - id: fovux.python.unsafe-yaml-load
+    message: Use yaml.safe_load instead of unsafe YAML constructors.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-502
+    pattern-either:
+      - pattern: yaml.unsafe_load(...)
+      - pattern: yaml.load(..., Loader=yaml.Loader, ...)
+      - pattern: yaml.load(..., Loader=yaml.UnsafeLoader, ...)
+      - pattern: yaml.load(..., Loader=yaml.CLoader, ...)

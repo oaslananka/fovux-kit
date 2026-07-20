@@ -26,8 +26,8 @@
 - Create: `.semgrep.yml`
 - Create: `.semgrep/rules/python-security.yml`
 - Create: `.semgrep/rules/typescript-security.yml`
-- Create: `.semgrep/tests/python-security.py`
-- Create: `.semgrep/tests/typescript-security.ts`
+- Create: `.semgrep/rules/python-security.py`
+- Create: `.semgrep/rules/typescript-security.ts`
 - Create: `.semgrepignore`
 
 **Interfaces:**
@@ -48,7 +48,7 @@ Add `ruleid` and `ok` annotations for:
 - [ ] **Step 2: Preserve RED**
 
 ```bash
-semgrep test --config .semgrep/rules .semgrep/tests
+semgrep test .semgrep/rules
 ```
 
 Expected: FAIL because rules do not exist.
@@ -60,8 +60,8 @@ Each rule must set `severity: ERROR`, include a remediation message, and scope p
 - [ ] **Step 4: Verify rule tests and repository baseline**
 
 ```bash
-semgrep validate --config .semgrep/rules
-semgrep test --config .semgrep/rules .semgrep/tests
+semgrep validate .semgrep/rules
+semgrep test .semgrep/rules
 semgrep scan --config .semgrep/rules --metrics=off --error \
   fovux-mcp/src fovux-studio/src fovux-mcp-npm/bin
 ```
@@ -193,7 +193,7 @@ git commit -m "feat(security): add Snyk and Sonar developer wrappers"
 ```yaml
   security:semgrep:
     cmds:
-      - semgrep test --config .semgrep/rules .semgrep/tests
+      - semgrep test .semgrep/rules
       - semgrep scan --config .semgrep/rules --metrics=off --error fovux-mcp/src fovux-studio/src fovux-mcp-npm/bin
   security:snyk:
     cmds:
@@ -309,8 +309,8 @@ git commit -m "chore(security): configure local Sonar analysis"
 - [ ] **Step 1: Run focused gates**
 
 ```bash
-semgrep validate --config .semgrep/rules
-semgrep test --config .semgrep/rules .semgrep/tests
+semgrep validate .semgrep/rules
+semgrep test .semgrep/rules
 semgrep scan --config .semgrep/rules --metrics=off --error fovux-mcp/src fovux-studio/src fovux-mcp-npm/bin
 cd fovux-mcp
 uv run pytest tests/unit/test_scanner_wrappers.py -q --no-header
