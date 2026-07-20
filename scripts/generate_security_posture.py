@@ -70,10 +70,7 @@ def _normalize_main_ruleset_policy(policy: dict[str, Any]) -> dict[str, Any]:
         "rules",
         "bypass_actors",
     )
-    normalized = _canonicalize({key: policy.get(key) for key in semantic_keys})
-    if not isinstance(normalized, dict):
-        raise TypeError("Normalized ruleset policy must be a dictionary")
-    return normalized
+    return {key: _canonicalize(policy.get(key)) for key in semantic_keys}
 
 
 def _required_status_checks(policy: dict[str, Any]) -> set[str]:
@@ -159,7 +156,7 @@ def main() -> int:
 
     try:
         expected_main_ruleset = _load_main_ruleset_policy()
-    except (OSError, json.JSONDecodeError, ValueError) as exc:
+    except (OSError, ValueError) as exc:
         print(f"Invalid tracked main ruleset policy: {exc}")
         return 1 if args.strict else 0
 
