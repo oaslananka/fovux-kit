@@ -137,6 +137,9 @@ def validate_config(repo_root: Path) -> list[str]:
         errors.append("prConcurrentLimit must be 6")
     if config.get("dependencyDashboard") is not True:
         errors.append("Dependency Dashboard must be enabled")
+    pre_commit_config = config.get("pre-commit", {})
+    if not isinstance(pre_commit_config, dict) or pre_commit_config.get("enabled") is not True:
+        errors.append("pre-commit manager must be explicitly enabled")
 
     missing_manifests = [
         relative_path
