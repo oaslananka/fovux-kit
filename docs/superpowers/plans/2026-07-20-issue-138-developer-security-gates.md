@@ -188,6 +188,12 @@ git commit -m "feat(security): add Snyk and Sonar developer wrappers"
 **Interfaces:**
 - Produces: `security:semgrep`, `security:snyk`, `security:sonar`, and manual/pre-push hooks.
 
+- [ ] **Step 0: Keep Semgrep out of the compatibility matrix**
+
+The broad `security` task is executed in every compatibility-matrix cell and must not invoke
+`security:semgrep`. Semgrep remains available through `security:semgrep`, `security:developer`,
+pre-commit, and the independent required SARIF job. This avoids eighteen duplicate Semgrep runs.
+
 - [ ] **Step 1: Add Taskfile tasks**
 
 ```yaml
