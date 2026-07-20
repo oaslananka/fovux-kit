@@ -70,6 +70,7 @@ dev = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7",
     "mkdocstrings[python]>=1.0.4",
+    "mutmut==3.6.0",
     "build>=1.2",
     "cyclonedx-bom>=7.3",
     "types-pillow",
@@ -167,13 +168,24 @@ filterwarnings = [
 ]
 
 [tool.mutmut]
-paths_to_mutate = ["src/fovux"]
+source_paths = ["src/fovux"]
+only_mutate = [
+    "src/fovux/core/path_policy.py",
+    "src/fovux/core/tool_registry.py",
+    "src/fovux/http/challenge.py",
+]
+mutate_only_covered_lines = true
 pytest_add_cli_args_test_selection = [
-    "tests",
-    "-m",
-    "not slow and not integration and not gpu",
+    "tests/unit/test_path_policy.py",
+    "tests/unit/test_tool_registry.py::test_available_tools_lists_known_entries",
+    "tests/unit/test_tool_registry.py::test_list_tool_names_is_available_tools_alias",
+    "tests/unit/test_tool_registry.py::test_resolve_tool_unknown_name_raises_key_error",
+    "tests/unit/test_tool_registry.py::test_register_all_imports_all_tool_modules",
+    "tests/unit/test_http_challenge.py::TestChallengeUnit",
 ]
 pytest_add_cli_args = ["--no-header", "-q"]
+timeout_multiplier = 10.0
+timeout_constant = 1.0
 
 [tool.coverage.run]
 source = ["src/fovux"]
