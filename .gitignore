@@ -74,3 +74,12 @@ requirements-build.txt
 
 .gemini/
 gha-creds-*.json
+
+# Local security scanner outputs and caches
+.scanner-cache/
+.sonar/
+.sonar-scanner/
+.semgrep-cache/
+semgrep-results.sarif
+snyk-results.json
+scanner-*.log
