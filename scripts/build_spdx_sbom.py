@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 def main() -> int:
+    """Build SPDX JSON and tag-value documents for installed distributions."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", default="fovux-mcp-python-environment")
     parser.add_argument("--output", type=Path, required=True)
@@ -40,9 +41,7 @@ def _write_json_sbom(name: str, output: Path) -> None:
         "packages": [_package_json(dist) for dist in distributions],
     }
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    output.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _write_tag_value_sbom(name: str, output: Path) -> None:
@@ -98,12 +97,13 @@ def _package_json(dist: metadata.Distribution) -> dict[str, object]:
 
 
 def _distributions() -> list[metadata.Distribution]:
-    return sorted(
-        metadata.distributions(), key=lambda item: item.metadata["Name"].lower()
-    )
+    return sorted(metadata.distributions(), key=lambda item: item.metadata["Name"].lower())
 
 
 def _license_for(dist: metadata.Distribution) -> str:
+    license_expression = dist.metadata.get("License-Expression")
+    if license_expression:
+        return _sanitize_license_expression(license_expression)
     license_value = dist.metadata.get("License")
     if license_value and len(license_value) < 80:
         return _sanitize_license(license_value)
@@ -116,6 +116,14 @@ def _license_for(dist: metadata.Distribution) -> str:
 
 def _sanitize(value: str) -> str:
     return "".join(char if char.isalnum() else "-" for char in value)
+
+
+def _sanitize_license_expression(value: str) -> str:
+    allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.+() ")
+    normalized = " ".join(value.split())
+    if normalized and all(char in allowed for char in normalized):
+        return normalized
+    return "NOASSERTION"
 
 
 def _sanitize_license(value: str) -> str:
