@@ -106,9 +106,27 @@ jobs:
       - name: Run CI
         run: task ci
 
+  renovate-config:
+    name: Renovate policy
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Validate repository Renovate policy
+        run: python scripts/validate_renovate_config.py
+
   ci-required:
     name: ci-required
-    needs: ci
+    needs: [ci, renovate-config]
     if: always() && github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -116,10 +134,15 @@ jobs:
       - name: Confirm CI matrix passed
         env:
           CI_RESULT: ${{ needs.ci.result }}
+          RENOVATE_CONFIG_RESULT: ${{ needs.renovate-config.result }}
         run: |
           set -euo pipefail
           if [[ "$CI_RESULT" != "success" ]]; then
             echo "::error::CI matrix result was $CI_RESULT."
             exit 1
           fi
-          echo "CI matrix passed."
+          if [[ "$RENOVATE_CONFIG_RESULT" != "success" ]]; then
+            echo "::error::Renovate policy result was $RENOVATE_CONFIG_RESULT."
+            exit 1
+          fi
+          echo "CI matrix and Renovate policy checks passed."

@@ -14,6 +14,7 @@ This page is the canonical local developer workflow for the monorepo.
 | go-task/task | 3.50.0 | Monorepo task runner |
 | actionlint | 1.7.12 | GitHub Actions linting |
 | gitleaks | 8.30.1 | Secret scanning |
+| Renovate CLI | 43.272.4, Node.js >=24.11 | Optional full schema validation |
 | act | optional | Local GitHub Actions simulation |
 
 ## One-time bootstrap
@@ -57,6 +58,7 @@ task lint        # lint Python, Studio, npm wrapper, and workflows
 task typecheck   # static typing
 task test        # backend and Studio tests
 task security    # Bandit, pip-audit, pnpm audit, npm audit, gitleaks, security posture
+task deps:renovate:validate  # static policy and Renovate schema validation
 task docs        # version/tool/docs truth checks, MkDocs strict build, docs code-block lint
 task build       # Python package, Studio bundle, npm wrapper dry-run pack
 task ci          # full local parity with the main CI workflow
@@ -110,6 +112,17 @@ cd ../fovux-mcp-npm && npm audit --omit=dev
 cd .. && gitleaks detect --no-banner --redact
 python scripts/generate_security_posture.py
 ```
+
+### Dependency automation
+
+```bash
+python scripts/validate_renovate_config.py
+npm exec --yes --package=renovate@43.272.4 -- renovate-config-validator renovate.json
+```
+
+The full schema validator requires Node.js 24.11 or newer. Use the `.nvmrc` runtime before running
+the second command. See [dependency-automation.md](dependency-automation.md) for bot ownership and
+activation evidence.
 
 ### Documentation
 
