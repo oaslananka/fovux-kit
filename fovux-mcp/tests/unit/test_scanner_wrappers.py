@@ -218,6 +218,12 @@ def test_taskfile_and_pre_commit_use_shared_wrappers() -> None:
     assert "security:semgrep:" in taskfile
     assert "security:snyk:" in taskfile
     assert "security:sonar:" in taskfile
+    developer_block = taskfile.split("  security:developer:\n", 1)[1].split("\n  security:\n", 1)[0]
+    matrix_security_block = taskfile.split("\n  security:\n", 1)[1].split(
+        "\n  security:posture:\n", 1
+    )[0]
+    assert "task: security:semgrep" in developer_block
+    assert "task: security:semgrep" not in matrix_security_block
     assert "python scripts/run_snyk.py" in taskfile
     assert "python scripts/run_sonar.py" in taskfile
     assert "id: snyk-maintainer" in pre_commit

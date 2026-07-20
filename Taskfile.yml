@@ -101,7 +101,6 @@ tasks:
   security:
     desc: Security scans
     cmds:
-      - task: security:semgrep
       - cmd: cd fovux-mcp && uv run bandit -r src/fovux -ll
       - cmd: cd fovux-mcp && uv export --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
       - cmd: cd fovux-mcp && uv run pip-audit --requirement requirements-audit.txt
