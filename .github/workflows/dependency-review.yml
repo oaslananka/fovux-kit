@@ -4,6 +4,15 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      base-ref:
+        description: Base git revision for a non-PR dependency comparison.
+        required: true
+        type: string
+      head-ref:
+        description: Head git revision for a non-PR dependency comparison.
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -25,3 +34,5 @@ jobs:
         with:
           fail-on-severity: high
           warn-only: false
+          base-ref: ${{ github.event_name == 'workflow_dispatch' && inputs['base-ref'] || '' }}
+          head-ref: ${{ github.event_name == 'workflow_dispatch' && inputs['head-ref'] || '' }}
