@@ -50,6 +50,7 @@ def test_repository_renovate_policy_has_expected_contract() -> None:
     assert config["timezone"] == "Europe/Istanbul"
     assert config["prHourlyLimit"] == 2
     assert config["prConcurrentLimit"] == 6
+    assert config["pre-commit"] == {"enabled": True}
 
     labels = module.collect_configured_labels(config)
     assert labels <= module.load_label_names(REPO_ROOT / ".github" / "labels.yml")
