@@ -37,12 +37,20 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
-        with:
-          go-version: "1.26.2"
-          cache: false
       - name: Install Gitleaks
-        run: go install github.com/zricethezav/gitleaks/v8@v8.30.1
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            --output "${RUNNER_TEMP}/${archive}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum --check -
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" gitleaks
+          chmod 0755 "${RUNNER_TEMP}/gitleaks"
+          echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
       - name: Gitleaks scan
         run: gitleaks detect --no-banner --redact
 
@@ -96,9 +104,9 @@ jobs:
         working-directory: fovux-mcp
         run: |
           set -euo pipefail
-          uv sync --frozen --extra dev
-          uv export --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
-          uv run pip-audit --requirement requirements-audit.txt --strict
+          uv sync --frozen --extra dev --no-install-project --no-build
+          uv export --frozen --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
+          uv run --frozen --no-build --no-sync pip-audit --requirement requirements-audit.txt --strict
 
   pnpm-audit:
     name: pnpm audit (fovux-studio)
@@ -121,7 +129,7 @@ jobs:
           set -euo pipefail
           corepack enable
           corepack prepare pnpm@10.34.1 --activate
-          pnpm install --frozen-lockfile
+          pnpm install --frozen-lockfile --ignore-scripts
           pnpm audit --prod
 
   npm-wrapper-audit:

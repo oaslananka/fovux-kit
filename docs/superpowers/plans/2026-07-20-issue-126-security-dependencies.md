@@ -150,7 +150,11 @@ limit-severities-for-sarif: true
 ```
 next to `severity: CRITICAL,HIGH` in the Trivy workflow step.
 
-- [x] **Step 4: Validate workflow syntax and prepare the GitHub security rerun**
+- [x] **Step 4: Harden security job dependency bootstrap**
+
+Replace `go install` with a checksum-verified Gitleaks release binary, run the Python audit environment with frozen/no-build semantics, and add `--ignore-scripts` to the pnpm audit install.
+
+- [x] **Step 5: Validate workflow syntax and prepare the GitHub security rerun**
 
 Run actionlint locally and verify Trivy 0.70.0 produces zero HIGH/CRITICAL SARIF results with the configured threshold. The replacement `security-required` result is recorded on PR #135.
 
