@@ -25,6 +25,18 @@ repos:
     hooks:
       - id: gitleaks
 
+
+  - repo: https://github.com/semgrep/pre-commit
+    rev: v1.170.0
+    hooks:
+      - id: semgrep
+        name: semgrep-fovux
+        args:
+          - --config=.semgrep/rules
+          - --metrics=off
+          - --error
+        files: ^(fovux-mcp/src/.*\.py|fovux-studio/src/.*\.(ts|tsx|js)|fovux-mcp-npm/bin/.*\.js)$
+
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12
     hooks:
