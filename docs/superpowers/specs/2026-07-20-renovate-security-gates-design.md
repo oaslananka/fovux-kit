@@ -123,7 +123,7 @@ The repository `renovate.json` will explicitly extend:
 and add Fovux-specific policy. The local configuration will enable only the managers needed by this
 monorepo:
 
-- `pep621` and `uv` for `fovux-mcp`;
+- `pep621` for `fovux-mcp`, including `pyproject.toml` and `uv.lock`;
 - `npm` for `fovux-studio` and `fovux-mcp-npm`;
 - `github-actions`;
 - `dockerfile`;
