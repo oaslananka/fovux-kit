@@ -16,7 +16,6 @@ concurrency:
 
 permissions:
   contents: read
-  security-events: write
 
 defaults:
   run:
@@ -55,6 +54,9 @@ jobs:
         run: gitleaks detect --no-banner --redact
 
   semgrep:
+    permissions:
+      contents: read
+      security-events: write
     name: Semgrep SAST
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
@@ -98,6 +100,9 @@ jobs:
           category: semgrep-fovux
 
   trivy-fs:
+    permissions:
+      contents: read
+      security-events: write
     name: Trivy filesystem scan
     if: >
       github.repository == 'oaslananka/fovux-kit' &&

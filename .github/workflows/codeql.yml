@@ -15,9 +15,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
-  actions: read
   contents: read
-  security-events: write
 
 defaults:
   run:
@@ -25,6 +23,10 @@ defaults:
 
 jobs:
   analyze:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
       (
