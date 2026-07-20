@@ -98,7 +98,7 @@ def main() -> int:
         failures,
     )
     _expect(
-        "mutmut run" in _read(mutation),
+        "run_mutmut.py run" in _read(mutation),
         "Mutation workflow does not run mutmut.",
         failures,
     )

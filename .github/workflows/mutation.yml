@@ -4,11 +4,6 @@ on:
   schedule:
     - cron: "0 4 * * 0"
   workflow_dispatch:
-    inputs:
-      module:
-        description: "Module to mutate, for example fovux.tools"
-        required: false
-        default: "fovux"
 
 concurrency:
   group: mutation-${{ github.ref }}
@@ -17,49 +12,56 @@ concurrency:
 permissions:
   contents: read
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   mutate:
     if: github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
-    env:
-      PY_KEY_VALUE_DISABLE_BEARTYPE: "true"
     timeout-minutes: 60
+    env:
+      PYTHONPATH: src
+      PY_KEY_VALUE_DISABLE_BEARTYPE: "true"
+    defaults:
+      run:
+        shell: bash
+        working-directory: fovux-mcp
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
+          version: "0.11.29"
           enable-cache: true
-      - name: Install project
-        working-directory: fovux-mcp
-        run: uv sync --frozen --extra dev
+          cache-dependency-glob: fovux-mcp/uv.lock
+
+      - name: Install mutation dependencies from wheels
+        run: uv sync --frozen --extra dev --no-install-project --no-build
 
       - name: Verify focused baseline tests
-        working-directory: fovux-mcp
         run: |
           set -euo pipefail
-          uv run --no-sync pytest --no-header -q             tests/unit/test_path_policy.py             tests/unit/test_tool_registry.py             tests/unit/test_http_challenge.py::TestChallengeUnit
+          uv run --no-sync --no-build pytest --no-header -q \
+            tests/unit/test_path_policy.py \
+            tests/unit/test_tool_registry.py \
+            tests/unit/test_http_challenge.py::TestChallengeUnit
 
       - name: Run mutation tests
-        working-directory: fovux-mcp
         run: |
           set -euo pipefail
-          rm -rf mutants
+          rm -rf mutants mutation-results.txt mutation-summary.md
           find src tests -type d -exec chmod u+rwx,g-s {} +
           find src tests -type f -exec chmod u+rw {} +
-          uv run --no-sync python ../scripts/run_mutmut.py run --max-children 2
+          uv run --no-sync --no-build python ../scripts/run_mutmut.py run --max-children 2
 
       - name: Export and enforce mutation results
         if: always()
-        working-directory: fovux-mcp
         run: |
           set -euo pipefail
-          uv run --no-sync python ../scripts/run_mutmut.py results --all true | tee mutation-results.txt
-          uv run --no-sync python ../scripts/run_mutmut.py export-cicd-stats
-          python ../scripts/check_mutation_stats.py             mutants/mutmut-cicd-stats.json             --minimum-score 50             --max-survived 120             --max-timeouts 0             --summary-output mutation-summary.md
+          uv run --no-sync --no-build python ../scripts/run_mutmut.py results --all true \
+            | tee mutation-results.txt
+          uv run --no-sync --no-build python ../scripts/run_mutmut.py export-cicd-stats
+          python ../scripts/check_mutation_stats.py \
+            --minimum-score 50 \
+            --max-survived 120 \
+            --max-timeouts 0
 
       - name: Upload mutation report
         if: always()

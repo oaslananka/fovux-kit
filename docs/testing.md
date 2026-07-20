@@ -115,8 +115,11 @@ Run the same focused gate locally from `fovux-mcp`:
 
 ```bash
 export PY_KEY_VALUE_DISABLE_BEARTYPE=true
-uv run --no-sync python ../scripts/run_mutmut.py run --max-children 2
-uv run --no-sync python ../scripts/run_mutmut.py results --all true
-uv run --no-sync python ../scripts/run_mutmut.py export-cicd-stats
-python ../scripts/check_mutation_stats.py   mutants/mutmut-cicd-stats.json   --minimum-score 50   --max-survived 120   --max-timeouts 0   --summary-output mutation-summary.md
+uv run --no-sync --no-build python ../scripts/run_mutmut.py run --max-children 2
+uv run --no-sync --no-build python ../scripts/run_mutmut.py results --all true
+uv run --no-sync --no-build python ../scripts/run_mutmut.py export-cicd-stats
+python ../scripts/check_mutation_stats.py \
+  --minimum-score 50 \
+  --max-survived 120 \
+  --max-timeouts 0
 ```

@@ -7,6 +7,8 @@ import tomllib
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "check_mutation_stats.py"
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "mutation.yml"
@@ -105,12 +107,38 @@ def test_mutation_workflow_exports_and_checks_machine_readable_stats() -> None:
     assert "python ../scripts/run_mutmut.py run --max-children 2" in workflow
     assert "python ../scripts/run_mutmut.py export-cicd-stats" in workflow
     assert "python ../scripts/check_mutation_stats.py" in workflow
+    assert "--summary-output" not in workflow
     assert "mutants/mutmut-cicd-stats.json" in workflow
     assert "mutation-results.txt" in workflow
     assert "minimum-score 50" in workflow
     assert "max-survived 120" in workflow
     assert 'PY_KEY_VALUE_DISABLE_BEARTYPE: "true"' in workflow
     assert "find src tests -type d -exec chmod u+rwx,g-s" in workflow
+    assert "uv sync --frozen --extra dev --no-install-project --no-build" in workflow
+    assert "uv run --no-sync --no-build" in workflow
+    assert 'version: "0.11.29"' in workflow
+
+
+def test_mutation_stats_paths_must_stay_inside_working_directory(tmp_path: Path) -> None:
+    module = _load_module()
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+
+    assert module.resolve_cli_path(Path("mutants/stats.json"), root=workdir) == (
+        workdir / "mutants" / "stats.json"
+    )
+
+    with pytest.raises(ValueError, match="outside the working directory"):
+        module.resolve_cli_path(Path("../escape.json"), root=workdir)
+
+    with pytest.raises(ValueError, match="relative"):
+        module.resolve_cli_path(tmp_path / "absolute.json", root=workdir)
+
+
+def test_test_strategy_checker_accepts_mutmut_wrapper() -> None:
+    checker = (REPO_ROOT / "scripts" / "check_test_strategy.py").read_text(encoding="utf-8")
+
+    assert '"run_mutmut.py run"' in checker
 
 
 def test_mutmut_wrapper_preloads_multiprocessing_before_mutmut() -> None:
