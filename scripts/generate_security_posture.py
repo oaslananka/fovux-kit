@@ -70,7 +70,10 @@ def _normalize_main_ruleset_policy(policy: dict[str, Any]) -> dict[str, Any]:
         "rules",
         "bypass_actors",
     )
-    return {key: _canonicalize(policy.get(key)) for key in semantic_keys}
+    semantic_policy = {key: policy.get(key) for key in semantic_keys}
+    if semantic_policy["bypass_actors"] is None:
+        semantic_policy["bypass_actors"] = []
+    return {key: _canonicalize(value) for key, value in semantic_policy.items()}
 
 
 def _required_status_checks(policy: dict[str, Any]) -> set[str]:
@@ -95,6 +98,23 @@ def _required_status_checks(policy: dict[str, Any]) -> set[str]:
         for check in checks
         if isinstance(check, dict) and isinstance((context := check.get("context")), str)
     }
+
+
+def _security_analysis_status(repo_data: dict[str, Any], feature: str) -> str | None:
+    """Return one admin-only security status, or None when unavailable."""
+    analysis = repo_data.get("security_and_analysis")
+    if not isinstance(analysis, dict):
+        return None
+    feature_data = analysis.get(feature)
+    if not isinstance(feature_data, dict):
+        return None
+    status = feature_data.get("status")
+    return status if isinstance(status, str) else None
+
+
+def _display_security_status(status: str | None) -> str:
+    """Render enabled/disabled statuses without treating unavailable as disabled."""
+    return status.capitalize() if status is not None else "Unavailable"
 
 
 def _is_restricted_api_error(exc: subprocess.CalledProcessError) -> bool:
@@ -214,16 +234,15 @@ def main() -> int:
     if visibility != "public":
         deviations.append(f"Repo visibility is {visibility} (expected public)")
 
-    security_analysis = repo_data.get("security_and_analysis", {})
-    secret_scanning = security_analysis.get("secret_scanning", {}).get("status")
-    push_protection = security_analysis.get("secret_scanning_push_protection", {}).get("status")
-    dependabot_updates = security_analysis.get("dependabot_security_updates", {}).get("status")
+    secret_scanning = _security_analysis_status(repo_data, "secret_scanning")
+    push_protection = _security_analysis_status(repo_data, "secret_scanning_push_protection")
+    dependabot_updates = _security_analysis_status(repo_data, "dependabot_security_updates")
 
-    if secret_scanning != "enabled":  # noqa: S105
+    if secret_scanning is not None and secret_scanning != "enabled":  # noqa: S105
         deviations.append("Secret scanning is not enabled")
-    if push_protection != "enabled":
+    if push_protection is not None and push_protection != "enabled":
         deviations.append("Secret scanning push protection is not enabled")
-    if dependabot_updates != "enabled":
+    if dependabot_updates is not None and dependabot_updates != "enabled":
         deviations.append("Dependabot security updates are not enabled")
 
     # Analyze rulesets against the tracked canonical policy.

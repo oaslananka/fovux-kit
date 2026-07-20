@@ -56,6 +56,7 @@ def test_ruleset_comparison_ignores_api_metadata_and_order() -> None:
     module = _load_module()
     expected = module._load_main_ruleset_policy()
     live = copy.deepcopy(expected)
+    live["bypass_actors"] = None
     live.update(
         {
             "id": 18689082,
@@ -110,3 +111,19 @@ def test_restricted_dependabot_access_does_not_skip_public_policy_checks(
     monkeypatch.setattr(module, "_run_gh_api", _restricted)
 
     assert module._fetch_dependabot_alerts() is None
+
+
+def test_admin_security_settings_can_be_unavailable_to_pr_tokens() -> None:
+    module = _load_module()
+
+    public_repo_data = {"visibility": "public"}
+    admin_repo_data = {
+        "security_and_analysis": {
+            "secret_scanning": {"status": "enabled"},
+        }
+    }
+
+    assert module._security_analysis_status(public_repo_data, "secret_scanning") is None
+    assert module._display_security_status(None) == "Unavailable"
+    assert module._security_analysis_status(admin_repo_data, "secret_scanning") == "enabled"
+    assert module._display_security_status("enabled") == "Enabled"
