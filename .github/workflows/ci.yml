@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       run_slow:
-        description: "Run slow backend validation"
+        description: "Run scheduled-style slow backend validation"
         required: false
         default: "false"
         type: choice
@@ -30,7 +30,64 @@ defaults:
     shell: bash
 
 jobs:
-  ci:
+  quality:
+    name: Required quality gate
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Check action SHA pinning
+        run: |
+          if grep -R "^[[:space:]]*uses:" .github/workflows/ | grep -v "@[0-9a-f]\{40\}"; then
+            echo "ERROR: Unpinned actions found. Use SHA-pinned refs."
+            exit 1
+          fi
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+          cache-dependency-glob: fovux-mcp/uv.lock
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24.16.0"
+          cache: pnpm
+          cache-dependency-path: |
+            fovux-studio/pnpm-lock.yaml
+            fovux-mcp-npm/package-lock.json
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version: "1.26.2"
+          cache: false
+
+      - name: Install quality tools
+        run: |
+          set -euo pipefail
+          go install github.com/go-task/task/v3/cmd/task@v3.50.0
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          go install github.com/zricethezav/gitleaks/v8@v8.30.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          corepack enable
+          corepack prepare pnpm@10.34.1 --activate
+          pnpm --version
+
+      - name: Run deterministic full quality gate
+        run: task ci
+
+  compatibility:
+    name: Compatibility (${{ matrix.os }}, Python ${{ matrix.python-version }})
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
       (
@@ -42,69 +99,145 @@ jobs:
       matrix:
         os: [ubuntu-24.04, macos-15, windows-2022]
         python-version: ["3.12", "3.13", "3.14"]
-        node-version: ["22", "24.16.0"]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-
-      - name: Check action SHA pinning
-        shell: bash
-        run: |
-          if grep -R "^[[:space:]]*uses:" .github/workflows/ | grep -v "@[0-9a-f]\{40\}"; then
-            echo "ERROR: Unpinned actions found. Use SHA-pinned refs."
-            exit 1
-          fi
-
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
-        if: hashFiles('fovux-mcp/pyproject.toml') != ''
         with:
           python-version: ${{ matrix.python-version }}
-
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
-        if: hashFiles('fovux-mcp/pyproject.toml') != ''
+        with:
+          enable-cache: true
+          cache-dependency-glob: fovux-mcp/uv.lock
 
+      - name: Install backend compatibility environment
+        working-directory: fovux-mcp
+        run: uv sync --frozen --extra dev
+
+      - name: Run filesystem, process, and package smoke tests
+        working-directory: fovux-mcp
+        run: |
+          set -euo pipefail
+          uv run python -c "import fovux; print(fovux.__version__)"
+          uv run pytest -q --no-header \
+            tests/unit/test_config.py \
+            tests/unit/test_path_helpers.py \
+            tests/unit/test_path_policy.py \
+            tests/unit/test_paths.py \
+            tests/unit/test_processes.py \
+            tests/unit/test_shutdown.py
+          uv build --wheel --out-dir "$RUNNER_TEMP/fovux-wheel"
+
+  compatibility-required:
+    name: compatibility-required
+    needs: [compatibility]
+    if: always() && github.repository == 'oaslananka/fovux-kit'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Confirm platform compatibility passed
+        env:
+          COMPATIBILITY_RESULT: ${{ needs.compatibility.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$COMPATIBILITY_RESULT" != "success" ]]; then
+            echo "::error::Compatibility matrix result was $COMPATIBILITY_RESULT."
+            exit 1
+          fi
+          echo "Python and operating-system compatibility passed."
+
+  node-compatibility:
+    name: Node compatibility (${{ matrix.node-version }})
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22", "24.16.0"]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
-        if: hashFiles('fovux-studio/package.json') != ''
         with:
           node-version: ${{ matrix.node-version }}
-
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
-        with:
-          go-version: "1.26.2"
-          cache: false
-
-      - name: Install Task
-        shell: bash
-        run: |
-          go install github.com/go-task/task/v3/cmd/task@v3.50.0
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-
-      - name: Install actionlint
-        shell: bash
-        run: |
-          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-
-      - name: Install Gitleaks
-        shell: bash
-        run: |
-          go install github.com/zricethezav/gitleaks/v8@v8.30.1
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-
+          cache: pnpm
+          cache-dependency-path: |
+            fovux-studio/pnpm-lock.yaml
+            fovux-mcp-npm/package-lock.json
       - name: Install pnpm
-        if: hashFiles('fovux-studio/package.json') != ''
         run: |
           set -euo pipefail
           corepack enable
           corepack prepare pnpm@10.34.1 --activate
           pnpm --version
+      - name: Install Node workspaces
+        run: |
+          cd fovux-studio
+          pnpm install --frozen-lockfile
+          cd ../fovux-mcp-npm
+          npm ci --ignore-scripts
+      - name: Run Studio and wrapper smoke tests
+        run: |
+          set -euo pipefail
+          cd fovux-studio
+          pnpm run typecheck
+          pnpm test --run
+          pnpm run build
+          cd ../fovux-mcp-npm
+          node --check bin/fovux-mcp.js
+          npm pack --dry-run
 
-      - name: Install dependencies
-        run: task install
+  node-required:
+    name: node-required
+    needs: [node-compatibility]
+    if: always() && github.repository == 'oaslananka/fovux-kit'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Confirm Node compatibility passed
+        env:
+          NODE_RESULT: ${{ needs.node-compatibility.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$NODE_RESULT" != "success" ]]; then
+            echo "::error::Node compatibility result was $NODE_RESULT."
+            exit 1
+          fi
+          echo "Studio and npm wrapper compatibility passed."
 
-      - name: Run CI
-        run: task ci
+  slow-validation:
+    name: Scheduled slow validation
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        github.event_name == 'schedule' ||
+        inputs.run_slow == 'true'
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+          cache-dependency-glob: fovux-mcp/uv.lock
+      - name: Run slow and integration-marked backend tests
+        working-directory: fovux-mcp
+        run: |
+          set -euo pipefail
+          uv sync --frozen --extra dev
+          uv run pytest -q --no-header \
+            -m "slow or integration or chaos or benchmark" \
+            --basetemp="$RUNNER_TEMP/fovux-slow-pytest"
 
   renovate-config:
     name: Renovate policy
@@ -126,23 +259,27 @@ jobs:
 
   ci-required:
     name: ci-required
-    needs: [ci, renovate-config]
+    needs: [quality, compatibility-required, node-required, renovate-config]
     if: always() && github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Confirm CI matrix passed
+      - name: Confirm required CI lanes passed
         env:
-          CI_RESULT: ${{ needs.ci.result }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          COMPATIBILITY_RESULT: ${{ needs.compatibility-required.result }}
+          NODE_RESULT: ${{ needs.node-required.result }}
           RENOVATE_CONFIG_RESULT: ${{ needs.renovate-config.result }}
         run: |
           set -euo pipefail
-          if [[ "$CI_RESULT" != "success" ]]; then
-            echo "::error::CI matrix result was $CI_RESULT."
-            exit 1
-          fi
-          if [[ "$RENOVATE_CONFIG_RESULT" != "success" ]]; then
-            echo "::error::Renovate policy result was $RENOVATE_CONFIG_RESULT."
-            exit 1
-          fi
-          echo "CI matrix and Renovate policy checks passed."
+          for result in \
+            "$QUALITY_RESULT" \
+            "$COMPATIBILITY_RESULT" \
+            "$NODE_RESULT" \
+            "$RENOVATE_CONFIG_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "::error::At least one required CI lane did not pass."
+              exit 1
+            fi
+          done
+          echo "Required quality, compatibility, Node, and Renovate lanes passed."
