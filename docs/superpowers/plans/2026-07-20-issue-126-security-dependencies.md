@@ -125,7 +125,36 @@ uv run pytest -x --no-header -q --basetemp=/tmp/fovux-kit-126-pytest-final
 ```
 Expected: both commands exit 0.
 
-### Task 3: Document and validate the patch
+### Task 3: Enforce Trivy severity filtering in SARIF mode
+
+**Files:**
+- Modify: `.github/workflows/security.yml`
+
+**Interfaces:**
+- Consumes: `aquasecurity/trivy-action` SARIF output with a configured `CRITICAL,HIGH` threshold.
+- Produces: a security gate whose exit code is limited to the configured severities while SARIF remains uploaded.
+
+- [x] **Step 1: Reproduce the workflow-only failure**
+
+Observe PR #135 security run `29757924264`: direct pip-audit and OSV jobs pass, but Trivy 0.70.0 fails in SARIF mode on the tracked LOW optional-Torch advisory.
+
+- [x] **Step 2: Verify upstream action behavior**
+
+Inspect the pinned Trivy action entrypoint and confirm that SARIF mode unsets `TRIVY_SEVERITY` unless `limit-severities-for-sarif` is true.
+
+- [x] **Step 3: Preserve the configured threshold**
+
+Add:
+```yaml
+limit-severities-for-sarif: true
+```
+next to `severity: CRITICAL,HIGH` in the Trivy workflow step.
+
+- [x] **Step 4: Validate workflow syntax and prepare the GitHub security rerun**
+
+Run actionlint locally and verify Trivy 0.70.0 produces zero HIGH/CRITICAL SARIF results with the configured threshold. The replacement `security-required` result is recorded on PR #135.
+
+### Task 4: Document and validate the patch
 
 **Files:**
 - Create: `docs/release-notes/1.4.1.md`
@@ -168,7 +197,8 @@ Expected: only the two dependency floors, corresponding lock entries, plan, OSV 
 
 Run:
 ```bash
-git add docs/superpowers/plans/2026-07-20-issue-126-security-dependencies.md \
+git add .github/workflows/security.yml \
+  docs/superpowers/plans/2026-07-20-issue-126-security-dependencies.md \
   fovux-mcp/pyproject.toml fovux-mcp/uv.lock fovux-mcp/osv-scanner.toml \
   fovux-mcp/tests/contract/test_mcp_protocol.py docs/release-notes/1.4.1.md
 git commit -m "fix(security): remediate MCP and Pillow advisories"
