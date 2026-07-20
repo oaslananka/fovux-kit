@@ -54,6 +54,49 @@ jobs:
       - name: Gitleaks scan
         run: gitleaks detect --no-banner --redact
 
+  semgrep:
+    name: Semgrep SAST
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+      - name: Install pinned Semgrep
+        run: uv tool install --no-build semgrep==1.170.0
+      - name: Validate Semgrep rules and fixtures
+        run: |
+          set -euo pipefail
+          semgrep validate .semgrep/rules
+          semgrep test .semgrep/rules
+      - name: Run Semgrep SAST
+        run: |
+          set -euo pipefail
+          semgrep scan \
+            --config .semgrep/rules \
+            --metrics=off \
+            --error \
+            --sarif-output semgrep-results.sarif \
+            fovux-mcp/src \
+            fovux-studio/src \
+            fovux-mcp-npm/bin
+      - name: Upload Semgrep SARIF
+        if: always() && hashFiles('semgrep-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep-fovux
+
   trivy-fs:
     name: Trivy filesystem scan
     if: >
@@ -215,7 +258,7 @@ jobs:
   security-required:
     name: security-required
     needs:
-      [gitleaks, trivy-fs, pip-audit, pnpm-audit, npm-wrapper-audit, osv-scan, posture]
+      [gitleaks, semgrep, trivy-fs, pip-audit, pnpm-audit, npm-wrapper-audit, osv-scan, posture]
     if: always() && github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -223,6 +266,7 @@ jobs:
       - name: Confirm security scans passed
         env:
           GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          SEMGREP_RESULT: ${{ needs.semgrep.result }}
           TRIVY_RESULT: ${{ needs.trivy-fs.result }}
           PIP_AUDIT_RESULT: ${{ needs.pip-audit.result }}
           PNPM_AUDIT_RESULT: ${{ needs.pnpm-audit.result }}
@@ -233,6 +277,7 @@ jobs:
           set -euo pipefail
           for result in \
             "$GITLEAKS_RESULT" \
+            "$SEMGREP_RESULT" \
             "$TRIVY_RESULT" \
             "$PIP_AUDIT_RESULT" \
             "$PNPM_AUDIT_RESULT" \
