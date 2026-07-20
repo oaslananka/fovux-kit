@@ -88,9 +88,7 @@ def main() -> int:
         "fovux-mcp-npm": _read(ROOT / "fovux-mcp-npm" / "CHANGELOG.md"),
         "fovux-studio": _read(STUDIO_ROOT / "CHANGELOG.md"),
     }
-    release_docs = _read(ROOT / "docs" / "release.md") + _read(
-        ROOT / "docs" / "release-process.md"
-    )
+    release_docs = _read(ROOT / "docs" / "release.md") + _read(ROOT / "docs" / "release-process.md")
 
     if not release_please_branch:
         _expect(
@@ -126,8 +124,7 @@ def main() -> int:
             failures,
         )
         _expect(
-            f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools"
-            in mcp_readme,
+            f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools" in mcp_readme,
             _with_regen(
                 "fovux-mcp/README.md tool count is stale",
                 "python scripts/check_docs_truth.py",
@@ -165,8 +162,7 @@ def main() -> int:
         failures,
     )
     _expect(
-        "not documented as a standards-compliant MCP Streamable HTTP endpoint"
-        in architecture,
+        "not documented as a standards-compliant MCP Streamable HTTP endpoint" in architecture,
         _with_regen(
             "docs/architecture.md does not distinguish the current HTTP/SSE API "
             "from MCP Streamable HTTP",
@@ -193,8 +189,7 @@ def main() -> int:
     )
     if not release_please_branch:
         _expect(
-            f"Fovux {mcp_version} is the current reviewed release baseline"
-            in release_notes,
+            f"Fovux {mcp_version} is the current reviewed release baseline" in release_notes,
             _with_regen(
                 "RELEASE_NOTES.md does not describe the current reviewed release baseline",
                 "python scripts/check_docs_truth.py",
@@ -203,12 +198,13 @@ def main() -> int:
         )
 
     for milestone_number, milestone_title in [
-        (1, "v1.3.1 — Stabilization & Documentation Truth"),
-        (2, "v1.4.0 — MCP Conformance & Agent Safety"),
-        (3, "v1.5.0 — Studio Workflow & Dataset Intelligence"),
-        (4, "v1.6.0 — Edge Export & Deployment Intelligence"),
-        (5, "v2.0.0 — Extensibility, Supply Chain & Ecosystem Readiness"),
-        (6, "Backlog — Research & Product Discovery"),
+        (1, "v1.3.1 - Stabilization & Documentation Truth"),
+        (2, "v1.4.0 - MCP Conformance & Agent Safety"),
+        (7, "Security & Reliability Stabilization"),
+        (3, "v1.5.0 - Studio Workflow & Dataset Intelligence"),
+        (4, "v1.6.0 - Edge Export & Deployment Intelligence"),
+        (5, "v2.0.0 - Extensibility, Supply Chain & Ecosystem Readiness"),
+        (6, "Backlog - Research & Product Discovery"),
     ]:
         _expect(
             f"[{milestone_title}](https://github.com/oaslananka/fovux-kit/milestone/{milestone_number})"

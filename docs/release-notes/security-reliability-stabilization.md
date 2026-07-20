@@ -1,7 +1,7 @@
-# Fovux 1.4.1 Release Notes
+# Security & Reliability Stabilization Workstream
 
-> **Status:** Planned security and reliability patch. These notes do not indicate that packages
-> have been published.
+> **Status:** Active engineering workstream, not a promised package version. Release Please computes
+> the next semantic version from merged commits; these notes do not indicate registry publication.
 
 ## Security
 
@@ -31,5 +31,5 @@ The remediation is complete only when the release pull request records successfu
 - OSV and Trivy dependency scans;
 - the repository `ci-required` and `security-required` checks.
 
-This patch supersedes the single-package MCP update in Dependabot PR #124 while preserving that
+This workstream supersedes the single-package MCP update in Dependabot PR #124 while preserving that
 commit's authorship in the remediation branch history.
