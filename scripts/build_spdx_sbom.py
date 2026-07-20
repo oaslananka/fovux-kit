@@ -17,13 +17,26 @@ def main() -> int:
     parser.add_argument("--name", default="fovux-mcp-python-environment")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    try:
+        output = _validated_output_path(args.output, Path.cwd())
+    except ValueError as exc:
+        parser.error(str(exc))
 
-    if args.output.suffix == ".json":
-        _write_json_sbom(args.name, args.output)
+    if output.suffix == ".json":
+        _write_json_sbom(args.name, output)
         return 0
 
-    _write_tag_value_sbom(args.name, args.output)
+    _write_tag_value_sbom(args.name, output)
     return 0
+
+
+def _validated_output_path(value: Path, working_directory: Path) -> Path:
+    """Resolve an output path and reject writes outside the working directory."""
+    root = working_directory.resolve()
+    candidate = (root / value).resolve() if not value.is_absolute() else value.resolve()
+    if candidate == root or not candidate.is_relative_to(root):
+        raise ValueError("--output must resolve inside the working directory")
+    return candidate
 
 
 def _write_json_sbom(name: str, output: Path) -> None:

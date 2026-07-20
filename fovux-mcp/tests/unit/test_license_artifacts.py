@@ -95,3 +95,18 @@ def test_spdx_builder_prefers_pep639_license_expression() -> None:
         metadata = Metadata({"License-Expression": "Apache-2.0"})
 
     assert module._license_for(Distribution()) == "Apache-2.0"
+
+
+def test_spdx_output_path_rejects_parent_escape(tmp_path: Path) -> None:
+    spec = importlib.util.spec_from_file_location("build_spdx_sbom", SBOM_SCRIPT_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module._validated_output_path(Path("sbom.json"), tmp_path) == tmp_path / "sbom.json"
+    try:
+        module._validated_output_path(Path("../escape.json"), tmp_path)
+    except ValueError as exc:
+        assert "inside the working directory" in str(exc)
+    else:
+        raise AssertionError("parent-directory output escape was accepted")
