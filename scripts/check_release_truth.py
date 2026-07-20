@@ -103,7 +103,7 @@ def validate_release_truth(root: Path) -> list[str]:
         if not published_release:
             failures.append("release-baseline.json published_release is required")
         expected_table = render_release_table(manifest)
-    except (OSError, json.JSONDecodeError, ValueError) as exc:
+    except (OSError, ValueError) as exc:
         return [f"Cannot load release baseline: {exc}"]
 
     documents = [
