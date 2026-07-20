@@ -1,5 +1,8 @@
 # Renovate and Layered Developer Security Gates Design
 
+> **Implementation amendment — 21 July 2026:** Renovate runs through the already-installed hosted GitHub App. The self-hosted `RENOVATE_TOKEN` path below is retained only as historical design context; it is not required for Fovux activation. Native Dependabot owns security PRs during the initial rollout.
+
+
 **Date:** 2026-07-20  
 **Issues:** #137, #138  
 **Status:** Approved design, implementation pending

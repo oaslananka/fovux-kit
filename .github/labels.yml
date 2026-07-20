@@ -377,3 +377,35 @@
 - name: "python:uv"
   color: "2b67c6"
   description: "Pull requests that update uv or Python packaging metadata"
+
+- name: "lockfile"
+  color: "bfdadc"
+  description: "Lockfile-only dependency maintenance"
+
+- name: "major"
+  color: "b60205"
+  description: "Major dependency update from the shared Renovate preset"
+
+- name: "requires-review"
+  color: "d93f0b"
+  description: "Requires explicit maintainer review before merge"
+
+- name: "javascript"
+  color: "f1e05a"
+  description: "JavaScript or npm ecosystem dependency update"
+
+- name: "github-actions"
+  color: "2088ff"
+  description: "GitHub Actions dependency or digest update"
+
+- name: "docker"
+  color: "0db7ed"
+  description: "Container image or Docker dependency update"
+
+- name: "automerge"
+  color: "0e8a16"
+  description: "Renovate may merge after all required checks pass"
+
+- name: "runtime"
+  color: "5319e7"
+  description: "Runtime support-policy or engine update"
