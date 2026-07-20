@@ -1,0 +1,48 @@
+rules:
+  - id: fovux.typescript.interpolated-child-process-exec
+    message: Avoid child_process.exec with interpolated or concatenated input; use spawn with an argument array.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-78
+    pattern-either:
+      - pattern: childProcess.exec(`...${$INPUT}...`, ...)
+      - pattern: childProcess.exec($LEFT + $RIGHT, ...)
+      - pattern: exec(`...${$INPUT}...`, ...)
+      - pattern: exec($LEFT + $RIGHT, ...)
+
+  - id: fovux.typescript.dynamic-code-execution
+    message: Dynamic eval or Function construction is forbidden in production code.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-95
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+
+  - id: fovux.typescript.credential-logging
+    message: Do not write token, authorization, bearer, or secret values to logs.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe: CWE-532
+    patterns:
+      - pattern-either:
+          - pattern: console.log($VALUE, ...)
+          - pattern: console.info($VALUE, ...)
+          - pattern: console.warn($VALUE, ...)
+          - pattern: console.error($VALUE, ...)
+          - pattern: $LOGGER.log($VALUE, ...)
+          - pattern: $LOGGER.info($VALUE, ...)
+          - pattern: $LOGGER.warn($VALUE, ...)
+          - pattern: $LOGGER.error($VALUE, ...)
+      - metavariable-regex:
+          metavariable: $VALUE
+          regex: (?i).*(token|authorization|bearer|secret).*

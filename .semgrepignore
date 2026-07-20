@@ -1,0 +1,17 @@
+.git/
+**/node_modules/
+**/.venv/
+**/venv/
+**/dist/
+**/build/
+**/out/
+**/coverage/
+**/htmlcov/
+**/.vscode-test/
+**/*.min.js
+**/*.map
+**/package-lock.json
+**/pnpm-lock.yaml
+**/uv.lock
+reports/
+.scan-results/

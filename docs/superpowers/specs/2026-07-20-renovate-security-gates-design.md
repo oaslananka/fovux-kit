@@ -237,7 +237,7 @@ Expected implementation files:
 - `renovate.json` — explicit shared preset plus Fovux package rules;
 - `.pre-commit-config.yaml` — Semgrep pre-commit and credential-aware manual/pre-push hooks;
 - `.semgrep.yml` and `.semgrep/rules/*.yml` — local configuration and rules;
-- `.semgrep/tests/` — positive and negative rule fixtures;
+- `.semgrep/rules/*.{py,ts}` — positive and negative fixtures colocated with each rule file;
 - `scripts/run_snyk.py` — authenticated Snyk wrapper;
 - `scripts/run_sonar.py` — authenticated SonarScanner wrapper;
 - `scripts/validate_renovate_config.py` — static project-specific policy validation;
