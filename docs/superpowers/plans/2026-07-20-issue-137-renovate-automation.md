@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Use the explicit preset `github>oaslananka/.github:renovate-config`.
-- Enable only `pep621`, `uv`, `npm`, `github-actions`, `dockerfile`, `nvm`, and `pre-commit` managers.
+- Enable only `pep621`, `npm`, `github-actions`, `dockerfile`, `nvm`, and `pre-commit` managers; `pep621` owns `uv.lock` maintenance.
 - Use only labels already declared in `.github/labels.yml`.
 - Never automerge MCP/FastMCP, Torch/YOLO/CUDA, computer-vision runtime, runtime-policy, or security/release tooling groups.
 - Keep normal updates in a weekly Europe/Istanbul maintenance window; security remediation remains immediate.
@@ -36,7 +36,7 @@ Create tests that assert:
 
 ```python
 EXPECTED_MANAGERS = {
-    "pep621", "uv", "npm", "github-actions", "dockerfile", "nvm", "pre-commit"
+    "pep621", "npm", "github-actions", "dockerfile", "nvm", "pre-commit"
 }
 PROTECTED_PACKAGES = {"mcp", "fastmcp", "torch", "pillow", "onnxruntime"}
 ```
@@ -121,7 +121,7 @@ Add package rules for the protected groups, component labels, lockfiles, securit
 python3 scripts/validate_renovate_config.py
 ```
 
-Expected: exit 0 and print a success summary with seven managers and three component manifests.
+Expected: exit 0 and print a success summary with six managers and three component manifests.
 
 - [ ] **Step 3: Run Renovate schema validation**
 

@@ -1,4 +1,158 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>oaslananka/.github"]
+  "extends": ["github>oaslananka/.github:renovate-config"],
+  "enabledManagers": [
+    "pep621",
+    "npm",
+    "github-actions",
+    "dockerfile",
+    "nvm",
+    "pre-commit"
+  ],
+  "timezone": "Europe/Istanbul",
+  "schedule": ["after 2am and before 6am on monday"],
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 6,
+  "labels": ["dependencies", "goal:supply-chain"],
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Dependency Dashboard",
+  "dependencyDashboardLabels": ["dependencies", "goal:supply-chain"],
+  "prBodyNotes": [
+    "Fovux-specific dependency policy is defined in `renovate.json` and extends the shared `oaslananka/.github` baseline.",
+    "Protected runtime, protocol, computer-vision, and security-tooling groups never automerge."
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"],
+    "automerge": false,
+    "addLabels": ["dependencies", "goal:supply-chain"]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "priority:p0", "goal:supply-chain"],
+    "prCreation": "immediate",
+    "vulnerabilityFixStrategy": "highest"
+  },
+  "packageRules": [
+    {
+      "description": "Label Python and uv dependency changes for fovux-mcp.",
+      "matchFileNames": ["fovux-mcp/pyproject.toml", "fovux-mcp/uv.lock"],
+      "addLabels": ["python", "python:uv", "component:fovux-mcp"]
+    },
+    {
+      "description": "Label Studio npm and pnpm dependency changes.",
+      "matchFileNames": ["fovux-studio/package.json", "fovux-studio/pnpm-lock.yaml"],
+      "addLabels": ["typescript", "component:fovux-studio"]
+    },
+    {
+      "description": "Label npm wrapper dependency changes.",
+      "matchFileNames": ["fovux-mcp-npm/package.json", "fovux-mcp-npm/package-lock.json"],
+      "addLabels": ["component:fovux-mcp-npm"]
+    },
+    {
+      "description": "Group non-major pre-commit hook updates.",
+      "matchManagers": ["pre-commit"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "pre-commit hooks",
+      "groupSlug": "pre-commit-hooks",
+      "addLabels": ["area:ci", "area:security"]
+    },
+    {
+      "description": "Require approval for every major update.",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "automerge": false,
+      "addLabels": ["major-update", "risk:high"]
+    },
+    {
+      "description": "Protect the MCP protocol and transport stack.",
+      "matchPackageNames": [
+        "mcp",
+        "fastmcp",
+        "fastmcp-slim",
+        "sse-starlette",
+        "starlette",
+        "uvicorn"
+      ],
+      "groupName": "MCP protocol stack",
+      "groupSlug": "mcp-protocol-stack",
+      "automerge": false,
+      "addLabels": ["area:mcp", "area:compatibility", "risk:high"]
+    },
+    {
+      "description": "Protect Torch, YOLO, CUDA, and optional ML runtime packages.",
+      "matchPackageNames": [
+        "torch",
+        "torchvision",
+        "ultralytics",
+        "triton",
+        "setuptools",
+        "/^nvidia-/"
+      ],
+      "groupName": "YOLO and PyTorch stack",
+      "groupSlug": "yolo-pytorch-stack",
+      "automerge": false,
+      "addLabels": ["area:compatibility", "risk:high"]
+    },
+    {
+      "description": "Protect the computer-vision runtime compatibility stack.",
+      "matchPackageNames": [
+        "numpy",
+        "pillow",
+        "opencv-python-headless",
+        "onnx",
+        "onnxruntime",
+        "imagehash",
+        "scipy"
+      ],
+      "groupName": "computer vision runtime",
+      "groupSlug": "computer-vision-runtime",
+      "automerge": false,
+      "addLabels": ["area:compatibility", "risk:high"]
+    },
+    {
+      "description": "Protect Studio runtime and extension build majors.",
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "vite",
+        "vitest",
+        "@types/vscode",
+        "@vscode/vsce",
+        "tsup"
+      ],
+      "groupName": "Studio runtime stack",
+      "groupSlug": "studio-runtime-stack",
+      "automerge": false,
+      "addLabels": ["component:fovux-studio", "area:compatibility", "risk:high"]
+    },
+    {
+      "description": "Protect Node support-policy updates.",
+      "matchPackageNames": ["node", "@types/node"],
+      "groupName": "Node support policy",
+      "groupSlug": "node-support-policy",
+      "dependencyDashboardApproval": true,
+      "automerge": false,
+      "addLabels": ["area:compatibility", "risk:high"]
+    },
+    {
+      "description": "Protect release and security tooling updates.",
+      "matchPackageNames": [
+        "renovate",
+        "pre-commit",
+        "semgrep",
+        "snyk",
+        "sonar-scanner",
+        "googleapis/release-please-action",
+        "github/codeql-action",
+        "aquasecurity/trivy-action",
+        "gitleaks/gitleaks",
+        "google/osv-scanner"
+      ],
+      "groupName": "release and security tooling",
+      "groupSlug": "release-security-tooling",
+      "automerge": false,
+      "addLabels": ["area:security", "area:ci", "risk:high"]
+    }
+  ]
 }
