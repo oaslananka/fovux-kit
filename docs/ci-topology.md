@@ -47,10 +47,22 @@ billing statements.
 
 ## After-change measurement
 
-The new topology has one full quality job, nine focused Python/OS smoke jobs, and two focused Node jobs.
-The first pull-request run using this topology must be recorded here after completion, including summed
-job minutes and wall time. Later runs should remain within the same lane responsibilities; regressions
-that move docs, security, or release work back into compatibility cells are rejected by unit tests.
+The first fully successful pull-request run of the new topology was
+[29778303542](https://github.com/oaslananka/fovux-kit/actions/runs/29778303542).
+
+| Measurement | Previous average | New topology | Change |
+| --- | ---: | ---: | ---: |
+| Full quality-suite cells | 18 | 1 | -94.4% |
+| Focused Python/OS smoke cells | 0 | 9 | explicit compatibility coverage |
+| Focused Node smoke cells | 0 | 2 | explicit runtime coverage |
+| Summed required-lane job minutes | 83.2 min | 9.0 min | **-89.2%** |
+| Workflow wall time | 8.8 min | 8.0 min | -9.1% |
+
+The 8.0-minute wall time includes macOS runner queue delay: the actual required-lane execution consumed
+9.0 summed job minutes, split into 3.9 minutes for the full quality gate, 4.3 minutes for nine
+Python/OS compatibility jobs, and 0.7 minutes for two Node jobs. Later runs should remain within the
+same lane responsibilities; regressions that move docs, security, or release work back into
+compatibility cells are rejected by unit tests.
 
 ## Failure and cancellation behavior
 
