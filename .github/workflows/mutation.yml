@@ -25,6 +25,8 @@ jobs:
   mutate:
     if: github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
+    env:
+      PY_KEY_VALUE_DISABLE_BEARTYPE: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -35,28 +37,38 @@ jobs:
         working-directory: fovux-mcp
         run: uv sync --frozen --extra dev
 
+      - name: Verify focused baseline tests
+        working-directory: fovux-mcp
+        run: |
+          set -euo pipefail
+          uv run --no-sync pytest --no-header -q             tests/unit/test_path_policy.py             tests/unit/test_tool_registry.py             tests/unit/test_http_challenge.py::TestChallengeUnit
+
       - name: Run mutation tests
         working-directory: fovux-mcp
         run: |
           set -euo pipefail
-          uv run --with mutmut mutmut run
+          rm -rf mutants
+          find src tests -type d -exec chmod u+rwx,g-s {} +
+          find src tests -type f -exec chmod u+rw {} +
+          uv run --no-sync python ../scripts/run_mutmut.py run --max-children 2
 
-      - name: Report
+      - name: Export and enforce mutation results
         if: always()
         working-directory: fovux-mcp
         run: |
           set -euo pipefail
-          if uv run --with mutmut mutmut results | tee mutation-results.txt; then
-            echo "Mutation results captured."
-          else
-            status=$?
-            echo "Mutation results command exited with status ${status}; report captured."
-          fi
+          uv run --no-sync python ../scripts/run_mutmut.py results --all true | tee mutation-results.txt
+          uv run --no-sync python ../scripts/run_mutmut.py export-cicd-stats
+          python ../scripts/check_mutation_stats.py             mutants/mutmut-cicd-stats.json             --minimum-score 50             --max-survived 120             --max-timeouts 0             --summary-output mutation-summary.md
 
       - name: Upload mutation report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: mutation-report
-          path: fovux-mcp/mutation-results.txt
+          path: |
+            fovux-mcp/mutation-results.txt
+            fovux-mcp/mutation-summary.md
+            fovux-mcp/mutants/mutmut-cicd-stats.json
+          if-no-files-found: error
           retention-days: 14

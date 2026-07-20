@@ -83,3 +83,8 @@ gha-creds-*.json
 semgrep-results.sarif
 snyk-results.json
 scanner-*.log
+
+# Mutation testing outputs
+fovux-mcp/mutants/
+fovux-mcp/mutation-results.txt
+fovux-mcp/mutation-summary.md

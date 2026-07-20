@@ -28,9 +28,11 @@ def test_find_images_canonicalizes_current_directory(
 ) -> None:
     """Relative dataset paths should resolve before the root guard runs."""
     (tmp_path / "image.jpg").write_bytes(b"not-real-image")
-    monkeypatch.chdir(tmp_path)
+    with monkeypatch.context() as context:
+        context.chdir(tmp_path)
+        result = [path.name for path in find_images(Path("."))]
 
-    assert [path.name for path in find_images(Path("."))] == ["image.jpg"]
+    assert result == ["image.jpg"]
 
 
 def test_find_images_returns_sorted_images(tmp_path: Path) -> None:
