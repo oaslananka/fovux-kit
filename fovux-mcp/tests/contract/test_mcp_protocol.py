@@ -24,7 +24,8 @@ from fovux.server import mcp
 _PROTOCOL_VERSION = "2025-11-25"
 _TOOL_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-_READ_TIMEOUT_SECONDS = 10
+# Tool registration can exceed 10 seconds on cold or resource-constrained runners.
+_READ_TIMEOUT_SECONDS = 30
 
 
 @asynccontextmanager
