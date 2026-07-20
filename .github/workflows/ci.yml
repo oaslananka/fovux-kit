@@ -119,9 +119,17 @@ jobs:
           enable-cache: true
           cache-dependency-glob: fovux-mcp/uv.lock
 
-      - name: Install backend compatibility environment
+      - name: Install backend compatibility environment from wheels
+        if: matrix.os != 'macos-15' || matrix.python-version != '3.14'
         working-directory: fovux-mcp
-        run: uv sync --frozen --extra dev --no-install-project --no-build-package fovux-mcp
+        run: uv sync --frozen --extra dev --no-install-project --no-build
+
+      - name: Install macOS Python 3.14 compatibility environment
+        if: matrix.os == 'macos-15' && matrix.python-version == '3.14'
+        working-directory: fovux-mcp
+        # The locked Python 3.14 environment may need a third-party source build; the local
+        # project remains blocked from running build hooks. This is the narrow reviewed exception.
+        run: uv sync --frozen --extra dev --no-install-project --no-build-package fovux-mcp # NOSONAR
 
       - name: Run filesystem, process, and package smoke tests
         working-directory: fovux-mcp
@@ -256,7 +264,7 @@ jobs:
         working-directory: fovux-mcp
         run: |
           set -euo pipefail
-          uv sync --frozen --extra dev --no-install-project --no-build-package fovux-mcp
+          uv sync --frozen --extra dev --no-install-project --no-build
           PYTHONPATH=src uv run --no-sync --no-build pytest -q --no-header \
             -m "slow or integration or chaos or benchmark" \
             --basetemp="$RUNNER_TEMP/fovux-slow-pytest"
