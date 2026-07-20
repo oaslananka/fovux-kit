@@ -1,0 +1,58 @@
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: 70..95
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
+        if_ci_failed: error
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
+        if_ci_failed: error
+
+flags:
+  backend:
+    paths:
+      - fovux-mcp/src/fovux/**
+    carryforward: false
+  studio:
+    paths:
+      - fovux-studio/src/**
+    carryforward: false
+
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+        threshold: 1%
+        informational: true
+  individual_components:
+    - component_id: backend
+      name: fovux-mcp backend
+      paths:
+        - fovux-mcp/src/fovux/**
+    - component_id: studio
+      name: Fovux Studio
+      paths:
+        - fovux-studio/src/**
+
+comment:
+  layout: diff, flags, components, files
+  behavior: default
+  require_changes: coverage_drop OR uncovered_patch
+  require_base: false
+  require_head: true
+
+bundle_analysis:
+  status: informational
+  warning_threshold: 5%

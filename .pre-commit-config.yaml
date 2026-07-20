@@ -41,6 +41,12 @@ repos:
     hooks:
       - id: actionlint
 
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.27.0
+    hooks:
+      - id: zizmor
+        args: [--pedantic, --min-severity=high]
+
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.38.0
     hooks:

@@ -32,6 +32,9 @@ defaults:
 jobs:
   quality:
     name: Required quality gate
+    permissions:
+      contents: read
+      id-token: write
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
       (
@@ -92,7 +95,66 @@ jobs:
           restore-keys: pnpm-${{ runner.os }}-node-24.16.0-
 
       - name: Run deterministic full quality gate
+        id: quality-gate
+        continue-on-error: true
         run: task ci
+
+      - name: Upload backend coverage to Codecov
+        if: ${{ !cancelled() && hashFiles('fovux-mcp/coverage.xml') != '' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
+        with:
+          use_oidc: true
+          files: fovux-mcp/coverage.xml
+          flags: backend
+          name: backend-coverage
+          disable_search: true
+          fail_ci_if_error: false
+
+      - name: Upload Studio coverage to Codecov
+        if: ${{ !cancelled() && hashFiles('fovux-studio/coverage/lcov.info') != '' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
+        with:
+          use_oidc: true
+          files: fovux-studio/coverage/lcov.info
+          flags: studio
+          name: studio-coverage
+          disable_search: true
+          fail_ci_if_error: false
+
+      - name: Upload backend test results to Codecov
+        if: ${{ !cancelled() && hashFiles('fovux-mcp/junit.xml') != '' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
+        with:
+          use_oidc: true
+          report_type: test_results
+          files: fovux-mcp/junit.xml
+          flags: backend
+          name: backend-test-results
+          disable_search: true
+          fail_ci_if_error: false
+
+      - name: Upload Studio test results to Codecov
+        if: ${{ !cancelled() && hashFiles('fovux-studio/coverage/junit.xml') != '' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
+        with:
+          use_oidc: true
+          report_type: test_results
+          files: fovux-studio/coverage/junit.xml
+          flags: studio
+          name: studio-test-results
+          disable_search: true
+          fail_ci_if_error: false
+
+      - name: Confirm deterministic quality gate passed
+        if: always()
+        env:
+          QUALITY_OUTCOME: ${{ steps.quality-gate.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$QUALITY_OUTCOME" != "success" ]]; then
+            echo "::error::Deterministic quality gate result was $QUALITY_OUTCOME."
+            exit 1
+          fi
 
   compatibility:
     name: Compatibility (${{ matrix.os }}, Python ${{ matrix.python-version }})

@@ -6,8 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  issues: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -19,6 +18,9 @@ defaults:
 
 jobs:
   lock:
+    permissions:
+      issues: write
+      pull-requests: write
     if: github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 10

@@ -1621,7 +1621,8 @@
     "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test",
     "verify": "pnpm check && pnpm build && pnpm audit:prod",
     "package": "node ../scripts/package_vscode_extension.mjs --extension-dir . --out fovuxstudiokit.vsix",
-    "check:bundle-size": "node scripts/check-bundle-size.js"
+    "check:bundle-size": "node scripts/check-bundle-size.js",
+    "coverage:ci": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov --reporter=default --reporter=junit --outputFile=coverage/junit.xml"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",
@@ -1630,6 +1631,7 @@
     "@types/vscode": "1.98.0",
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
+    "@vitest/coverage-v8": "4.1.7",
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
     "prettier": "^3.8.3",

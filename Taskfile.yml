@@ -45,6 +45,7 @@ tasks:
       - cmd: cd fovux-studio && {{.PNPM}} prettier --check --ignore-path ../.prettierignore ../fovux-mcp-npm
       - cmd: node --check fovux-mcp-npm/bin/fovux-mcp.js
       - cmd: actionlint
+      - cmd: uvx zizmor==1.27.0 --pedantic --min-severity=high .github/workflows
 
   typecheck:
     desc: Static type checking
@@ -71,7 +72,7 @@ tasks:
           --basetemp="{{.PYTEST_TEMP_ROOT}}/fovux-kit-pytest"
           --cov=fovux --cov-fail-under=85
           --cov-report=term-missing --cov-report=html --cov-report=xml
-      - cmd: cd fovux-studio && {{.PNPM}} test
+      - cmd: cd fovux-studio && {{.PNPM}} run coverage:ci
 
   security:semgrep:
     desc: Validate and run repository-owned Semgrep rules
@@ -170,6 +171,7 @@ tasks:
       - task: typecheck
       - task: test:fast
       - cmd: actionlint
+      - cmd: uvx zizmor==1.27.0 --pedantic --min-severity=high .github/workflows
 
   ci:
     desc: Run the exact CI pipeline locally - full parity
