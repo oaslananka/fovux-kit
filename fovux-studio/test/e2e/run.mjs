@@ -162,7 +162,10 @@ async function launchExtensionTests(executable, args, environment, logStream) {
       stdio: ["ignore", "pipe", "pipe"],
     });
     const timeout = setTimeout(() => {
-      child.kill("SIGTERM");
+      child.kill("SIGKILL");
+      child.stdout.destroy();
+      child.stderr.destroy();
+      child.unref();
       rejectLaunch(new Error("VS Code E2E process exceeded the 3 minute scenario timeout"));
     }, 180_000);
     child.stdout.on("data", (chunk) => {
