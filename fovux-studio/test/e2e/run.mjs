@@ -24,7 +24,7 @@ const harnessPath = join(scriptDirectory, "harness");
 const testsPath = join(scriptDirectory, "out", "suite", "index.js");
 
 await mkdir(artifactsRoot, { recursive: true });
-const vscodeExecutablePath = await downloadVsCode();
+const vscodeInstallation = await downloadVsCode();
 
 for (const scenario of [
   {
@@ -38,15 +38,17 @@ for (const scenario of [
     launchArgs: [],
   },
 ]) {
-  await runScenario(vscodeExecutablePath, scenario);
+  await runScenario(vscodeInstallation, scenario);
 }
 
 async function downloadVsCode() {
   const installationRoot = join(vscodeCache, `vscode-${VSCODE_VERSION}`);
   const executable = join(installationRoot, "VSCode-linux-x64", "code");
+  const cli = join(installationRoot, "VSCode-linux-x64", "bin", "code");
   try {
     await access(executable);
-    return executable;
+    await access(cli);
+    return { executable, cli };
   } catch {
     await rm(installationRoot, { recursive: true, force: true });
   }
@@ -70,10 +72,11 @@ async function downloadVsCode() {
   }
   await rm(archive, { force: true });
   await access(executable);
-  return executable;
+  await access(cli);
+  return { executable, cli };
 }
 
-async function runScenario(vscodePath, scenario) {
+async function runScenario(vscodeInstallation, scenario) {
   const scenarioRoot = join(artifactsRoot, scenario.mode);
   const extensionsDirectory = join(scenarioRoot, "extensions");
   const userDataDirectory = join(scenarioRoot, "user-data");
@@ -86,7 +89,7 @@ async function runScenario(vscodePath, scenario) {
   await mkdir(fovuxHome, { recursive: true });
 
   const install = spawnSync(
-    vscodePath,
+    vscodeInstallation.cli,
     [
       "--install-extension",
       vsixPath,
@@ -114,7 +117,7 @@ async function runScenario(vscodePath, scenario) {
   const logStream = createWriteStream(logPath, { flags: "w" });
   try {
     await launchExtensionTests(
-      vscodePath,
+      vscodeInstallation.executable,
       [
         scenario.workspace,
         "--no-sandbox",

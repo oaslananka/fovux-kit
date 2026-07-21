@@ -34,6 +34,7 @@ def test_runner_installs_vsix_and_runs_isolated_trust_scenarios() -> None:
         'const VSCODE_VERSION = "1.129.1"',
         "https://update.code.visualstudio.com/",
         "await fetch(VSCODE_DOWNLOAD_URL",
+        'join(installationRoot, "VSCode-linux-x64", "bin", "code")',
         'const TAR_EXECUTABLE = "/usr/bin/tar"',
         'const SCROT_EXECUTABLE = "/usr/bin/scrot"',
         "--install-extension",
