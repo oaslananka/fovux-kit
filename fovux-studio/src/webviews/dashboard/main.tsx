@@ -885,4 +885,5 @@ const mutedParagraphStyle: CSSProperties = {
 const rootNode = document.getElementById("root");
 if (rootNode) {
   createRoot(rootNode).render(<DashboardApp />);
+  postToExtension({ type: "webviewReady", view: "dashboard" });
 }

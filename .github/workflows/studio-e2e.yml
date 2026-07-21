@@ -1,0 +1,88 @@
+name: Studio packaged VSIX E2E
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/studio-e2e.yml"
+      - "fovux-studio/**"
+      - "scripts/check_studio_e2e_smoke.py"
+      - "scripts/package_vscode_extension.mjs"
+      - "docs/studio-e2e-smoke-contract.md"
+      - "Taskfile.yml"
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - ".github/workflows/studio-e2e.yml"
+      - "fovux-studio/**"
+      - "scripts/check_studio_e2e_smoke.py"
+      - "scripts/package_vscode_extension.mjs"
+      - "docs/studio-e2e-smoke-contract.md"
+      - "Taskfile.yml"
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  studio-e2e:
+    name: Studio packaged VSIX E2E
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24.16.0"
+
+      - name: Install display and screenshot tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends xvfb scrot
+
+      - name: Install pnpm and Studio dependencies
+        working-directory: fovux-studio
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.34.1 --activate
+          pnpm install --frozen-lockfile --ignore-scripts
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: .vscode-test
+          key: studio-e2e-vscode-${{ runner.os }}-1.129.1
+
+      - name: Run packaged VSIX E2E
+        working-directory: fovux-studio
+        env:
+          FOVUX_E2E_ARTIFACTS: ${{ github.workspace }}/fovux-studio/artifacts/studio-e2e
+          FOVUX_E2E_VSCODE_CACHE: ${{ github.workspace }}/.vscode-test
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s "-screen 0 1440x900x24" pnpm run test:e2e:ci
+
+      - name: Upload Studio E2E evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: studio-e2e-${{ github.run_id }}
+          path: |
+            fovux-studio/artifacts/studio-e2e
+            fovux-studio/fovuxstudiokit.vsix
+          if-no-files-found: warn
+          retention-days: 14

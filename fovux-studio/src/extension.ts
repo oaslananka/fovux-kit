@@ -20,6 +20,7 @@ import { registerWalkthroughCommands } from "./commands/walkthroughActions";
 import { RunFileDecorationProvider } from "./decorations/runFileDecorator";
 import { ExtensionFovuxClient } from "./fovux/extensionClient";
 import { registerFovuxLanguageModelTool } from "./fovux/languageModelTools";
+import { createFovuxStudioApi, FovuxStudioApi } from "./fovux/runtimeApi";
 import {
   getSessionActiveFovuxProfile,
   resolveFovuxHome,
@@ -43,7 +44,7 @@ import { ExportsSummary, ExportsTreeProvider } from "./views/exportsTree";
 import { ModelsSummary, ModelsTreeProvider } from "./views/modelsTree";
 import { RunsSummary, RunsTreeProvider } from "./views/runsTree";
 
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(context: vscode.ExtensionContext): FovuxStudioApi {
   logger.info("Fovux Studio activating...");
   registerFovuxLanguageModelTool(context);
   registerWalkthroughCommands(context);
@@ -218,6 +219,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   logger.info("Fovux Studio activated.");
   void doctorProvider.refresh();
+  return createFovuxStudioApi(context);
 }
 
 export function deactivate(): void {

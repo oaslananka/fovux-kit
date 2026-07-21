@@ -8,10 +8,13 @@ import {
   resolveFovuxProfiles,
 } from "../fovux/paths";
 import { startFovuxServer } from "../fovux/serverManager";
-import { createWebviewHtml } from "../webviews/html";
+import { recordDashboardWebviewOpened, recordDashboardWebviewReady } from "../webviews/diagnostics";
+import { createWebviewDocument } from "../webviews/html";
 import { DashboardInitialState, WebviewToExtensionMessage } from "../webviews/shared/types";
 
-export async function openDashboard(context: vscode.ExtensionContext): Promise<void> {
+export async function openDashboard(
+  context: vscode.ExtensionContext
+): Promise<DashboardInitialState> {
   const panel = vscode.window.createWebviewPanel(
     "fovux.dashboard",
     "Fovux Dashboard",
@@ -24,6 +27,10 @@ export async function openDashboard(context: vscode.ExtensionContext): Promise<v
   );
 
   panel.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
+    if (message.type === "webviewReady" && message.view === "dashboard") {
+      recordDashboardWebviewReady();
+      return;
+    }
     if (message.type === "openPath") {
       void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(message.path));
       return;
@@ -108,13 +115,13 @@ export async function openDashboard(context: vscode.ExtensionContext): Promise<v
     }
   });
 
-  await renderDashboard(panel, context);
+  return renderDashboard(panel, context);
 }
 
 async function renderDashboard(
   panel: vscode.WebviewPanel,
   context: vscode.ExtensionContext
-): Promise<void> {
+): Promise<DashboardInitialState> {
   const config = vscode.workspace.getConfiguration("fovux");
   const client = await ExtensionFovuxClient.create();
   const isServerReachable = await client.health();
@@ -156,10 +163,13 @@ async function renderDashboard(
     discoveredDatasets,
   };
 
-  panel.webview.html = createWebviewHtml(
+  const document = createWebviewDocument(
     panel.webview,
     context.extensionUri,
     "webviews/dashboard/main.js",
     initialState
   );
+  recordDashboardWebviewOpened(document.contentSecurityPolicy, document.bundleUri);
+  panel.webview.html = document.html;
+  return initialState;
 }

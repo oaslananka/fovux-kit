@@ -87,3 +87,7 @@ scanner-*.log
 fovux-mcp/mutants/
 fovux-mcp/mutation-results.txt
 fovux-mcp/mutation-summary.md
+
+# Executable VS Code E2E evidence
+fovux-studio/artifacts/studio-e2e/
+fovux-studio/test/e2e/out/

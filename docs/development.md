@@ -65,6 +65,8 @@ task security    # Bandit, pip-audit, pnpm audit, npm audit, gitleaks, security 
 task deps:renovate:validate  # static policy and Renovate schema validation
 task studio:lm-tools:generate  # regenerate Studio LM definitions/package metadata
 task studio:lm-tools:check     # fail on snapshot/override/generated drift
+task studio:e2e:check        # static packaged-VSIX E2E contract check
+task studio:e2e              # download VS Code and run trusted/untrusted VSIX E2E
 task security:semgrep        # repository Semgrep fixtures and production scan
 task security:osv            # required credential-free lockfile vulnerability scan
 task security:sonar -- --branch feature/name  # optional Sonar analysis

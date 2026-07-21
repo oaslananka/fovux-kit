@@ -28,6 +28,7 @@ type MockWebview = {
   };
   onDidReceiveMessage: ReturnType<typeof vi.fn>;
   postMessage: ReturnType<typeof vi.fn>;
+  receiveMessage: (message: unknown) => unknown;
 };
 
 type MockTreeView = {
@@ -123,14 +124,19 @@ vi.mock("vscode", () => {
 
   const createWebviewPanel = vi.fn(
     (id: string, title: string, _column: number, options: Record<string, unknown>) => {
+      let messageHandler: ((message: unknown) => unknown) | undefined;
       const webview: MockWebview = {
         html: "",
         cspSource: "vscode-webview-resource",
         asWebviewUri: (uri) => ({
           toString: () => `vscode-resource:${uri.path ?? uri.fsPath ?? ""}`,
         }),
-        onDidReceiveMessage: vi.fn(),
+        onDidReceiveMessage: vi.fn((handler: (message: unknown) => unknown) => {
+          messageHandler = handler;
+          return { dispose: vi.fn() };
+        }),
         postMessage: vi.fn(() => Promise.resolve(true)),
+        receiveMessage: (message: unknown) => messageHandler?.(message),
       };
       const panel = { webview };
       createdPanels.push({ id, title, options, panel });
