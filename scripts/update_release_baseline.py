@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import tomllib
 from collections.abc import Mapping
 from copy import deepcopy
 from datetime import date
@@ -26,6 +27,9 @@ MCP_README_PATH = ROOT / MCP_README_FILENAME
 ROADMAP_PATH = ROOT / ROADMAP_FILENAME
 ROOT_RELEASE_NOTES_PATH = ROOT / ROOT_RELEASE_NOTES_FILENAME
 RELEASE_NOTES_DIRECTORY = ROOT / "docs" / "release-notes"
+MCP_PYPROJECT_PATH = ROOT / "fovux-mcp" / "pyproject.toml"
+NPM_PACKAGE_PATH = ROOT / "fovux-mcp-npm" / "package.json"
+STUDIO_PACKAGE_PATH = ROOT / "fovux-studio" / "package.json"
 
 BASELINE_PHRASE = re.compile(
     r"Fovux \d+\.\d+\.\d+ is the current reviewed release baseline"
@@ -56,6 +60,20 @@ def _validate_versions(*versions: str) -> None:
             raise ValueError(
                 f"release version must use numeric semantic versioning: {version!r}"
             )
+
+
+def _repository_versions() -> tuple[str, str, str]:
+    """Read released package versions from fixed repository manifests."""
+    mcp_config = tomllib.loads(MCP_PYPROJECT_PATH.read_text(encoding="utf-8"))
+    mcp_version = str(mcp_config["project"]["version"])
+    npm_version = str(
+        json.loads(NPM_PACKAGE_PATH.read_text(encoding="utf-8"))["version"]
+    )
+    studio_version = str(
+        json.loads(STUDIO_PACKAGE_PATH.read_text(encoding="utf-8"))["version"]
+    )
+    _validate_versions(mcp_version, npm_version, studio_version)
+    return mcp_version, npm_version, studio_version
 
 
 def _updated_marked_table(text: str, table: str, *, label: str) -> str:
@@ -238,15 +256,9 @@ def _published_release_note(version: str) -> Path:
     return matches[0]
 
 
-def update_repository_baseline(
-    *,
-    mcp_version: str,
-    npm_version: str,
-    studio_version: str,
-    reviewed_at: str,
-) -> list[Path]:
+def update_repository_baseline(*, reviewed_at: str) -> list[Path]:
     """Apply synchronized content to fixed, repository-owned release-truth files."""
-    _validate_versions(mcp_version, npm_version, studio_version)
+    mcp_version, npm_version, studio_version = _repository_versions()
     release_note_path = _published_release_note(mcp_version)
     documents = {
         ROOT_README_FILENAME: ROOT_README_PATH.read_text(encoding="utf-8"),
@@ -287,9 +299,6 @@ def update_repository_baseline(
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mcp-version", required=True)
-    parser.add_argument("--npm-version", required=True)
-    parser.add_argument("--studio-version", required=True)
     parser.add_argument("--reviewed-at", default=date.today().isoformat())
     return parser.parse_args()
 
@@ -297,12 +306,7 @@ def _parse_args() -> argparse.Namespace:
 def main() -> int:
     """Update the checked-out repository's release baseline."""
     args = _parse_args()
-    paths = update_repository_baseline(
-        mcp_version=args.mcp_version,
-        npm_version=args.npm_version,
-        studio_version=args.studio_version,
-        reviewed_at=args.reviewed_at,
-    )
+    paths = update_repository_baseline(reviewed_at=args.reviewed_at)
     print("Updated release baseline files:")
     for path in paths:
         print(f"- {path.relative_to(ROOT)}")

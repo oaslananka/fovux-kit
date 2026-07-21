@@ -65,7 +65,7 @@ A GitHub Release is not considered verified until its notes or attached artifact
 4. A maintainer reviews and merges the release PR.
 5. Publish jobs run for each package that received a release.
 6. SBOM, SHA256 checksum, and provenance assets are attached to the GitHub Release.
-7. Run `scripts/update_release_baseline.py` with the verified package versions and merge the generated baseline update through a pull request.
+7. Run `scripts/update_release_baseline.py` after the package manifests contain the verified versions and merge the generated baseline update through a pull request.
 
 ## Emergency Hotfix
 
