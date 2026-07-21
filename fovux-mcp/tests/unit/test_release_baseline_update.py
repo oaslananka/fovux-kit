@@ -101,6 +101,12 @@ def test_synchronize_release_content_is_deterministic() -> None:
         f"Fovux {mcp_version} is the current reviewed release baseline"
         in first_documents["RELEASE_NOTES.md"]
     )
+    for label in ("RELEASE_NOTES.md", "published_release_note"):
+        published_text = first_documents[label]
+        assert "Package publication remains pending" not in published_text
+        assert "The final GitHub Release evidence will include" not in published_text
+        assert "Package publication has been verified by the release workflow" in published_text
+        assert "The verified GitHub Release evidence includes" in published_text
     assert f"Python backend package `fovux-mcp` {mcp_version}" in first_documents["README.md"]
     assert f"npm wrapper `fovux-mcp` {npm_version}" in first_documents["README.md"]
     assert f"VS Code companion `Fovux Studio` {studio_version}" in first_documents["README.md"]

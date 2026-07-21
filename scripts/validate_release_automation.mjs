@@ -202,6 +202,7 @@ if (!workflowNames.includes("release-please.yml")) {
     "post-release-baseline:",
     "needs.verify-release.result == 'success'",
     "python scripts/update_release_baseline.py",
+    "--channel studio --retries 40 --delay 15",
     "chore/post-release-baseline-",
     "secrets.RELEASE_PLEASE_TOKEN",
     "gh pr create",
