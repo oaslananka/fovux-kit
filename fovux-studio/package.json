@@ -2,7 +2,7 @@
   "name": "fovuxstudiokit",
   "displayName": "Fovux Studio Kit",
   "description": "Visual companion for Fovux MCP — run dashboards, dataset inspector, export wizard.",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "publisher": "oaslananka",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.34.1",
