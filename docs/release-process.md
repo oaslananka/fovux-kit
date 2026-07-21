@@ -7,6 +7,7 @@ Releases are automated from merges to `main` in `oaslananka/fovux-kit`.
 3. A maintainer reviews and merges the release pull request.
 4. The release workflow creates the GitHub Release from release-please outputs.
 5. Publish jobs build artifacts on GitHub-hosted runners, generate SBOMs and SHA256 checksums, attest provenance, attach assets, publish to registries, and verify the release.
+6. After registry verification, synchronize the reviewed published baseline through a normal pull request.
 
 
 ## Release Evidence Checklist
@@ -25,3 +26,20 @@ verified first-public `1.0.0` release is complete, so release-please calculates
 subsequent versions from Conventional Commits. The Python `fovux-mcp` package
 and npm wrapper are linked; `fovux-studio` remains an independent release track.
 Release tags remain component-specific for the monorepo packages.
+
+## Post-release baseline synchronization
+
+After the `Verify Release` job succeeds, update the machine-readable baseline using the versions
+reported by release-please and the verified registry evidence:
+
+```bash
+python scripts/update_release_baseline.py \
+  --mcp-version <python-version> \
+  --npm-version <npm-version> \
+  --studio-version <studio-version>
+python scripts/check_release_truth.py
+python scripts/check_docs_truth.py
+```
+
+Commit the generated `release-baseline.json`, README, ROADMAP, and release-note changes through a
+normal pull request. Historical release-note files for earlier versions must remain unchanged.

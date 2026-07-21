@@ -6,9 +6,9 @@ published package versions, registry/channel status, release evidence, and miles
 <!-- release-baseline:start -->
 | Component | Published version | Channel status | Evidence |
 | --- | --- | --- | --- |
-| Python package `fovux-mcp` | `1.4.0` | Published on PyPI | `fovux_mcp-1.4.0-py3-none-any.whl`, `fovux_mcp-1.4.0.tar.gz`, `fovux-mcp-sbom.spdx.json`, `fovux-mcp.sha256` |
-| npm wrapper `fovux-mcp` | `1.4.0` | Published on npm | `npm registry metadata`, `wrapper CLI smoke result`, `fovux-mcp-v1.4.0 source release` |
-| VS Code extension `oaslananka.fovuxstudiokit` | `1.3.0` | Published on VS Marketplace; Open VSX unavailable (404 verified 2026-07-20) | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256` |
+| Python package `fovux-mcp` | `1.5.0` | Published on PyPI | `fovux_mcp-1.5.0-py3-none-any.whl`, `fovux_mcp-1.5.0.tar.gz`, `fovux-mcp-sbom.spdx.json`, `fovux-mcp.sha256`, `registry-verification-python.json` |
+| npm wrapper `fovux-mcp` | `1.5.0` | Published on npm | `npm registry metadata`, `wrapper CLI smoke result`, `fovux-mcp-npm-v1.5.0 source release`, `registry-verification-npm.json` |
+| VS Code extension `oaslananka.fovuxstudiokit` | `1.4.0` | Published on VS Marketplace and Open VSX | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256`, `registry-verification-studio.json` |
 <!-- release-baseline:end -->
 
 - Backend tool registry: 47 local tools
@@ -74,7 +74,7 @@ without promising a package version outside Release Please's semantic-version ca
 
 **DRI:** @oaslananka
 
-## [v1.5.0 - Studio Workflow & Dataset Intelligence](https://github.com/oaslananka/fovux-kit/milestone/3)
+## [Studio Workflow & Dataset Intelligence](https://github.com/oaslananka/fovux-kit/milestone/3)
 
 **State:** Open
 **Target:** 2026-10-15
