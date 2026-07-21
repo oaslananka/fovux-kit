@@ -19,6 +19,7 @@ import {
   registeredCommands,
   registeredFileDecorationProviders,
   resetVscodeMockState,
+  setWorkspaceTrust,
 } from "./helpers/vscodeMock";
 import { ExportsTreeProvider } from "../../src/views/exportsTree";
 import { ModelsTreeProvider } from "../../src/views/modelsTree";
@@ -39,6 +40,50 @@ describe("Fovux Studio extension", () => {
     if (tempHome) {
       fs.rmSync(tempHome, { recursive: true, force: true });
     }
+  });
+
+  it("returns a runtime API with trust, no-telemetry, version, and contributed commands", () => {
+    setWorkspaceTrust(false);
+    const context = {
+      extensionUri: { path: "/extension" },
+      extension: {
+        packageJSON: {
+          version: "1.5.0",
+          contributes: {
+            commands: [{ command: "fovux.openDashboard" }, { command: "fovux.startServer" }],
+          },
+        },
+      },
+      subscriptions: [] as Array<unknown>,
+    };
+
+    const api = activate(context as never);
+
+    expect(api.getRuntimeState()).toEqual({
+      workspaceTrusted: false,
+      telemetryEnabled: false,
+      extensionVersion: "1.5.0",
+      contributedCommands: ["fovux.openDashboard", "fovux.startServer"],
+    });
+  });
+
+  it("returns the exact backend-offline state used by the dashboard webview", async () => {
+    const context = {
+      extensionUri: { path: "/extension" },
+      subscriptions: [] as Array<unknown>,
+    };
+    tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "fovux-dashboard-offline-"));
+    process.env["FOVUX_HOME"] = tempHome;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Promise.reject(new Error("offline")))
+    );
+
+    const state = await openDashboard(context as never);
+
+    expect(state.isServerReachable).toBe(false);
+    expect(state.initialError).toContain("HTTP server is offline");
+    expect(createdPanels[0]?.panel.webview.html).toContain("HTTP server is offline");
   });
 
   it("registers all user-facing commands on activate", async () => {

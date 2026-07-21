@@ -115,7 +115,6 @@ tasks:
     cmds:
       - python scripts/generate_security_posture.py --strict
 
-
   deps:renovate:validate:
     desc: Validate Fovux-specific Renovate policy
     cmds:
@@ -133,6 +132,16 @@ tasks:
     desc: Fail when generated Studio Language Model tool artifacts are stale
     cmds:
       - python scripts/generate_studio_lm_tools.py --check
+
+  studio:e2e:check:
+    desc: Validate executable packaged-VSIX E2E contracts without downloading VS Code
+    cmds:
+      - python scripts/check_studio_e2e_smoke.py
+
+  studio:e2e:
+    desc: Package and run Fovux Studio in trusted and untrusted VS Code instances
+    cmds:
+      - cmd: cd fovux-studio && {{.PNPM}} run test:e2e:ci
 
   docs:
     desc: Build and lint documentation
@@ -206,7 +215,6 @@ tasks:
     desc: Verify that published packages are available on registries and pass smoke tests
     cmds:
       - python scripts/verify_registry_releases.py
-
 
   ci:act:
     desc: Run GitHub Actions workflows locally with nektos/act

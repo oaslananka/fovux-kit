@@ -11,7 +11,9 @@ import { startFovuxServer } from "../fovux/serverManager";
 import { createWebviewHtml } from "../webviews/html";
 import { DashboardInitialState, WebviewToExtensionMessage } from "../webviews/shared/types";
 
-export async function openDashboard(context: vscode.ExtensionContext): Promise<void> {
+export async function openDashboard(
+  context: vscode.ExtensionContext
+): Promise<DashboardInitialState> {
   const panel = vscode.window.createWebviewPanel(
     "fovux.dashboard",
     "Fovux Dashboard",
@@ -108,13 +110,13 @@ export async function openDashboard(context: vscode.ExtensionContext): Promise<v
     }
   });
 
-  await renderDashboard(panel, context);
+  return renderDashboard(panel, context);
 }
 
 async function renderDashboard(
   panel: vscode.WebviewPanel,
   context: vscode.ExtensionContext
-): Promise<void> {
+): Promise<DashboardInitialState> {
   const config = vscode.workspace.getConfiguration("fovux");
   const client = await ExtensionFovuxClient.create();
   const isServerReachable = await client.health();
@@ -162,4 +164,5 @@ async function renderDashboard(
     "webviews/dashboard/main.js",
     initialState
   );
+  return initialState;
 }
