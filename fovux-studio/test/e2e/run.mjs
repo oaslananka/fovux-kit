@@ -1,15 +1,15 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createWriteStream } from "node:fs";
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 
-import {
-  downloadAndUnzipVSCode,
-  resolveCliArgsFromVSCodeExecutablePath,
-} from "@vscode/test-electron";
-
 const VSCODE_VERSION = "1.129.1";
+const TAR_EXECUTABLE = "/usr/bin/tar";
+const SCROT_EXECUTABLE = "/usr/bin/scrot";
+const VSCODE_DOWNLOAD_URL = `https://update.code.visualstudio.com/${VSCODE_VERSION}/linux-x64/stable`;
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const studioRoot = resolve(scriptDirectory, "../..");
 const repositoryRoot = resolve(studioRoot, "..");
@@ -24,11 +24,7 @@ const harnessPath = join(scriptDirectory, "harness");
 const testsPath = join(scriptDirectory, "out", "suite", "index.js");
 
 await mkdir(artifactsRoot, { recursive: true });
-
-const vscodeExecutablePath = await downloadAndUnzipVSCode({
-  version: VSCODE_VERSION,
-  cachePath: vscodeCache,
-});
+const vscodeExecutablePath = await downloadVsCode();
 
 for (const scenario of [
   {
@@ -45,6 +41,38 @@ for (const scenario of [
   await runScenario(vscodeExecutablePath, scenario);
 }
 
+async function downloadVsCode() {
+  const installationRoot = join(vscodeCache, `vscode-${VSCODE_VERSION}`);
+  const executable = join(installationRoot, "VSCode-linux-x64", "code");
+  try {
+    await access(executable);
+    return executable;
+  } catch {
+    await rm(installationRoot, { recursive: true, force: true });
+  }
+
+  await mkdir(installationRoot, { recursive: true });
+  const archive = join(installationRoot, `vscode-${VSCODE_VERSION}.tar.gz`);
+  const response = await fetch(VSCODE_DOWNLOAD_URL, {
+    redirect: "follow",
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!response.ok || !response.body) {
+    throw new Error(`VS Code download failed with HTTP ${response.status}`);
+  }
+  await pipeline(Readable.fromWeb(response.body), createWriteStream(archive));
+
+  const extract = spawnSync(TAR_EXECUTABLE, ["-xzf", archive, "-C", installationRoot], {
+    encoding: "utf8",
+  });
+  if (extract.status !== 0) {
+    throw new Error(`VS Code extraction failed: ${extract.stderr || extract.stdout}`);
+  }
+  await rm(archive, { force: true });
+  await access(executable);
+  return executable;
+}
+
 async function runScenario(vscodePath, scenario) {
   const scenarioRoot = join(artifactsRoot, scenario.mode);
   const extensionsDirectory = join(scenarioRoot, "extensions");
@@ -57,11 +85,9 @@ async function runScenario(vscodePath, scenario) {
   await mkdir(userDataDirectory, { recursive: true });
   await mkdir(fovuxHome, { recursive: true });
 
-  const cli = resolveCliArgsFromVSCodeExecutablePath(vscodePath);
   const install = spawnSync(
-    cli[0],
+    vscodePath,
     [
-      ...cli.slice(1),
       "--install-extension",
       vsixPath,
       "--force",
@@ -70,6 +96,7 @@ async function runScenario(vscodePath, scenario) {
       "--user-data-dir",
       userDataDirectory,
       "--disable-telemetry",
+      "--no-sandbox",
     ],
     {
       cwd: studioRoot,
@@ -148,17 +175,18 @@ async function launchExtensionTests(executable, args, environment, logStream) {
         resolveLaunch();
         return;
       }
-      rejectLaunch(
-        new Error(`VS Code E2E process failed with ${signal ? `signal ${signal}` : `code ${code}`}`)
-      );
+      const termination = signal ? `signal ${signal}` : `code ${code}`;
+      rejectLaunch(new Error(`VS Code E2E process failed with ${termination}`));
     });
   });
 }
 
 async function captureRunnerFailureScreenshot(scenarioRoot, mode) {
-  const screenshot = spawnSync("scrot", [join(scenarioRoot, `${mode}-runner-failure.png`)], {
-    encoding: "utf8",
-  });
+  const screenshot = spawnSync(
+    SCROT_EXECUTABLE,
+    [join(scenarioRoot, `${mode}-runner-failure.png`)],
+    { encoding: "utf8" }
+  );
   if (screenshot.status !== 0) {
     const detail = screenshot.stderr || screenshot.stdout || "scrot was unavailable";
     await writeFile(join(scenarioRoot, "runner-screenshot-error.log"), `${detail}\n`, "utf8");

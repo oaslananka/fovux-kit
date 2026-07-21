@@ -10,7 +10,7 @@ import {
   getAuthToken,
   getFovuxBaseUrl,
 } from "../../src/fovux/extensionClient";
-import { createWebviewHtml, getNonce } from "../../src/webviews/html";
+import { createWebviewDocument, createWebviewHtml, getNonce } from "../../src/webviews/html";
 
 describe("Fovux client and webview host", () => {
   afterEach(() => {
@@ -103,6 +103,29 @@ describe("Fovux client and webview host", () => {
     const scriptNonce = html.match(/<script nonce="([A-Za-z0-9_-]+)">/);
     expect(cspNonce?.[1]).toBeTruthy();
     expect(scriptNonce?.[1]).toBe(cspNonce?.[1]);
+  });
+
+  it("returns the exact CSP and bundle URI assigned to a webview", () => {
+    const document = createWebviewDocument(
+      {
+        cspSource: "vscode-webview-resource",
+        asWebviewUri: (uri: { path?: string; fsPath?: string }) => ({
+          toString: () => `vscode-resource:${uri.path ?? uri.fsPath ?? ""}`,
+        }),
+      } as never,
+      { path: "/extension" } as never,
+      "webviews/dashboard/main.js",
+      { ready: true }
+    );
+
+    expect(document.bundleUri).toContain("webviews/dashboard/main.js");
+    expect(document.contentSecurityPolicy).toContain("default-src 'none'");
+    expect(document.contentSecurityPolicy).toContain(
+      "connect-src http://127.0.0.1:* https://127.0.0.1:*"
+    );
+    expect(document.contentSecurityPolicy).toContain(`'nonce-${document.nonce}'`);
+    expect(document.html).toContain(`content="${document.contentSecurityPolicy}"`);
+    expect(document.html).toContain(`nonce="${document.nonce}"`);
   });
 
   it("generates cryptographic base64url CSP nonces", () => {

@@ -8,7 +8,8 @@ import {
   resolveFovuxProfiles,
 } from "../fovux/paths";
 import { startFovuxServer } from "../fovux/serverManager";
-import { createWebviewHtml } from "../webviews/html";
+import { recordDashboardWebviewOpened, recordDashboardWebviewReady } from "../webviews/diagnostics";
+import { createWebviewDocument } from "../webviews/html";
 import { DashboardInitialState, WebviewToExtensionMessage } from "../webviews/shared/types";
 
 export async function openDashboard(
@@ -26,6 +27,10 @@ export async function openDashboard(
   );
 
   panel.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
+    if (message.type === "webviewReady" && message.view === "dashboard") {
+      recordDashboardWebviewReady();
+      return;
+    }
     if (message.type === "openPath") {
       void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(message.path));
       return;
@@ -158,11 +163,13 @@ async function renderDashboard(
     discoveredDatasets,
   };
 
-  panel.webview.html = createWebviewHtml(
+  const document = createWebviewDocument(
     panel.webview,
     context.extensionUri,
     "webviews/dashboard/main.js",
     initialState
   );
+  recordDashboardWebviewOpened(document.contentSecurityPolicy, document.bundleUri);
+  panel.webview.html = document.html;
   return initialState;
 }

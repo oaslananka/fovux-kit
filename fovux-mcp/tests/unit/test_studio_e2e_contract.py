@@ -15,7 +15,7 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_package_scripts_and_dependencies_run_installed_vsix_e2e() -> None:
+def test_package_scripts_run_installed_vsix_e2e_without_framework_dependencies() -> None:
     package = json.loads(_read(STUDIO / "package.json"))
     scripts = package["scripts"]
     dev_dependencies = package["devDependencies"]
@@ -23,17 +23,19 @@ def test_package_scripts_and_dependencies_run_installed_vsix_e2e() -> None:
     assert scripts["test:e2e:compile"] == "tsc -p test/e2e/tsconfig.json"
     assert scripts["test:e2e"] == "node test/e2e/run.mjs"
     assert scripts["test:e2e:ci"] == "pnpm run build && pnpm run package && pnpm run test:e2e"
-    assert dev_dependencies["@vscode/test-electron"] == "3.0.0"
-    assert dev_dependencies["mocha"] == "11.7.6"
-    assert dev_dependencies["@types/mocha"] == "10.0.10"
+    for forbidden in ("@vscode/test-electron", "mocha", "@types/mocha"):
+        assert forbidden not in dev_dependencies
 
 
-def test_runner_installs_vsix_and_runs_trusted_and_untrusted_instances() -> None:
+def test_runner_installs_vsix_and_runs_isolated_trust_scenarios() -> None:
     runner = _read(STUDIO / "test" / "e2e" / "run.mjs")
 
     for phrase in (
         'const VSCODE_VERSION = "1.129.1"',
-        "resolveCliArgsFromVSCodeExecutablePath",
+        "https://update.code.visualstudio.com/",
+        "await fetch(VSCODE_DOWNLOAD_URL",
+        'const TAR_EXECUTABLE = "/usr/bin/tar"',
+        'const SCROT_EXECUTABLE = "/usr/bin/scrot"',
         "--install-extension",
         "fovuxstudiokit.vsix",
         "FOVUX_E2E_EXTENSION_PATH",
@@ -47,31 +49,45 @@ def test_runner_installs_vsix_and_runs_trusted_and_untrusted_instances() -> None
         assert phrase in runner
 
 
-def test_extension_host_suite_checks_real_packaged_boundary() -> None:
+def test_extension_host_suite_covers_all_runtime_acceptance_boundaries() -> None:
     suite = _read(STUDIO / "test" / "e2e" / "suite" / "installedExtension.test.ts")
 
     for phrase in (
+        "runInstalledExtensionAssertions",
         "vscode.extensions.getExtension<FovuxStudioApi>(extensionId)",
         "extensionPath",
-        "FOVUX_E2E_EXTENSION_PATH",
         "contributedCommands",
-        "vscode.commands.executeCommand<DashboardInitialState>",
-        "Fovux Dashboard",
+        "getDashboardDiagnostics",
+        r"webviews\/dashboard\/main\.js",
+        "contentSecurityPolicy",
         "HTTP server is offline",
+        "rejected this workspace auth token",
+        'vscode.commands.executeCommand("fovux.startServer")',
+        'vscode.lm.invokeTool("fovux_run_doctor"',
+        'url: "/tools/fovux_doctor"',
         "workspaceTrusted",
         "telemetryEnabled",
-        'vscode.commands.executeCommand("fovux.startServer")',
-        "fovux_call_tool",
     ):
         assert phrase in suite
 
 
-def test_ci_runs_xvfb_and_always_uploads_logs_results_screenshots_and_vsix() -> None:
+def test_production_webview_exposes_real_ready_and_csp_diagnostics() -> None:
+    dashboard = _read(STUDIO / "src" / "webviews" / "dashboard" / "main.tsx")
+    command = _read(STUDIO / "src" / "commands" / "openDashboard.ts")
+    runtime_api = _read(STUDIO / "src" / "fovux" / "runtimeApi.ts")
+
+    assert 'postToExtension({ type: "webviewReady", view: "dashboard" })' in dashboard
+    assert "recordDashboardWebviewReady" in command
+    assert "recordDashboardWebviewOpened" in command
+    assert "createWebviewDocument" in command
+    assert "getDashboardDiagnostics" in runtime_api
+
+
+def test_ci_runs_xvfb_and_always_uploads_runtime_evidence() -> None:
     workflow_path = ROOT / ".github" / "workflows" / "studio-e2e.yml"
     workflow_text = _read(workflow_path)
     workflow = yaml.safe_load(workflow_text)
-    jobs = workflow["jobs"]
-    job = jobs["studio-e2e"]
+    job = workflow["jobs"]["studio-e2e"]
 
     assert job["name"] == "Studio packaged VSIX E2E"
     assert job["runs-on"] == "ubuntu-24.04"
@@ -84,14 +100,17 @@ def test_ci_runs_xvfb_and_always_uploads_logs_results_screenshots_and_vsix() -> 
     assert "fovux-studio/fovuxstudiokit.vsix" in workflow_text
 
 
-def test_static_checker_requires_executable_e2e_files() -> None:
+def test_static_checker_requires_dependency_free_executable_e2e_files() -> None:
     checker = _read(ROOT / "scripts" / "check_studio_e2e_smoke.py")
 
     for phrase in (
-        "@vscode/test-electron",
+        "forbidden_dependencies",
         "installedExtension.test.ts",
         "studio-e2e.yml",
         "--install-extension",
+        "getDashboardDiagnostics",
+        "fovux_run_doctor",
+        "auth-token mismatch",
         "FOVUX_E2E_ARTIFACTS",
     ):
         assert phrase in checker

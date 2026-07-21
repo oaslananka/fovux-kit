@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import "./helpers/vscodeMock";
 import { activate } from "../../src/extension";
+import { createFovuxStudioApi } from "../../src/fovux/runtimeApi";
 import { openCompareRuns } from "../../src/commands/compareRuns";
 import { openDashboard } from "../../src/commands/openDashboard";
 import { openExportWizard } from "../../src/commands/openExportWizard";
@@ -24,12 +25,17 @@ import {
 import { ExportsTreeProvider } from "../../src/views/exportsTree";
 import { ModelsTreeProvider } from "../../src/views/modelsTree";
 import { RunsTreeProvider } from "../../src/views/runsTree";
+import {
+  getDashboardWebviewDiagnostics,
+  resetDashboardWebviewDiagnostics,
+} from "../../src/webviews/diagnostics";
 
 describe("Fovux Studio extension", () => {
   let tempHome: string | undefined;
 
   beforeEach(() => {
     resetVscodeMockState();
+    resetDashboardWebviewDiagnostics();
     vi.resetModules();
     delete process.env["FOVUX_HOME"];
     tempHome = undefined;
@@ -67,6 +73,40 @@ describe("Fovux Studio extension", () => {
     });
   });
 
+  it("normalizes malformed runtime manifest metadata", () => {
+    setWorkspaceTrust(true);
+    const api = createFovuxStudioApi({
+      extension: {
+        packageJSON: {
+          version: 15,
+          contributes: { commands: { command: "not-an-array" } },
+        },
+      },
+    } as never);
+
+    expect(api.getRuntimeState()).toEqual({
+      workspaceTrusted: true,
+      telemetryEnabled: false,
+      extensionVersion: "unknown",
+      contributedCommands: [],
+    });
+  });
+
+  it("filters malformed command contributions from runtime metadata", () => {
+    const api = createFovuxStudioApi({
+      extension: {
+        packageJSON: {
+          version: "1.5.0",
+          contributes: {
+            commands: [{ command: 42 }, {}, { command: "fovux.openDashboard" }],
+          },
+        },
+      },
+    } as never);
+
+    expect(api.getRuntimeState().contributedCommands).toEqual(["fovux.openDashboard"]);
+  });
+
   it("returns the exact backend-offline state used by the dashboard webview", async () => {
     const context = {
       extensionUri: { path: "/extension" },
@@ -84,6 +124,20 @@ describe("Fovux Studio extension", () => {
     expect(state.isServerReachable).toBe(false);
     expect(state.initialError).toContain("HTTP server is offline");
     expect(createdPanels[0]?.panel.webview.html).toContain("HTTP server is offline");
+
+    const opened = getDashboardWebviewDiagnostics();
+    const runtimeApi = createFovuxStudioApi({ extension: { packageJSON: {} } } as never);
+    expect(runtimeApi.getDashboardDiagnostics()).toEqual(opened);
+    expect(opened.opened).toBe(true);
+    expect(opened.ready).toBe(false);
+    expect(opened.contentSecurityPolicy).toContain("default-src 'none'");
+    expect(opened.bundleUri).toContain("webviews/dashboard/main.js");
+
+    createdPanels[0]?.panel.webview.receiveMessage({
+      type: "webviewReady",
+      view: "dashboard",
+    });
+    expect(getDashboardWebviewDiagnostics().ready).toBe(true);
   });
 
   it("registers all user-facing commands on activate", async () => {

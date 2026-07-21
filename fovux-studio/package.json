@@ -1554,7 +1554,6 @@
     "test:e2e:ci": "pnpm run build && pnpm run package && pnpm run test:e2e"
   },
   "devDependencies": {
-    "@types/mocha": "10.0.10",
     "@types/node": "^22.19.19",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
@@ -1562,10 +1561,8 @@
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
     "@vitest/coverage-v8": "4.1.7",
-    "@vscode/test-electron": "3.0.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
-    "mocha": "11.7.6",
     "prettier": "^3.8.3",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",

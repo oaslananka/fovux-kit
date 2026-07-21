@@ -1,5 +1,10 @@
 import * as vscode from "vscode";
 
+import {
+  DashboardWebviewDiagnostics,
+  getDashboardWebviewDiagnostics,
+} from "../webviews/diagnostics";
+
 export interface FovuxRuntimeState {
   workspaceTrusted: boolean;
   telemetryEnabled: false;
@@ -9,6 +14,7 @@ export interface FovuxRuntimeState {
 
 export interface FovuxStudioApi {
   getRuntimeState(): FovuxRuntimeState;
+  getDashboardDiagnostics(): DashboardWebviewDiagnostics;
 }
 
 interface CommandContribution {
@@ -32,6 +38,9 @@ export function createFovuxStudioApi(context: vscode.ExtensionContext): FovuxStu
         extensionVersion: typeof packageJson.version === "string" ? packageJson.version : "unknown",
         contributedCommands: readContributedCommands(packageJson),
       };
+    },
+    getDashboardDiagnostics(): DashboardWebviewDiagnostics {
+      return getDashboardWebviewDiagnostics();
     },
   };
 }

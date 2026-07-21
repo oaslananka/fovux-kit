@@ -17,7 +17,9 @@ def _read(path: Path, failures: list[str]) -> str:
         return ""
 
 
-def _require(text: str, phrases: tuple[str, ...], *, label: str, failures: list[str]) -> None:
+def _require(
+    text: str, phrases: tuple[str, ...], *, label: str, failures: list[str]
+) -> None:
     for phrase in phrases:
         if phrase not in text:
             failures.append(f"{label} missing {phrase}")
@@ -40,13 +42,13 @@ def main() -> int:
     for name, expected in expected_scripts.items():
         if scripts.get(name) != expected:
             failures.append(f"package.json script {name} must be {expected!r}")
-    for name, expected in {
-        "@vscode/test-electron": "3.0.0",
-        "mocha": "11.7.6",
-        "@types/mocha": "10.0.10",
-    }.items():
-        if dependencies.get(name) != expected:
-            failures.append(f"package.json must pin {name}@{expected}")
+
+    forbidden_dependencies = ("@vscode/test-electron", "mocha", "@types/mocha")
+    for name in forbidden_dependencies:
+        if name in dependencies:
+            failures.append(
+                f"package.json must not add E2E framework dependency {name}"
+            )
     if ".vsix" not in scripts.get("package", ""):
         failures.append("package script must create a VSIX")
 
@@ -55,8 +57,10 @@ def main() -> int:
         runner,
         (
             'const VSCODE_VERSION = "1.129.1"',
-            "downloadAndUnzipVSCode",
-            "resolveCliArgsFromVSCodeExecutablePath",
+            "https://update.code.visualstudio.com/",
+            "await fetch(VSCODE_DOWNLOAD_URL",
+            'const TAR_EXECUTABLE = "/usr/bin/tar"',
+            'const SCROT_EXECUTABLE = "/usr/bin/scrot"',
             "--install-extension",
             "fovuxstudiokit.vsix",
             'mode: "trusted"',
@@ -67,33 +71,32 @@ def main() -> int:
             "--disable-telemetry",
             "FOVUX_E2E_ARTIFACTS",
             "FOVUX_E2E_EXTENSION_PATH",
+            "extension-host.log",
         ),
         label="Studio E2E runner",
         failures=failures,
     )
 
-    _require(
-        runner,
-        ("extension-host.log",),
-        label="Studio E2E runner evidence",
-        failures=failures,
+    suite = _read(
+        STUDIO / "test" / "e2e" / "suite" / "installedExtension.test.ts", failures
     )
-
-    suite = _read(STUDIO / "test" / "e2e" / "suite" / "installedExtension.test.ts", failures)
     _require(
         suite,
         (
+            "runInstalledExtensionAssertions",
             "vscode.extensions.getExtension<FovuxStudioApi>(extensionId)",
             "extension.extensionPath",
             "contributedCommands",
-            "vscode.commands.executeCommand<DashboardInitialState>",
-            '"fovux.openDashboard"',
-            "Fovux Dashboard",
+            "getDashboardDiagnostics",
+            "contentSecurityPolicy",
             "HTTP server is offline",
+            "auth-token mismatch",
+            "rejected this workspace auth token",
+            'vscode.commands.executeCommand("fovux.startServer")',
+            'vscode.lm.invokeTool("fovux_run_doctor"',
+            'url: "/tools/fovux_doctor"',
             "workspaceTrusted",
             "telemetryEnabled",
-            'vscode.commands.executeCommand("fovux.startServer")',
-            "fovux_call_tool",
         ),
         label="installed VSIX suite",
         failures=failures,
@@ -102,8 +105,38 @@ def main() -> int:
     harness = _read(STUDIO / "test" / "e2e" / "suite" / "index.ts", failures)
     _require(
         harness,
-        ("result.json", "scrot", "failure.png"),
+        ("runInstalledExtensionAssertions", "result.json", "scrot", "failure.png"),
         label="E2E evidence harness",
+        failures=failures,
+    )
+
+    tsconfig = _read(STUDIO / "test" / "e2e" / "tsconfig.json", failures)
+    if '"mocha"' in tsconfig:
+        failures.append("Studio E2E tsconfig must not load Mocha types")
+
+    dashboard = _read(STUDIO / "src" / "webviews" / "dashboard" / "main.tsx", failures)
+    _require(
+        dashboard,
+        ('postToExtension({ type: "webviewReady", view: "dashboard" })',),
+        label="dashboard bundle handshake",
+        failures=failures,
+    )
+    command = _read(STUDIO / "src" / "commands" / "openDashboard.ts", failures)
+    _require(
+        command,
+        (
+            "recordDashboardWebviewOpened",
+            "recordDashboardWebviewReady",
+            "createWebviewDocument",
+        ),
+        label="dashboard extension handshake",
+        failures=failures,
+    )
+    runtime_api = _read(STUDIO / "src" / "fovux" / "runtimeApi.ts", failures)
+    _require(
+        runtime_api,
+        ("getDashboardDiagnostics", "getDashboardWebviewDiagnostics"),
+        label="Studio runtime diagnostics API",
         failures=failures,
     )
 
@@ -132,7 +165,12 @@ def main() -> int:
             "installed VSIX",
             "Workspace Trust",
             "backend-offline",
+            "auth-token mismatch",
+            "webviewReady",
+            "Content Security Policy",
+            "vscode.lm.invokeTool",
             "No telemetry",
+            "dependency-free",
             "artifacts/studio-e2e",
             "failure screenshot",
         ),
@@ -145,9 +183,10 @@ def main() -> int:
             print(f"ERROR: {failure}")
         return 1
     print(
-        "Studio executable E2E checks passed: packaged VSIX installation, trusted/untrusted "
-        "extension-host coverage, offline dashboard state, no-telemetry metadata, and failure "
-        "evidence are aligned."
+        "Studio executable E2E checks passed: dependency-free VS Code download, packaged VSIX "
+        "installation, trusted/untrusted activation, backend-offline and auth-token mismatch "
+        "handling, CSP-protected webview handshake, Language Model tool invocation, no-telemetry "
+        "metadata, and failure evidence are aligned."
     )
     return 0
 

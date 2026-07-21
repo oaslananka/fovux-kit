@@ -2,19 +2,35 @@ import { randomBytes } from "node:crypto";
 
 import * as vscode from "vscode";
 
+export interface WebviewDocument {
+  html: string;
+  contentSecurityPolicy: string;
+  bundleUri: string;
+  nonce: string;
+}
+
 export function createWebviewHtml(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   entryPath: string,
   initialState: unknown
 ): string {
-  const bundleUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, "out", ...entryPath.split("/"))
-  );
+  return createWebviewDocument(webview, extensionUri, entryPath, initialState).html;
+}
+
+export function createWebviewDocument(
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri,
+  entryPath: string,
+  initialState: unknown
+): WebviewDocument {
+  const bundleUri = webview
+    .asWebviewUri(vscode.Uri.joinPath(extensionUri, "out", ...entryPath.split("/")))
+    .toString();
   const nonce = getNonce();
   const serializedState = JSON.stringify(initialState).replace(/</g, "\\u003c");
-  const escapedBundleUri = bundleUri.toString().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-  const csp = [
+  const escapedBundleUri = bundleUri.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const contentSecurityPolicy = [
     "default-src 'none'",
     `img-src ${webview.cspSource} data: blob:`,
     `style-src ${webview.cspSource} 'unsafe-inline'`,
@@ -23,12 +39,12 @@ export function createWebviewHtml(
     `script-src ${webview.cspSource} 'nonce-${nonce}'`,
   ].join("; ");
 
-  return `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta http-equiv="Content-Security-Policy" content="${contentSecurityPolicy}" />
     <title>Fovux Studio</title>
   </head>
   <body style="margin:0;padding:0;background:var(--vscode-editor-background);color:var(--vscode-editor-foreground);">
@@ -103,6 +119,13 @@ export function createWebviewHtml(
     </script>
   </body>
 </html>`;
+
+  return {
+    html,
+    contentSecurityPolicy,
+    bundleUri,
+    nonce,
+  };
 }
 
 export function getNonce(): string {

@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Exercise the packaged Fovux Studio VSIX in real isolated VS Code instances and verify activation, contributed commands, dashboard offline state, Workspace Trust restrictions, no-telemetry runtime state, and failure evidence.
+**Goal:** Exercise the packaged Fovux Studio VSIX in real isolated VS Code instances and verify activation, contributed commands, backend-offline and auth-token mismatch behavior, a CSP-protected dashboard message handshake, Language Model tool invocation, Workspace Trust restrictions, no-telemetry runtime state, and failure evidence.
 
-**Architecture:** Package the production extension, install that VSIX into an isolated extensions directory with the downloaded VS Code CLI, and run a separate minimal harness extension through `@vscode/test-electron`. Trusted and untrusted modes use independent workspaces and user-data directories. The production extension exposes a small stable runtime API for trust/telemetry metadata, while dashboard command results expose the real offline initial state used by the webview.
+**Architecture:** Package the production extension, install that VSIX into an isolated extensions directory with a pinned VS Code CLI downloaded through Node.js built-in APIs, and run a separate minimal harness extension without a test framework dependency. Trusted and untrusted modes use independent workspaces and user-data directories. The production extension exposes read-only runtime and dashboard diagnostics, while isolated loopback servers exercise auth rejection and Language Model tool calls.
 
-**Tech Stack:** VS Code 1.129.1, `@vscode/test-electron` 3.0.0, Mocha 11.7.6, TypeScript 5.9, pnpm 10.34.1, xvfb, scrot, GitHub Actions.
+**Tech Stack:** VS Code 1.129.1, Node.js built-in fetch/HTTP/process APIs, TypeScript 5.9, pnpm 10.34.1, xvfb, scrot, GitHub Actions.
 
 ## Global Constraints
 
@@ -30,10 +30,10 @@
 - Consumes: `fovux-studio/package.json`, `.github/workflows/studio-e2e.yml`, and E2E source files.
 - Produces: a static contract that rejects mock-only `test:e2e` configurations and missing artefact capture.
 
-- [ ] **Step 1: Write failing tests** asserting pinned VS Code/test dependencies, package/install runner files, trusted/untrusted modes, installed-VSIX path assertion, offline dashboard assertion, trust restriction assertion, and always-uploaded failure artefacts.
-- [ ] **Step 2: Run** `cd fovux-mcp && uv run pytest -q tests/unit/test_studio_e2e_contract.py` and verify failure because executable files/workflow do not exist.
-- [ ] **Step 3: Extend** `scripts/check_studio_e2e_smoke.py` to semantically validate the same files and package scripts.
-- [ ] **Step 4: Keep the contract RED** until Tasks 2–5 provide the implementation.
+- [x] **Step 1: Write failing tests** asserting a pinned dependency-free VS Code runner, trusted/untrusted modes, installed-VSIX path, offline and auth mismatch behavior, webview handshake/CSP, Language Model invocation, trust restrictions, and always-uploaded failure artefacts.
+- [x] **Step 2: Run** the focused contract tests and verify RED before the executable files and workflow exist.
+- [x] **Step 3: Extend** `scripts/check_studio_e2e_smoke.py` to semantically validate the same files and package scripts.
+- [x] **Step 4: Keep the contract RED** until Tasks 2–5 provide the implementation.
 
 ### Task 2: Add a stable extension runtime observation API
 
@@ -44,14 +44,14 @@
 - Modify: `fovux-studio/test/suite/extension.test.ts`
 
 **Interfaces:**
-- Produces: `FovuxStudioApi.getRuntimeState(): FovuxRuntimeState` with `workspaceTrusted`, `telemetryEnabled`, `extensionVersion`, and `contributedCommands`.
+- Produces: `FovuxStudioApi.getRuntimeState(): FovuxRuntimeState` plus read-only dashboard CSP/bundle/ready diagnostics.
 - Produces: `openDashboard(context): Promise<DashboardInitialState>` so command callers observe the exact initial webview state.
 
-- [ ] **Step 1: Write Vitest tests** for the returned activation API, no-telemetry value, trust value, and dashboard command result.
-- [ ] **Step 2: Run the focused tests** and verify failure because `activate()` returns no API and dashboard returns `void`.
-- [ ] **Step 3: Implement** the runtime API using `context.extension.packageJSON`, `vscode.workspace.isTrusted`, and the constant `telemetryEnabled: false`.
-- [ ] **Step 4: Return** the rendered `DashboardInitialState` from `openDashboard`/`renderDashboard` without changing webview behavior.
-- [ ] **Step 5: Run** focused Vitest, lint, and typecheck.
+- [x] **Step 1: Write Vitest tests** for the activation API, no-telemetry value, trust value, dashboard state, malformed manifest metadata, and the webview-ready diagnostics handshake.
+- [x] **Step 2: Run the focused tests** and verify RED before the observation API and dashboard result exist.
+- [x] **Step 3: Implement** runtime and dashboard diagnostics using package metadata, Workspace Trust, no-telemetry metadata, the assigned CSP, bundle URI, and real `webviewReady` messages.
+- [x] **Step 4: Return** the rendered `DashboardInitialState` from `openDashboard`/`renderDashboard` and preserve production webview behavior.
+- [x] **Step 5: Run** focused Vitest, lint, and typecheck.
 
 ### Task 3: Build the installed-VSIX test harness
 
@@ -72,12 +72,12 @@
 - Runner inputs: `FOVUX_E2E_ARTIFACTS`, `FOVUX_E2E_MODE`, `FOVUX_E2E_EXTENSION_PATH`, and isolated test directories.
 - Test output: `<artifacts>/<mode>/result.json`, `<artifacts>/<mode>/extension-host.log`, and failure screenshot.
 
-- [ ] **Step 1: Add exact dev dependencies** `@vscode/test-electron@3.0.0`, `mocha@11.7.6`, and `@types/mocha@10.0.10`.
-- [ ] **Step 2: Implement the runner** to download VS Code 1.129.1, install the built VSIX through its CLI into an isolated extensions directory, and invoke the harness via `runTests` twice.
-- [ ] **Step 3: Assert in the suite** that `oaslananka.fovuxstudiokit` is installed outside the repository, activates, returns the runtime API, registers all contributed commands, opens `Fovux Dashboard`, reports the loopback backend offline, and contributes `fovux_call_tool` when the LM API is available.
-- [ ] **Step 4: Assert untrusted behavior** by checking `workspaceTrusted === false` and verifying `fovux.startServer` rejects before spawning a process.
-- [ ] **Step 5: Capture evidence** from the Mocha runner and call `scrot` before the VS Code process exits when failures occur.
-- [ ] **Step 6: Run trusted then untrusted E2E locally under xvfb.**
+- [x] **Step 1: Keep the executable harness dependency-free** beyond existing TypeScript and VS Code type packages; explicitly reject Mocha and `@vscode/test-electron`.
+- [x] **Step 2: Implement the runner** with Node.js built-ins to download VS Code 1.129.1, install the built VSIX into isolated extension directories, and launch trusted/untrusted extension hosts directly.
+- [x] **Step 3: Assert in the suite** installed path, activation, commands, offline dashboard state, CSP and `webviewReady` handshake, auth-token mismatch, and a real `vscode.lm.invokeTool` call through `fovux_run_doctor`.
+- [x] **Step 4: Assert untrusted behavior** by checking `workspaceTrusted === false` and verifying `fovux.startServer` rejects before spawning a process.
+- [x] **Step 5: Capture per-assertion JSON evidence** from the framework-free runner and call absolute-path `scrot` before the VS Code process exits when failures occur.
+- [ ] **Step 6: Run trusted then untrusted E2E under the GitHub-hosted xvfb lane.**
 
 ### Task 4: Add a dedicated CI lane and artefact retention
 

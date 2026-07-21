@@ -119,6 +119,7 @@ export interface UserPreset {
 }
 
 export type WebviewToExtensionMessage =
+  | { type: "webviewReady"; view: "dashboard" }
   | { type: "openPath"; path: string }
   | { type: "openDashboard" }
   | { type: "startServer" }
