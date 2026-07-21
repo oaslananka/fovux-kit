@@ -113,7 +113,9 @@ export async function runInstalledExtensionAssertions(): Promise<E2eTestOutcome[
   if (mode === "trusted") {
     await runCase(outcomes, "detects an auth-token mismatch before spawning a server", async () => {
       await writeAuthToken("wrong-e2e-token");
+      const requests: string[] = [];
       const fakeServer = await startFakeServer(async (request, response) => {
+        requests.push(`${request.method ?? "UNKNOWN"} ${request.url ?? "UNKNOWN"}`);
         if (request.url === "/health") {
           respondJson(response, 200, { status: "ok" });
           return;
@@ -127,10 +129,24 @@ export async function runInstalledExtensionAssertions(): Promise<E2eTestOutcome[
 
       try {
         await updateHttpPort(fakeServer.port);
-        await assert.rejects(
-          async () => vscode.commands.executeCommand("fovux.startServer"),
-          /rejected this workspace auth token/i
-        );
+        const configuredPort = vscode.workspace.getConfiguration("fovux").get<number>("httpPort");
+        assert.equal(configuredPort, fakeServer.port, "VS Code did not apply the E2E HTTP port");
+        await waitFor(async () => {
+          try {
+            return (await fetch(`http://127.0.0.1:${fakeServer.port}/health`)).ok;
+          } catch {
+            return false;
+          }
+        }, 5_000);
+        try {
+          await assert.rejects(
+            async () => vscode.commands.executeCommand("fovux.startServer"),
+            /rejected this workspace auth token/i
+          );
+        } catch (error) {
+          const detail = error instanceof Error ? error.message : String(error);
+          throw new Error(`${detail}; fake-server requests: ${requests.join(", ")}`);
+        }
       } finally {
         await updateHttpPort(offlinePort);
         await fakeServer.close();
@@ -288,10 +304,13 @@ async function updateHttpPort(port: number): Promise<void> {
     .update("httpPort", port, vscode.ConfigurationTarget.Global);
 }
 
-async function waitFor(predicate: () => boolean, timeoutMs: number): Promise<void> {
+async function waitFor(
+  predicate: () => boolean | Promise<boolean>,
+  timeoutMs: number
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (predicate()) {
+    if (await predicate()) {
       return;
     }
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
