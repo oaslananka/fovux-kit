@@ -128,11 +128,13 @@ def test_mutation_stats_paths_must_stay_inside_working_directory(tmp_path: Path)
         workdir / "mutants" / "stats.json"
     )
 
+    parent_escape = Path("../escape.json")
     with pytest.raises(ValueError, match="outside the working directory"):
-        module.resolve_cli_path(Path("../escape.json"), root=workdir)
+        module.resolve_cli_path(parent_escape, root=workdir)
 
+    absolute_path = tmp_path / "absolute.json"
     with pytest.raises(ValueError, match="relative"):
-        module.resolve_cli_path(tmp_path / "absolute.json", root=workdir)
+        module.resolve_cli_path(absolute_path, root=workdir)
 
 
 def test_test_strategy_checker_accepts_mutmut_wrapper() -> None:
