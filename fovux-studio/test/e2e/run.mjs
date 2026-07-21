@@ -161,6 +161,10 @@ async function launchExtensionTests(executable, args, environment, logStream) {
       env: environment,
       stdio: ["ignore", "pipe", "pipe"],
     });
+    const timeout = setTimeout(() => {
+      child.kill("SIGTERM");
+      rejectLaunch(new Error("VS Code E2E process exceeded the 3 minute scenario timeout"));
+    }, 180_000);
     child.stdout.on("data", (chunk) => {
       logStream.write(chunk);
       process.stdout.write(chunk);
@@ -169,8 +173,12 @@ async function launchExtensionTests(executable, args, environment, logStream) {
       logStream.write(chunk);
       process.stderr.write(chunk);
     });
-    child.once("error", rejectLaunch);
+    child.once("error", (error) => {
+      clearTimeout(timeout);
+      rejectLaunch(error);
+    });
     child.once("close", (code, signal) => {
+      clearTimeout(timeout);
       if (code === 0) {
         resolveLaunch();
         return;

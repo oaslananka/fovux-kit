@@ -209,6 +209,7 @@ async function runCase(
   name: string,
   assertion: () => void | Promise<void>
 ): Promise<void> {
+  process.stdout.write(`[Fovux E2E] START: ${name}\n`);
   try {
     await assertion();
     outcomes.push({ name, status: "passed" });
@@ -248,7 +249,19 @@ async function startFakeServer(
 
 async function closeServer(server: Server): Promise<void> {
   await new Promise<void>((resolveClose, rejectClose) => {
-    server.close((error) => (error ? rejectClose(error) : resolveClose()));
+    const timeout = setTimeout(() => {
+      server.closeAllConnections();
+      rejectClose(new Error("fake server did not close within 5 seconds"));
+    }, 5_000);
+    server.close((error) => {
+      clearTimeout(timeout);
+      if (error) {
+        rejectClose(error);
+        return;
+      }
+      resolveClose();
+    });
+    server.closeAllConnections();
   });
 }
 
