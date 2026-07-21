@@ -45,7 +45,6 @@ Fovux uses a protected GitHub Actions release model.
 - Marketplace publishing runs only when `VSCE_PAT` and `OVSX_PAT` are configured
   in the `vsce-production` environment or org repo secrets.
 
-
 ## Release Evidence Checklist
 
 A GitHub Release is not considered verified until its notes or attached artifacts document:
@@ -88,3 +87,5 @@ source for `mcp.json`, `fovux-mcp/server.json`, and `fovux-mcp/smithery.yaml`.
 Public tracks start from `1.0.0` in `oaslananka/fovux-kit`; Studio publishes
 under `oaslananka.fovuxstudiokit`. The verified first-public release is complete,
 so subsequent versions are calculated normally from Conventional Commits.
+
+After registry verification succeeds, the release workflow opens or updates a protected-branch post-release baseline pull request. That PR promotes candidate wording and pending channel statuses to the reviewed published truth; do not edit the published baseline directly on main.

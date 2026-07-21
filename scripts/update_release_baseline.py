@@ -33,7 +33,8 @@ NPM_PACKAGE_PATH = ROOT / "fovux-mcp-npm" / "package.json"
 STUDIO_PACKAGE_PATH = ROOT / "fovux-studio" / "package.json"
 
 BASELINE_PHRASE = re.compile(
-    r"Fovux \d+\.\d+\.\d+ is the current reviewed release baseline"
+    r"Fovux \d+\.\d+\.\d+ is the current "
+    r"(?:reviewed release baseline|release candidate)"
 )
 VERSION_PATTERN = re.compile(r"\d+\.\d+\.\d+")
 
@@ -58,21 +59,15 @@ def _package(manifest: dict[str, Any], package_id: str) -> dict[str, Any]:
 def _validate_versions(*versions: str) -> None:
     for version in versions:
         if not VERSION_PATTERN.fullmatch(version):
-            raise ValueError(
-                f"release version must use numeric semantic versioning: {version!r}"
-            )
+            raise ValueError(f"release version must use numeric semantic versioning: {version!r}")
 
 
 def _repository_versions() -> tuple[str, str, str]:
     """Read released package versions from fixed repository manifests."""
     mcp_config = tomllib.loads(MCP_PYPROJECT_PATH.read_text(encoding="utf-8"))
     mcp_version = str(mcp_config["project"]["version"])
-    npm_version = str(
-        json.loads(NPM_PACKAGE_PATH.read_text(encoding="utf-8"))["version"]
-    )
-    studio_version = str(
-        json.loads(STUDIO_PACKAGE_PATH.read_text(encoding="utf-8"))["version"]
-    )
+    npm_version = str(json.loads(NPM_PACKAGE_PATH.read_text(encoding="utf-8"))["version"])
+    studio_version = str(json.loads(STUDIO_PACKAGE_PATH.read_text(encoding="utf-8"))["version"])
     _validate_versions(mcp_version, npm_version, studio_version)
     return mcp_version, npm_version, studio_version
 
@@ -174,12 +169,8 @@ def synchronize_release_content(
         reviewed_at=reviewed_at,
     )
     tooling = manifest.get("tooling")
-    if not isinstance(tooling, dict) or not isinstance(
-        tooling.get("backend_tools"), int
-    ):
-        raise ValueError(
-            f"{BASELINE_FILENAME} tooling.backend_tools must be an integer"
-        )
+    if not isinstance(tooling, dict) or not isinstance(tooling.get("backend_tools"), int):
+        raise ValueError(f"{BASELINE_FILENAME} tooling.backend_tools must be an integer")
     backend_tools = tooling["backend_tools"]
 
     required = {
@@ -234,9 +225,7 @@ def synchronize_release_content(
     ):
         updated[label] = _updated_marked_table(updated[label], table, label=label)
     for label in (ROOT_RELEASE_NOTES_FILENAME, "published_release_note"):
-        updated[label] = _updated_baseline_phrase(
-            updated[label], mcp_version, label=label
-        )
+        updated[label] = _updated_baseline_phrase(updated[label], mcp_version, label=label)
 
     return json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", updated
 
@@ -272,9 +261,7 @@ def update_repository_baseline(*, reviewed_at: str) -> list[Path]:
         ROOT_README_FILENAME: ROOT_README_PATH.read_text(encoding="utf-8"),
         MCP_README_FILENAME: MCP_README_PATH.read_text(encoding="utf-8"),
         ROADMAP_FILENAME: ROADMAP_PATH.read_text(encoding="utf-8"),
-        ROOT_RELEASE_NOTES_FILENAME: ROOT_RELEASE_NOTES_PATH.read_text(
-            encoding="utf-8"
-        ),
+        ROOT_RELEASE_NOTES_FILENAME: ROOT_RELEASE_NOTES_PATH.read_text(encoding="utf-8"),
         "published_release_note": release_note_path.read_text(encoding="utf-8"),
     }
     manifest_text, updated = synchronize_release_content(
@@ -290,9 +277,7 @@ def update_repository_baseline(*, reviewed_at: str) -> list[Path]:
     ROOT_README_PATH.write_text(updated[ROOT_README_FILENAME], encoding="utf-8")
     MCP_README_PATH.write_text(updated[MCP_README_FILENAME], encoding="utf-8")
     ROADMAP_PATH.write_text(updated[ROADMAP_FILENAME], encoding="utf-8")
-    ROOT_RELEASE_NOTES_PATH.write_text(
-        updated[ROOT_RELEASE_NOTES_FILENAME], encoding="utf-8"
-    )
+    ROOT_RELEASE_NOTES_PATH.write_text(updated[ROOT_RELEASE_NOTES_FILENAME], encoding="utf-8")
     # The path is an existing, non-symlink file selected from the fixed release-note directory.
     release_note_path.write_text(  # NOSONAR -- containment is enforced by _published_release_note
         updated[PUBLISHED_RELEASE_NOTE_KEY], encoding="utf-8"

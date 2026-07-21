@@ -1,16 +1,22 @@
-"""Keep server.json and smithery.yaml versions in lockstep with pyproject.toml.
+"""Synchronize release-candidate metadata after Release Please updates package versions.
 
 Run as:
     python scripts/sync_mcp_metadata.py
 
-Idempotent — writes only when a version mismatch is detected.
+The command is idempotent. It keeps MCP metadata aligned and renders candidate
+release notes from the package changelog sections without claiming publication.
 """
 
 from __future__ import annotations
 
 import json
 import re
+from collections.abc import Mapping
+from datetime import date
 from pathlib import Path
+
+_VERSION_PATTERN = re.compile(r"\d+\.\d+\.\d+")
+CHANGELOG_FILENAME = "CHANGELOG.md"
 
 
 def _repo_root() -> Path:
@@ -25,6 +31,37 @@ def _read_pyproject_version(root: Path) -> str:
     return match.group(1)
 
 
+def _read_json_version(path: Path) -> str:
+    value = json.loads(path.read_text(encoding="utf-8")).get("version")
+    if not isinstance(value, str) or not _VERSION_PATTERN.fullmatch(value):
+        raise SystemExit(f"Could not find a semantic version in {path}")
+    return value
+
+
+def _read_package_versions(root: Path) -> tuple[str, str, str]:
+    mcp_version = _read_pyproject_version(root)
+    npm_version = _read_json_version(root / "fovux-mcp-npm" / "package.json")
+    studio_version = _read_json_version(root / "fovux-studio" / "package.json")
+    for version in (mcp_version, npm_version, studio_version):
+        if not _VERSION_PATTERN.fullmatch(version):
+            raise SystemExit(f"Invalid release version: {version}")
+    if npm_version != mcp_version:
+        raise SystemExit("The npm wrapper version must match the Python package version")
+    return mcp_version, npm_version, studio_version
+
+
+def _is_unpublished_candidate(root: Path, mcp_version: str) -> bool:
+    """Return whether package metadata is ahead of the reviewed published baseline."""
+    baseline_path = root / "release-baseline.json"
+    if not baseline_path.exists():
+        return True
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    published = baseline.get("published_release")
+    if not isinstance(published, str) or not _VERSION_PATTERN.fullmatch(published):
+        raise SystemExit("release-baseline.json has no valid published_release")
+    return published != mcp_version
+
+
 def _sync_server_json(mcp_root: Path, version: str) -> bool:
     path = mcp_root / "server.json"
     if not path.exists():
@@ -35,9 +72,9 @@ def _sync_server_json(mcp_root: Path, version: str) -> bool:
         data["version"] = version
         changed = True
     packages = data.get("packages", [])
-    for pkg in packages:
-        if pkg.get("version") != version:
-            pkg["version"] = version
+    for package in packages:
+        if package.get("version") != version:
+            package["version"] = version
             changed = True
     if changed:
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
@@ -54,9 +91,9 @@ def _sync_root_mcp_json(root: Path, version: str) -> bool:
     if data.get("version") != version:
         data["version"] = version
         changed = True
-    for pkg in data.get("packages", []):
-        if pkg.get("version") != version:
-            pkg["version"] = version
+    for package in data.get("packages", []):
+        if package.get("version") != version:
+            package["version"] = version
             changed = True
     if changed:
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
@@ -98,72 +135,165 @@ def _sync_smithery_yaml(mcp_root: Path, version: str) -> bool:
     return False
 
 
-def _sync_docs(root: Path, version: str) -> bool:
-    changed = False
+def _extract_changelog_section(text: str, version: str, *, label: str) -> str:
+    heading = re.search(rf"^##\s+\[{re.escape(version)}\][^\n]*\n", text, flags=re.MULTILINE)
+    if heading is None:
+        raise ValueError(f"{label} changelog is missing release {version}")
+    next_heading = re.search(r"^##\s+\[", text[heading.end() :], flags=re.MULTILINE)
+    end = heading.end() + next_heading.start() if next_heading else len(text)
+    section = text[heading.end() : end].strip()
+    if not section:
+        raise ValueError(f"{label} changelog release {version} is empty")
+    return re.sub(r"^(#{3,5}) ", r"#\1 ", section, flags=re.MULTILINE)
 
-    # 1. Sync root CHANGELOG.md
-    changelog_path = root / "CHANGELOG.md"
-    if changelog_path.exists():
-        content = changelog_path.read_text(encoding="utf-8")
-        # Check if the topmost header is already for this version
-        match = re.search(r"^##\s*\[([^\]]+)\]", content, re.MULTILINE)
-        if match and match.group(1) != version:
-            first_header_pos = content.find("## [")
-            if first_header_pos != -1:
-                from datetime import datetime
 
-                today = datetime.now().strftime("%Y-%m-%d")
-                new_section = (
-                    f"## [{version}] - {today}\n\n"
-                    "### Added\n\n"
-                    "- Synchronized release package updates.\n\n"
-                )
-                new_content = (
-                    content[:first_header_pos] + new_section + content[first_header_pos:]
-                )
-                changelog_path.write_text(new_content, encoding="utf-8")
-                print(f"Updated root CHANGELOG.md to include version {version}")
-                changed = True
-
-    # 2. Sync root RELEASE_NOTES.md
-    rn_path = root / "RELEASE_NOTES.md"
-    if rn_path.exists():
-        content = rn_path.read_text(encoding="utf-8")
-        new_content = re.sub(
-            r"^#\s+Fovux\s+[^\s]+\s+Release\s+Notes",
-            f"# Fovux {version} Release Notes",
-            content,
-            flags=re.MULTILINE,
+def render_candidate_release_notes(
+    *,
+    mcp_version: str,
+    npm_version: str,
+    studio_version: str,
+    changelogs: Mapping[str, str],
+) -> str:
+    """Render deterministic notes for versions that are not published yet."""
+    mcp_changes = _extract_changelog_section(changelogs["mcp"], mcp_version, label="fovux-mcp")
+    npm_changes = _extract_changelog_section(changelogs["npm"], npm_version, label="fovux-mcp-npm")
+    studio_changes = _extract_changelog_section(
+        changelogs["studio"], studio_version, label="fovux-studio"
+    )
+    candidate_table = "\n".join(
+        (
+            "<!-- release-baseline:start -->",
+            "| Component | Candidate version | Channel status | Evidence |",
+            "| --- | --- | --- | --- |",
+            (
+                f"| Python package `fovux-mcp` | `{mcp_version}` | "
+                "Pending publication | Generated after registry verification |"
+            ),
+            (
+                f"| npm wrapper `fovux-mcp` | `{npm_version}` | "
+                "Pending publication | Generated after registry verification |"
+            ),
+            (
+                "| VS Code extension `oaslananka.fovuxstudiokit` | "
+                f"`{studio_version}` | Pending publication | "
+                "Generated after marketplace verification |"
+            ),
+            "<!-- release-baseline:end -->",
         )
-        if new_content != content:
-            rn_path.write_text(new_content, encoding="utf-8")
-            print(f"Updated root RELEASE_NOTES.md version to {version}")
-            changed = True
+    )
+    return f"""# Fovux {mcp_version} Release Notes
 
-    # 3. Create docs/release-notes/<version>.md if not exists
-    docs_rn_path = root / "docs" / "release-notes" / f"{version}.md"
-    if not docs_rn_path.exists():
-        if rn_path.exists():
-            rn_content = rn_path.read_text(encoding="utf-8")
-            docs_rn_path.write_text(rn_content, encoding="utf-8")
-            print(f"Created docs/release-notes/{version}.md stub")
-            changed = True
+Fovux {mcp_version} is the current release candidate for the local-first edge-AI computer vision
+workbench. Package publication remains pending until the release workflow verifies every configured
+registry and extension marketplace.
 
+## Package Versions and Release Evidence
+
+{candidate_table}
+
+The final GitHub Release evidence will include:
+
+- VSIX packaging status and publish results for VS Marketplace and Open VSX;
+- SPDX SBOM files, checksums, and provenance attestations;
+- registry verification evidence JSON and a smoke-test result for every published channel.
+
+## Included Changes
+
+### Python package `fovux-mcp` {mcp_version}
+
+{mcp_changes}
+
+### npm wrapper `fovux-mcp` {npm_version}
+
+{npm_changes}
+
+### Fovux Studio {studio_version}
+
+{studio_changes}
+
+## Upgrade Path
+
+```bash
+uv tool upgrade fovux-mcp
+npm install -g fovux-mcp@latest
+```
+
+## Release Validation
+
+- `python scripts/check_versions.py`
+- `python scripts/check_docs_truth.py`
+- `python scripts/check_release_truth.py`
+- `node scripts/validate_release_automation.mjs`
+- registry, VS Marketplace, and Open VSX verification in the release workflow
+"""
+
+
+def _sync_root_changelog(root: Path, version: str) -> bool:
+    path = root / CHANGELOG_FILENAME
+    if not path.exists():
+        return False
+    content = path.read_text(encoding="utf-8")
+    match = re.search(r"^##\s*\[([^\]]+)\]", content, re.MULTILINE)
+    if not match or match.group(1) == version:
+        return False
+    first_header = content.find("## [")
+    if first_header < 0:
+        return False
+    new_section = (
+        f"## [{version}] - {date.today().isoformat()}\n\n"
+        "### Added\n\n"
+        "- Synchronized release package updates.\n\n"
+    )
+    path.write_text(content[:first_header] + new_section + content[first_header:], encoding="utf-8")
+    print(f"Updated root CHANGELOG.md to include version {version}")
+    return True
+
+
+def _sync_docs(root: Path, mcp_version: str, npm_version: str, studio_version: str) -> bool:
+    changed = _sync_root_changelog(root, mcp_version)
+    changelogs = {
+        "mcp": (root / "fovux-mcp" / CHANGELOG_FILENAME).read_text(encoding="utf-8"),
+        "npm": (root / "fovux-mcp-npm" / CHANGELOG_FILENAME).read_text(encoding="utf-8"),
+        "studio": (root / "fovux-studio" / CHANGELOG_FILENAME).read_text(encoding="utf-8"),
+    }
+    rendered = render_candidate_release_notes(
+        mcp_version=mcp_version,
+        npm_version=npm_version,
+        studio_version=studio_version,
+        changelogs=changelogs,
+    )
+    targets = (
+        root / "RELEASE_NOTES.md",
+        root / "docs" / "release-notes" / f"{mcp_version}.md",
+    )
+    targets[1].parent.mkdir(parents=True, exist_ok=True)
+    for path in targets:
+        current = path.read_text(encoding="utf-8") if path.exists() else ""
+        if current != rendered:
+            path.write_text(rendered, encoding="utf-8")
+            print(f"Updated {path.relative_to(root)} for release candidate {mcp_version}")
+            changed = True
     return changed
 
 
 def main() -> int:
     """Synchronize release metadata files and return a process status code."""
     root = _repo_root()
-    version = _read_pyproject_version(root)
+    mcp_version, npm_version, studio_version = _read_package_versions(root)
     mcp_root = root / "fovux-mcp"
-    s1 = _sync_server_json(mcp_root, version)
-    s2 = _sync_smithery_yaml(mcp_root, version)
-    s3 = _sync_root_mcp_json(root, version)
-    s4 = _sync_uv_lock(mcp_root, version)
-    s5 = _sync_docs(root, version)
-    if not s1 and not s2 and not s3 and not s4 and not s5:
-        print(f"MCP metadata already at {version}. No changes.")
+    changes = (
+        _sync_server_json(mcp_root, mcp_version),
+        _sync_smithery_yaml(mcp_root, mcp_version),
+        _sync_root_mcp_json(root, mcp_version),
+        _sync_uv_lock(mcp_root, mcp_version),
+        (
+            _sync_docs(root, mcp_version, npm_version, studio_version)
+            if _is_unpublished_candidate(root, mcp_version)
+            else False
+        ),
+    )
+    if not any(changes):
+        print(f"Release candidate metadata already at {mcp_version}. No changes.")
     return 0
 
 

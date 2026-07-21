@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -25,9 +26,7 @@ def _packages(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     packages: list[dict[str, Any]] = []
     for index, item in enumerate(value):
         if not isinstance(item, dict):
-            raise ValueError(
-                f"release-baseline.json packages[{index}] must be an object"
-            )
+            raise ValueError(f"release-baseline.json packages[{index}] must be an object")
         packages.append(item)
     return packages
 
@@ -48,9 +47,7 @@ def render_release_table(manifest: dict[str, Any]) -> str:
             raise ValueError("every package requires component, version, and status")
         if not isinstance(evidence_value, list) or not evidence_value:
             raise ValueError(f"package {component} requires evidence entries")
-        evidence = ", ".join(
-            f"`{item}`" for item in evidence_value if isinstance(item, str)
-        )
+        evidence = ", ".join(f"`{item}`" for item in evidence_value if isinstance(item, str))
         if not evidence:
             raise ValueError(f"package {component} requires string evidence entries")
         lines.append(f"| {component} | `{version}` | {status} | {evidence} |")
@@ -64,6 +61,84 @@ def _marked_block(text: str) -> str | None:
     if start < 0 or end < start:
         return None
     return text[start : end + len(BASELINE_END)]
+
+
+def _current_package_versions(root: Path) -> tuple[str, str, str]:
+    mcp = tomllib.loads((root / "fovux-mcp" / "pyproject.toml").read_text(encoding="utf-8"))
+    npm = json.loads((root / "fovux-mcp-npm" / "package.json").read_text(encoding="utf-8"))
+    studio = json.loads((root / "fovux-studio" / "package.json").read_text(encoding="utf-8"))
+    return (
+        str(mcp["project"]["version"]),
+        str(npm["version"]),
+        str(studio["version"]),
+    )
+
+
+def _validate_candidate_note(
+    root: Path,
+    path: Path,
+    *,
+    mcp_version: str,
+    npm_version: str,
+    studio_version: str,
+) -> list[str]:
+    failures: list[str] = []
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"Cannot read {path.relative_to(root)}: {exc}"]
+    required = (
+        f"# Fovux {mcp_version} Release Notes",
+        f"Fovux {mcp_version} is the current release candidate",
+        f"| Python package `fovux-mcp` | `{mcp_version}` | Pending publication |",
+        f"| npm wrapper `fovux-mcp` | `{npm_version}` | Pending publication |",
+        (
+            "| VS Code extension `oaslananka.fovuxstudiokit` | "
+            f"`{studio_version}` | Pending publication |"
+        ),
+    )
+    for phrase in required:
+        if phrase not in text:
+            failures.append(f"{path.relative_to(root)} is missing candidate release fact: {phrase}")
+    if "current reviewed release baseline" in text:
+        failures.append(
+            f"{path.relative_to(root)} claims an unpublished candidate is already reviewed"
+        )
+    return failures
+
+
+def _release_documents(
+    root: Path,
+    *,
+    published_release: str,
+    mcp_version: str,
+    npm_version: str,
+    studio_version: str,
+) -> tuple[list[Path], list[str]]:
+    """Select published documents and validate candidate-only documents."""
+    documents = [
+        root / "ROADMAP.md",
+        root / "docs" / "release-notes" / f"{published_release}.md",
+    ]
+    candidate_failures: list[str] = []
+    if mcp_version == published_release:
+        documents.append(root / "RELEASE_NOTES.md")
+    else:
+        candidate_paths = (
+            root / "RELEASE_NOTES.md",
+            root / "docs" / "release-notes" / f"{mcp_version}.md",
+        )
+        for candidate_path in candidate_paths:
+            candidate_failures.extend(
+                _validate_candidate_note(
+                    root,
+                    candidate_path,
+                    mcp_version=mcp_version,
+                    npm_version=npm_version,
+                    studio_version=studio_version,
+                )
+            )
+    return documents, candidate_failures
 
 
 def _validate_milestones(root: Path, manifest: dict[str, Any]) -> list[str]:
@@ -92,9 +167,7 @@ def _validate_milestones(root: Path, manifest: dict[str, Any]) -> list[str]:
         section = roadmap[start : next_heading if next_heading >= 0 else len(roadmap)]
         state_phrase = f"**State:** {state.capitalize()}"
         if state_phrase not in section:
-            failures.append(
-                f"ROADMAP.md is missing milestone state for {title}: {state_phrase}"
-            )
+            failures.append(f"ROADMAP.md is missing milestone state for {title}: {state_phrase}")
     return failures
 
 
@@ -112,11 +185,20 @@ def validate_release_truth(root: Path) -> list[str]:
     except (OSError, ValueError) as exc:
         return [f"Cannot load release baseline: {exc}"]
 
-    documents = [
-        root / "ROADMAP.md",
-        root / "RELEASE_NOTES.md",
-        root / "docs" / "release-notes" / f"{published_release}.md",
-    ]
+    try:
+        mcp_version, npm_version, studio_version = _current_package_versions(root)
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        return failures + [f"Cannot load current package versions: {exc}"]
+
+    documents, candidate_failures = _release_documents(
+        root,
+        published_release=published_release,
+        mcp_version=mcp_version,
+        npm_version=npm_version,
+        studio_version=studio_version,
+    )
+    failures.extend(candidate_failures)
+
     for path in documents:
         try:
             block = _marked_block(path.read_text(encoding="utf-8"))
@@ -132,16 +214,12 @@ def validate_release_truth(root: Path) -> list[str]:
     release_note_path = root / "docs" / "release-notes" / f"{published_release}.md"
     try:
         release_note = release_note_path.read_text(encoding="utf-8")
-        baseline_phrase = (
-            f"Fovux {published_release} is the current reviewed release baseline"
-        )
+        baseline_phrase = f"Fovux {published_release} is the current reviewed release baseline"
         if baseline_phrase not in release_note:
             failures.append(
                 f"{release_note_path.relative_to(root)} does not identify the published baseline"
             )
-        studio = next(
-            package for package in _packages(manifest) if package.get("id") == "studio"
-        )
+        studio = next(package for package in _packages(manifest) if package.get("id") == "studio")
         studio_status = str(studio.get("status", ""))
         if "Open VSX" not in studio_status:
             failures.append("Studio baseline must state the verified Open VSX status")
