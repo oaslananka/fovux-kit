@@ -554,3 +554,85 @@ jobs:
           name: registry-verification-${{ github.event.repository.name }}
           path: out/registry-verification-*.json
           if-no-files-found: ignore
+
+  post-release-baseline:
+    name: Open post-release baseline PR
+    needs:
+      - release-please
+      - verify-release
+    if: >
+      always() &&
+      github.repository == 'oaslananka/fovux-kit' &&
+      needs.verify-release.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.13"
+      - name: Open post-release baseline PR
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          MCP_VERSION: ${{ needs.release-please.outputs.mcp_version }}
+          STUDIO_VERSION: ${{ needs.release-please.outputs.studio_version }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::error::RELEASE_PLEASE_TOKEN is required to create the post-release baseline PR."
+            exit 1
+          fi
+
+          python scripts/update_release_baseline.py --reviewed-at "$(date -u +%F)"
+          if git diff --quiet; then
+            echo "Published release baseline is already synchronized."
+            exit 0
+          fi
+
+          release_version="${MCP_VERSION:-${STUDIO_VERSION}}"
+          if [[ -z "$release_version" ]]; then
+            echo "::error::No release version was emitted by Release Please."
+            exit 1
+          fi
+          branch="chore/post-release-baseline-${release_version}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add \
+            release-baseline.json \
+            README.md \
+            fovux-mcp/README.md \
+            ROADMAP.md \
+            RELEASE_NOTES.md \
+            docs/release-notes/
+          git commit -m "chore(release): synchronize published baseline ${release_version}"
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch origin "$branch" || true
+          git push --force-with-lease origin "HEAD:${branch}"
+
+          existing="$(
+            gh pr list \
+              --repo "$GITHUB_REPOSITORY" \
+              --head "$branch" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+          if [[ -z "$existing" ]]; then
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head "$branch" \
+              --title "chore(release): synchronize published baseline ${release_version}" \
+              --body "Registry verification passed. This automated PR promotes the release candidate metadata to the reviewed published baseline."
+          else
+            echo "Post-release baseline PR #${existing} already exists."
+          fi

@@ -32,9 +32,7 @@ def _tool_names() -> set[str]:
 
 
 def _granular_lm_tool_count() -> int:
-    overrides = json.loads(
-        _read(STUDIO_ROOT / "src" / "fovux" / "tools" / "overrides.json")
-    )
+    overrides = json.loads(_read(STUDIO_ROOT / "src" / "fovux" / "tools" / "overrides.json"))
     tools = overrides.get("tools")
     if not isinstance(tools, dict):
         raise ValueError("Studio LM overrides tools must be an object")
@@ -72,6 +70,20 @@ def _with_regen(message: str, command: str) -> str:
     return f"{message}. Regenerate/check with: `{command}`"
 
 
+def _lm_tool_sources(
+    architecture: str,
+    roadmap: str,
+    release_notes: str,
+    *,
+    release_please_branch: bool,
+) -> str:
+    """Return the documents that must carry the LM tool-count fact."""
+    sources = architecture + roadmap
+    if not release_please_branch:
+        sources += release_notes
+    return sources
+
+
 def main() -> int:
     """Run public documentation truth checks."""
     failures: list[str] = []
@@ -93,9 +105,7 @@ def main() -> int:
         "fovux-mcp-npm": _read(ROOT / "fovux-mcp-npm" / "CHANGELOG.md"),
         "fovux-studio": _read(STUDIO_ROOT / "CHANGELOG.md"),
     }
-    release_docs = _read(ROOT / "docs" / "release.md") + _read(
-        ROOT / "docs" / "release-process.md"
-    )
+    release_docs = _read(ROOT / "docs" / "release.md") + _read(ROOT / "docs" / "release-process.md")
 
     if not release_please_branch:
         _expect(
@@ -131,8 +141,7 @@ def main() -> int:
             failures,
         )
         _expect(
-            f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools"
-            in mcp_readme,
+            f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools" in mcp_readme,
             _with_regen(
                 "fovux-mcp/README.md tool count is stale",
                 "python scripts/check_docs_truth.py",
@@ -170,8 +179,7 @@ def main() -> int:
         failures,
     )
     _expect(
-        "not documented as a standards-compliant MCP Streamable HTTP endpoint"
-        in architecture,
+        "not documented as a standards-compliant MCP Streamable HTTP endpoint" in architecture,
         _with_regen(
             "docs/architecture.md does not distinguish the current HTTP/SSE API "
             "from MCP Streamable HTTP",
@@ -181,7 +189,13 @@ def main() -> int:
     )
     lm_tool_phrase = f"{lm_tool_count} granular tools plus 1 generic fallback"
     _expect(
-        lm_tool_phrase in architecture + roadmap + release_notes,
+        lm_tool_phrase
+        in _lm_tool_sources(
+            architecture,
+            roadmap,
+            release_notes,
+            release_please_branch=release_please_branch,
+        ),
         _with_regen(
             "LM tool count is stale in docs/architecture.md, ROADMAP.md, or RELEASE_NOTES.md",
             "python scripts/check_docs_truth.py",
@@ -198,8 +212,7 @@ def main() -> int:
     )
     if not release_please_branch:
         _expect(
-            f"Fovux {mcp_version} is the current reviewed release baseline"
-            in release_notes,
+            f"Fovux {mcp_version} is the current reviewed release baseline" in release_notes,
             _with_regen(
                 "RELEASE_NOTES.md does not describe the current reviewed release baseline",
                 "python scripts/check_docs_truth.py",

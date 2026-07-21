@@ -9,7 +9,6 @@ Releases are automated from merges to `main` in `oaslananka/fovux-kit`.
 5. Publish jobs build artifacts on GitHub-hosted runners, generate SBOMs and SHA256 checksums, attest provenance, attach assets, publish to registries, and verify the release.
 6. After registry verification, synchronize the reviewed published baseline through a normal pull request.
 
-
 ## Release Evidence Checklist
 
 A GitHub Release is not considered verified until its notes or attached artifacts document:
@@ -40,3 +39,5 @@ python scripts/check_docs_truth.py
 
 Commit the generated `release-baseline.json`, README, ROADMAP, and release-note changes through a
 normal pull request. Historical release-note files for earlier versions must remain unchanged.
+
+After registry verification succeeds, the release workflow opens or updates a protected-branch post-release baseline pull request. That PR promotes candidate wording and pending channel statuses to the reviewed published truth; do not edit the published baseline directly on main.

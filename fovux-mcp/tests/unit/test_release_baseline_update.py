@@ -111,6 +111,15 @@ def test_synchronize_release_content_is_deterministic() -> None:
     )
 
 
+def test_candidate_phrase_is_promoted_to_reviewed_baseline() -> None:
+    module = _load_module()
+    candidate = "Fovux 1.6.0 is the current release candidate for validation."
+
+    updated = module._updated_baseline_phrase(candidate, "1.6.0", label="candidate release note")
+
+    assert updated == ("Fovux 1.6.0 is the current reviewed release baseline for validation.")
+
+
 def test_synchronize_release_content_rejects_path_escape_version() -> None:
     module = _load_module()
 

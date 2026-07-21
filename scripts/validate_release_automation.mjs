@@ -111,7 +111,9 @@ for (const [path, expected] of Object.entries(expectedPackages)) {
     fail(`${path} must use component-specific tags`);
   }
   if (actual["release-as"] !== undefined) {
-    fail(`${path} must not retain a release-as override after the first public release`);
+    fail(
+      `${path} must not retain a release-as override after the first public release`,
+    );
   }
   if (manifest[path] !== expected.version) {
     fail(`${path} manifest version must match current package version`);
@@ -197,6 +199,12 @@ if (!workflowNames.includes("release-please.yml")) {
     '-f head-ref="$head_sha"',
     "publish-npm-wrapper",
     "npm publish --provenance --access public",
+    "post-release-baseline:",
+    "needs.verify-release.result == 'success'",
+    "python scripts/update_release_baseline.py",
+    "chore/post-release-baseline-",
+    "secrets.RELEASE_PLEASE_TOKEN",
+    "gh pr create",
   ]) {
     if (!releaseWorkflow.includes(required)) {
       fail(`release workflow must reference ${required}`);
@@ -206,7 +214,7 @@ if (!workflowNames.includes("release-please.yml")) {
     "fovux-studio.vsix",
     "ovsx@0.10.11",
     "ovsx@0.10.12",
-    '--version 1.0.0',
+    "--version 1.0.0",
     'require(\'./package.json\').version")" = "1.0.0"',
   ]) {
     if (releaseWorkflow.includes(forbidden)) {
@@ -259,10 +267,14 @@ if (!workflowNames.includes("publish-production.yml")) {
     fail("production publish workflow must use GitHub-hosted runners");
   }
   if (publishWorkflow.includes("\n  release:")) {
-    fail("production recovery workflow must not race automatic release publishing");
+    fail(
+      "production recovery workflow must not race automatic release publishing",
+    );
   }
   if (publishWorkflow.includes('p.version !== "1.0.0"')) {
-    fail("production recovery workflow must accept the package version from the selected ref");
+    fail(
+      "production recovery workflow must accept the package version from the selected ref",
+    );
   }
 }
 
