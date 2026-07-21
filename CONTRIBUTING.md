@@ -16,16 +16,16 @@ fovux/
 
 ## Prerequisites
 
-| Tool                             | Version                                                       | Install                                                       |
-| -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
-| Python                           | ≥ 3.12                                                        | https://python.org                                            |
-| [uv](https://docs.astral.sh/uv/) | latest                                                        | official standalone installer                                 |
-| Node.js                          | >= 22.0.0, with 24.16.0 pinned in `.nvmrc` for release builds | https://nodejs.org                                            |
-| pnpm                             | 10.34.1                                                       | `corepack enable && corepack prepare pnpm@10.34.1 --activate` |
-| pre-commit                       | ≥ 4.0                                                         | included in `dev` extra                                       |
-| go-task/task                     | 3.50.0                                                        | `go install github.com/go-task/task/v3/cmd/task@v3.50.0`      |
+| Tool                             | Version                                                       | Install                                                         |
+| -------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- |
+| Python                           | ≥ 3.12                                                        | https://python.org                                              |
+| [uv](https://docs.astral.sh/uv/) | latest                                                        | official standalone installer                                   |
+| Node.js                          | >= 22.0.0, with 24.16.0 pinned in `.nvmrc` for release builds | https://nodejs.org                                              |
+| pnpm                             | 10.34.1                                                       | `corepack enable && corepack prepare pnpm@10.34.1 --activate`   |
+| pre-commit                       | ≥ 4.0                                                         | included in `dev` extra                                         |
+| go-task/task                     | 3.50.0                                                        | `go install github.com/go-task/task/v3/cmd/task@v3.50.0`        |
 | actionlint                       | 1.7.12                                                        | `go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12` |
-| gitleaks                         | 8.30.1                                                        | `go install github.com/zricethezav/gitleaks/v8@v8.30.1`      |
+| gitleaks                         | 8.30.1                                                        | `go install github.com/zricethezav/gitleaks/v8@v8.30.1`         |
 
 ## Local setup
 
@@ -74,6 +74,20 @@ pnpm typecheck
 pnpm test
 pnpm build
 ```
+
+### Generated Studio Language Model tools
+
+The backend schema snapshot is canonical for Studio LM input schemas and policy metadata. Edit
+`fovux-studio/src/fovux/tools/overrides.json` only for Studio-specific names, descriptions, tags,
+prompt references, and custom confirmation copy. Then regenerate and verify the committed artifacts:
+
+```bash
+task studio:lm-tools:generate
+task studio:lm-tools:check
+```
+
+Do not edit `fovux-studio/src/fovux/tools/definitions.ts` or the granular
+`contributes.languageModelTools` entries in `fovux-studio/package.json` by hand.
 
 ## CLI aliases
 

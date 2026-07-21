@@ -124,6 +124,16 @@ tasks:
         npm exec --yes --package=renovate@{{.RENOVATE_VERSION}} --
         renovate-config-validator renovate.json
 
+  studio:lm-tools:generate:
+    desc: Generate Studio Language Model tool artifacts from the backend schema snapshot
+    cmds:
+      - python scripts/generate_studio_lm_tools.py
+
+  studio:lm-tools:check:
+    desc: Fail when generated Studio Language Model tool artifacts are stale
+    cmds:
+      - python scripts/generate_studio_lm_tools.py --check
+
   docs:
     desc: Build and lint documentation
     cmds:
@@ -136,6 +146,7 @@ tasks:
       - cmd: python scripts/check_agent_policy.py
       - cmd: python scripts/check_audit_schema.py
       - cmd: uv run --project fovux-mcp python scripts/check_tool_contracts.py
+      - cmd: python scripts/generate_studio_lm_tools.py --check
       - cmd: uv run --project fovux-mcp python scripts/check_studio_lm_tools.py
       - cmd: python scripts/check_guided_workflow.py
       - cmd: python scripts/check_first_run_onboarding.py

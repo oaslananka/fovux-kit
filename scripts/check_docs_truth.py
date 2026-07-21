@@ -32,8 +32,13 @@ def _tool_names() -> set[str]:
 
 
 def _granular_lm_tool_count() -> int:
-    content = _read(STUDIO_ROOT / "src" / "fovux" / "tools" / "definitions.ts")
-    return len(re.findall(r'name:\s*"fovux_[^"]+"', content))
+    overrides = json.loads(
+        _read(STUDIO_ROOT / "src" / "fovux" / "tools" / "overrides.json")
+    )
+    tools = overrides.get("tools")
+    if not isinstance(tools, dict):
+        raise ValueError("Studio LM overrides tools must be an object")
+    return len(tools)
 
 
 def _readme_tool_names() -> set[str]:

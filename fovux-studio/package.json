@@ -295,51 +295,32 @@
           "fovux",
           "dataset"
         ],
-        "canBeReferencedInPrompt": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "dataset_path": {
-              "type": "string",
-              "description": "Path to the YOLO dataset directory containing data.yaml.",
-              "examples": [
-                "C:/Users/Admin/datasets/my_dataset",
-                "./data/coco128"
-              ]
+              "type": "string"
             },
             "format": {
-              "type": "string",
-              "description": "Dataset format to analyze.",
-              "enum": [
-                "auto",
-                "yolo",
-                "coco"
-              ],
-              "default": "auto"
+              "default": "auto",
+              "type": "string"
             },
             "include_samples": {
-              "type": "boolean",
-              "description": "Whether to include sample image paths in the output report.",
-              "default": true
+              "default": true,
+              "type": "boolean"
             },
             "max_images_analyzed": {
-              "type": "integer",
-              "description": "Cap on the number of images to read to prevent timeouts.",
-              "minimum": 1,
-              "maximum": 100000,
               "default": 10000,
-              "examples": [
-                1000,
-                5000,
-                10000
-              ]
+              "type": "integer"
             }
           },
           "required": [
             "dataset_path"
-          ]
+          ],
+          "type": "object"
         },
-        "userDescription": "Run Fovux Inspect Dataset using the local fovux-mcp server."
+        "userDescription": "Run Fovux Inspect Dataset using the local fovux-mcp server.",
+        "canBeReferencedInPrompt": true
       },
       {
         "name": "fovux_validate_dataset",
@@ -351,49 +332,36 @@
           "dataset"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "dataset_path": {
-              "type": "string",
-              "description": "Path to the YOLO dataset directory.",
-              "examples": [
-                "C:/Users/Admin/datasets/traffic_signs"
-              ]
-            },
-            "format": {
-              "type": "string",
-              "description": "Dataset format.",
-              "enum": [
-                "auto",
-                "yolo",
-                "coco"
-              ],
-              "default": "auto"
-            },
-            "check_image_readable": {
-              "type": "boolean",
-              "description": "Verify that all image files can be loaded by PIL without corruption.",
-              "default": true
-            },
             "check_bbox_bounds": {
-              "type": "boolean",
-              "description": "Ensure bbox coordinates lie strictly within [0.0, 1.0].",
-              "default": true
+              "default": true,
+              "type": "boolean"
             },
             "check_class_id_range": {
-              "type": "boolean",
-              "description": "Ensure annotated class IDs match the categories defined in dataset metadata.",
-              "default": true
+              "default": true,
+              "type": "boolean"
+            },
+            "check_image_readable": {
+              "default": true,
+              "type": "boolean"
+            },
+            "dataset_path": {
+              "type": "string"
+            },
+            "format": {
+              "default": "auto",
+              "type": "string"
             },
             "strict": {
-              "type": "boolean",
-              "description": "Fail on warnings as well as critical errors.",
-              "default": false
+              "default": false,
+              "type": "boolean"
             }
           },
           "required": [
             "dataset_path"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Validate Dataset using the local fovux-mcp server."
       },
@@ -407,47 +375,28 @@
           "dataset"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "dataset_path": {
-              "type": "string",
-              "description": "Path to the YOLO dataset directory.",
-              "examples": [
-                "C:/Users/Admin/datasets/my_dataset"
-              ]
+            "across_splits": {
+              "default": true,
+              "type": "boolean"
             },
             "algorithm": {
-              "type": "string",
-              "description": "Perceptual hashing algorithm to use.",
-              "enum": [
-                "phash",
-                "dhash",
-                "whash",
-                "average"
-              ],
-              "default": "phash"
+              "default": "phash",
+              "type": "string"
+            },
+            "dataset_path": {
+              "type": "string"
             },
             "hamming_threshold": {
-              "type": "integer",
-              "description": "Maximum hamming distance (0-64) for near-duplicates. Lower values mean stricter matching.",
-              "minimum": 0,
-              "maximum": 64,
               "default": 5,
-              "examples": [
-                3,
-                5,
-                8
-              ]
-            },
-            "across_splits": {
-              "type": "boolean",
-              "description": "Detect duplicate images leaked between train, val, or test splits.",
-              "default": true
+              "type": "integer"
             }
           },
           "required": [
             "dataset_path"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Find Dataset Duplicates using the local fovux-mcp server."
       },
@@ -461,32 +410,30 @@
           "dataset"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "dataset_path": {
-              "type": "string",
-              "description": "Path to the YOLO/COCO dataset directory.",
-              "examples": [
-                "C:/Users/Admin/datasets/traffic_signs"
-              ]
-            },
             "checks": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "tiny_box",
-                  "out_of_bounds",
-                  "overlapping",
-                  "empty_label"
-                ]
-              },
-              "description": "Specific checks to run. If empty, runs all checks."
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "dataset_path": {
+              "type": "string"
             }
           },
           "required": [
             "dataset_path"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Annotation Quality Check using the local fovux-mcp server."
       },
@@ -500,135 +447,134 @@
           "training"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "dataset_path": {
-              "type": "string",
-              "description": "Path to the YOLO training dataset.",
-              "examples": [
-                "C:/Users/Admin/datasets/my_dataset"
-              ]
-            },
-            "model": {
-              "type": "string",
-              "description": "Model architecture file or checkpoint to start from.",
-              "default": "yolov8n.pt",
-              "examples": [
-                "yolov8n.pt",
-                "yolov8s.yaml"
-              ]
-            },
-            "epochs": {
-              "type": "integer",
-              "description": "Number of training epochs.",
-              "minimum": 1,
-              "default": 100,
-              "examples": [
-                50,
-                100,
-                200
-              ]
-            },
             "batch": {
-              "type": "integer",
-              "description": "Batch size (images per step).",
-              "minimum": 1,
               "default": 16,
-              "examples": [
-                8,
-                16,
-                32
-              ]
+              "type": "integer"
             },
-            "imgsz": {
-              "type": "integer",
-              "description": "Training image dimension.",
-              "minimum": 32,
-              "default": 640,
-              "examples": [
-                320,
-                640,
-                1280
-              ]
+            "dataset_path": {
+              "type": "string"
             },
             "device": {
-              "type": "string",
-              "description": "Compute device to run training on (auto, cpu, cuda GPU index).",
               "default": "auto",
-              "examples": [
-                "auto",
-                "cpu",
-                "cuda:0",
-                "0"
-              ]
-            },
-            "task": {
-              "type": "string",
-              "description": "YOLO training task type.",
-              "enum": [
-                "detect",
-                "segment",
-                "classify",
-                "pose",
-                "obb"
-              ],
-              "default": "detect"
-            },
-            "name": {
-              "type": "string",
-              "description": "Explicit run identifier. If omitted, a random ID is generated.",
-              "examples": [
-                "yolov8_traffic_01"
-              ]
-            },
-            "force": {
-              "type": "boolean",
-              "description": "Overwrite existing run directory if it exists with the same name.",
-              "default": false
-            },
-            "max_concurrent_runs": {
-              "type": "integer",
-              "description": "Limit on concurrent active runs. Restricts resource exhaustion.",
-              "minimum": 1,
-              "default": 1
-            },
-            "tags": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Tags for classifying the run.",
-              "examples": [
-                [
-                  "baseline",
-                  "detect"
-                ]
-              ]
-            },
-            "max_runtime_seconds": {
-              "type": "integer",
-              "description": "Hard time budget in seconds before automatic run termination.",
-              "minimum": 1
-            },
-            "max_disk_usage_gb": {
-              "type": "number",
-              "description": "Hard disk budget in gigabytes for saved checkpoints.",
-              "minimum": 0.1
+              "type": "string"
             },
             "device_policy": {
-              "type": "string",
-              "description": "Enforces specific device requirements.",
-              "enum": [
-                "any",
-                "gpu_only",
-                "cpu_only"
+              "default": "any",
+              "type": "string"
+            },
+            "epochs": {
+              "default": 100,
+              "type": "integer"
+            },
+            "extra_args": {
+              "anyOf": [
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "default": "any"
+              "default": null
+            },
+            "force": {
+              "default": false,
+              "type": "boolean"
+            },
+            "imgsz": {
+              "default": 640,
+              "type": "integer"
+            },
+            "max_concurrent_runs": {
+              "default": 1,
+              "type": "integer"
+            },
+            "max_disk_usage_gb": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "max_runtime_seconds": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "model": {
+              "default": "yolov8n.pt",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "options": {
+              "anyOf": [
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "preflight_approval_reason": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "tags": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "task": {
+              "default": "detect",
+              "type": "string"
             }
           },
           "required": [
             "dataset_path"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Start Training using the local fovux-mcp server."
       },
@@ -642,63 +588,111 @@
           "training"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "dataset_path": {
-              "type": "string",
-              "description": "Path to the YOLO training dataset.",
-              "examples": [
-                "C:/Users/Admin/datasets/my_dataset"
-              ]
-            },
-            "model": {
-              "type": "string",
-              "description": "Model architecture or checkpoint.",
-              "default": "yolov8n.pt"
-            },
-            "epochs": {
-              "type": "integer",
-              "description": "Number of epochs planned.",
-              "minimum": 1,
-              "default": 100
-            },
             "batch": {
-              "type": "integer",
-              "description": "Batch size planned.",
-              "minimum": 1,
-              "default": 16
+              "default": 16,
+              "type": "integer"
             },
-            "imgsz": {
-              "type": "integer",
-              "description": "Image size planned.",
-              "minimum": 32,
-              "default": 640
+            "dataset_path": {
+              "type": "string"
             },
             "device": {
-              "type": "string",
-              "description": "Target compute device.",
-              "default": "auto"
+              "default": "auto",
+              "type": "string"
             },
-            "task": {
-              "type": "string",
-              "description": "Task type.",
-              "enum": [
-                "detect",
-                "segment",
-                "classify",
-                "pose",
-                "obb"
+            "device_policy": {
+              "default": "any",
+              "type": "string"
+            },
+            "epochs": {
+              "default": 100,
+              "type": "integer"
+            },
+            "force": {
+              "default": false,
+              "type": "boolean"
+            },
+            "imgsz": {
+              "default": 640,
+              "type": "integer"
+            },
+            "max_concurrent_runs": {
+              "default": 1,
+              "type": "integer"
+            },
+            "max_disk_usage_gb": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "default": "detect"
+              "default": null
+            },
+            "max_runtime_seconds": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "model": {
+              "default": "yolov8n.pt",
+              "type": "string"
             },
             "name": {
-              "type": "string",
-              "description": "Planned run ID."
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "options": {
+              "anyOf": [
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "tags": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "task": {
+              "default": "detect",
+              "type": "string"
             }
           },
           "required": [
             "dataset_path"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Training Preflight Check using the local fovux-mcp server."
       },
@@ -711,24 +705,20 @@
           "fovux",
           "training"
         ],
-        "canBeReferencedInPrompt": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "run_id": {
-              "type": "string",
-              "description": "ID of the training run to check.",
-              "examples": [
-                "run_demo",
-                "yolov8_traffic_01"
-              ]
+              "type": "string"
             }
           },
           "required": [
             "run_id"
-          ]
+          ],
+          "type": "object"
         },
-        "userDescription": "Run Fovux Training Status using the local fovux-mcp server."
+        "userDescription": "Run Fovux Training Status using the local fovux-mcp server.",
+        "canBeReferencedInPrompt": true
       },
       {
         "name": "fovux_stop_train",
@@ -740,24 +730,20 @@
           "training"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "run_id": {
-              "type": "string",
-              "description": "ID of the training run to stop.",
-              "examples": [
-                "yolov8_traffic_01"
-              ]
-            },
             "force": {
-              "type": "boolean",
-              "description": "Force kill the process group immediately using SIGKILL if it hangs.",
-              "default": false
+              "default": false,
+              "type": "boolean"
+            },
+            "run_id": {
+              "type": "string"
             }
           },
           "required": [
             "run_id"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Stop Training using the local fovux-mcp server."
       },
@@ -771,24 +757,27 @@
           "training"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "run_id": {
-              "type": "string",
-              "description": "ID of the training run to resume.",
-              "examples": [
-                "yolov8_traffic_01"
-              ]
-            },
             "epochs": {
-              "type": "integer",
-              "description": "Optionally adjust the total number of epochs for the resumed training run.",
-              "minimum": 1
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "run_id": {
+              "type": "string"
             }
           },
           "required": [
             "run_id"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Resume Training using the local fovux-mcp server."
       },
@@ -801,85 +790,52 @@
           "fovux",
           "evaluation"
         ],
-        "canBeReferencedInPrompt": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "checkpoint": {
-              "type": "string",
-              "description": "Model checkpoint path (absolute or relative to FOVUX_HOME/models).",
-              "examples": [
-                "C:/Users/Admin/.fovux/runs/yolov8_traffic_01/weights/best.pt",
-                "best.pt"
-              ]
-            },
-            "dataset_path": {
-              "type": "string",
-              "description": "Validation/test dataset path.",
-              "examples": [
-                "C:/Users/Admin/datasets/my_dataset"
-              ]
-            },
-            "split": {
-              "type": "string",
-              "description": "Dataset split to evaluate on.",
-              "enum": [
-                "val",
-                "test",
-                "train"
-              ],
-              "default": "val"
-            },
             "batch": {
-              "type": "integer",
-              "description": "Inference batch size.",
-              "minimum": 1,
-              "default": 16
+              "default": 16,
+              "type": "integer"
             },
-            "imgsz": {
-              "type": "integer",
-              "description": "Inference image dimension.",
-              "minimum": 32,
-              "default": 640
-            },
-            "device": {
-              "type": "string",
-              "description": "Target compute device.",
-              "default": "auto"
+            "checkpoint": {
+              "type": "string"
             },
             "conf": {
-              "type": "number",
-              "description": "Confidence threshold for detections.",
-              "minimum": 0,
-              "maximum": 1,
-              "default": 0.25
+              "default": 0.25,
+              "type": "number"
+            },
+            "dataset_path": {
+              "type": "string"
+            },
+            "device": {
+              "default": "auto",
+              "type": "string"
+            },
+            "imgsz": {
+              "default": 640,
+              "type": "integer"
             },
             "iou": {
-              "type": "number",
-              "description": "NMS IoU threshold.",
-              "minimum": 0,
-              "maximum": 1,
-              "default": 0.45
+              "default": 0.45,
+              "type": "number"
+            },
+            "split": {
+              "default": "val",
+              "type": "string"
             },
             "task": {
-              "type": "string",
-              "description": "YOLO task type.",
-              "enum": [
-                "detect",
-                "segment",
-                "classify",
-                "pose",
-                "obb"
-              ],
-              "default": "detect"
+              "default": "detect",
+              "type": "string"
             }
           },
           "required": [
             "checkpoint",
             "dataset_path"
-          ]
+          ],
+          "type": "object"
         },
-        "userDescription": "Run Fovux Run Evaluation using the local fovux-mcp server."
+        "userDescription": "Run Fovux Run Evaluation using the local fovux-mcp server.",
+        "canBeReferencedInPrompt": true
       },
       {
         "name": "fovux_compare_eval",
@@ -891,73 +847,47 @@
           "evaluation"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "batch": {
+              "default": 16,
+              "type": "integer"
+            },
             "checkpoints": {
-              "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "List of model checkpoints to evaluate.",
-              "examples": [
-                [
-                  "run1/weights/best.pt",
-                  "run2/weights/best.pt"
-                ]
-              ]
-            },
-            "dataset_path": {
-              "type": "string",
-              "description": "Evaluation dataset path.",
-              "examples": [
-                "C:/Users/Admin/datasets/my_dataset"
-              ]
-            },
-            "split": {
-              "type": "string",
-              "description": "Dataset split to evaluate on.",
-              "enum": [
-                "val",
-                "test"
-              ],
-              "default": "val"
-            },
-            "batch": {
-              "type": "integer",
-              "description": "Batch size.",
-              "minimum": 1,
-              "default": 16
-            },
-            "imgsz": {
-              "type": "integer",
-              "description": "Image size.",
-              "minimum": 32,
-              "default": 640
-            },
-            "device": {
-              "type": "string",
-              "description": "Target compute device.",
-              "default": "auto"
+              "type": "array"
             },
             "conf": {
-              "type": "number",
-              "description": "Confidence threshold.",
-              "minimum": 0,
-              "maximum": 1,
-              "default": 0.25
+              "default": 0.25,
+              "type": "number"
+            },
+            "dataset_path": {
+              "type": "string"
+            },
+            "device": {
+              "default": "auto",
+              "type": "string"
+            },
+            "imgsz": {
+              "default": 640,
+              "type": "integer"
             },
             "iou": {
-              "type": "number",
-              "description": "NMS IoU threshold.",
-              "minimum": 0,
-              "maximum": 1,
-              "default": 0.45
+              "default": 0.45,
+              "type": "number"
+            },
+            "split": {
+              "default": "val",
+              "type": "string"
             }
           },
           "required": [
             "checkpoints",
             "dataset_path"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Compare Evaluations using the local fovux-mcp server."
       },
@@ -971,26 +901,35 @@
           "evaluation"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "run_ids": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "List of run IDs to compare. If empty, all non-archived runs are compared.",
-              "examples": [
-                [
-                  "yolov8_traffic_01",
-                  "yolov8_traffic_02"
-                ]
-              ]
-            },
             "output_path": {
-              "type": "string",
-              "description": "Optional output markdown filepath to write the report to."
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "run_ids": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             }
-          }
+          },
+          "type": "object"
         },
         "userDescription": "Run Fovux Compare Training Runs using the local fovux-mcp server."
       },
@@ -1004,56 +943,59 @@
           "export"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "checkpoint": {
-              "type": "string",
-              "description": "Model checkpoint filepath to export.",
-              "examples": [
-                "best.pt"
-              ]
+              "type": "string"
             },
-            "output_path": {
-              "type": "string",
-              "description": "Optional custom output path for the ONNX file."
-            },
-            "imgsz": {
-              "type": "integer",
-              "description": "Export image dimension.",
-              "minimum": 32,
-              "default": 640
-            },
-            "opset": {
-              "type": "integer",
-              "description": "ONNX opset version.",
-              "minimum": 7,
-              "maximum": 20,
-              "default": 17
+            "device": {
+              "default": "auto",
+              "type": "string"
             },
             "dynamic": {
-              "type": "boolean",
-              "description": "Support dynamic input dimensions.",
-              "default": false
-            },
-            "simplify": {
-              "type": "boolean",
-              "description": "Optimize ONNX graph structures via onnxsimplifier.",
-              "default": true
+              "default": false,
+              "type": "boolean"
             },
             "half": {
-              "type": "boolean",
-              "description": "Use FP16 half precision.",
-              "default": false
+              "default": false,
+              "type": "boolean"
             },
-            "nms": {
-              "type": "boolean",
-              "description": "Embed CoreML/ONNX Non-Maximum Suppression directly inside the model graph.",
-              "default": false
+            "imgsz": {
+              "default": 640,
+              "type": "integer"
+            },
+            "opset": {
+              "default": 17,
+              "type": "integer"
+            },
+            "output_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "parity_check": {
+              "default": true,
+              "type": "boolean"
+            },
+            "parity_tolerance": {
+              "default": 0.001,
+              "type": "number"
+            },
+            "simplify": {
+              "default": true,
+              "type": "boolean"
             }
           },
           "required": [
             "checkpoint"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Export to ONNX using the local fovux-mcp server."
       },
@@ -1067,39 +1009,43 @@
           "export"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "checkpoint": {
-              "type": "string",
-              "description": "Model checkpoint to export.",
-              "examples": [
-                "best.pt"
-              ]
+              "type": "string"
             },
-            "output_path": {
-              "type": "string",
-              "description": "Optional custom output path for the .tflite file."
-            },
-            "imgsz": {
-              "type": "integer",
-              "description": "Export image dimension.",
-              "minimum": 32,
-              "default": 640
+            "device": {
+              "default": "auto",
+              "type": "string"
             },
             "half": {
-              "type": "boolean",
-              "description": "Use FP16 float precision.",
-              "default": false
+              "default": false,
+              "type": "boolean"
+            },
+            "imgsz": {
+              "default": 640,
+              "type": "integer"
             },
             "int8": {
-              "type": "boolean",
-              "description": "Convert model weights to INT8 integer values (requires calibration dataset).",
-              "default": false
+              "default": false,
+              "type": "boolean"
+            },
+            "output_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             }
           },
           "required": [
             "checkpoint"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Export to TFLite using the local fovux-mcp server."
       },
@@ -1113,37 +1059,39 @@
           "export"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "checkpoint": {
-              "type": "string",
-              "description": "Model checkpoint to quantize.",
-              "examples": [
-                "best.pt"
-              ]
-            },
             "calibration_dataset": {
-              "type": "string",
-              "description": "Path to a representative calibration dataset directory.",
-              "examples": [
-                "C:/Users/Admin/datasets/my_dataset"
-              ]
+              "type": "string"
             },
-            "output_path": {
-              "type": "string",
-              "description": "Optional custom output path for the quantized model."
+            "checkpoint": {
+              "type": "string"
+            },
+            "device": {
+              "default": "auto",
+              "type": "string"
             },
             "imgsz": {
-              "type": "integer",
-              "description": "Quantization input dimension.",
-              "minimum": 32,
-              "default": 640
+              "default": 640,
+              "type": "integer"
+            },
+            "output_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             }
           },
           "required": [
             "checkpoint",
             "calibration_dataset"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Quantize INT8 using the local fovux-mcp server."
       },
@@ -1157,46 +1105,35 @@
           "export"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "model_path": {
-              "type": "string",
-              "description": "Path to the exported model file (.onnx, .tflite, .engine).",
-              "examples": [
-                "best.onnx"
-              ]
-            },
-            "target_profile": {
-              "type": "string",
-              "description": "Target deployment hardware profile.",
-              "enum": [
-                "cpu_server",
-                "nvidia_gpu_tensorrt",
-                "jetson",
-                "raspberry_pi",
-                "android_tflite",
-                "browser_wasm"
-              ],
-              "examples": [
-                "android_tflite",
-                "raspberry_pi"
-              ]
-            },
             "dataset_path": {
-              "type": "string",
-              "description": "Optional validation dataset to run accuracy and parity benchmarks."
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             },
             "imgsz": {
-              "type": "integer",
-              "description": "Benchmark input image size.",
-              "minimum": 32,
-              "default": 640
+              "default": 640,
+              "type": "integer"
+            },
+            "model_path": {
+              "type": "string"
+            },
+            "target_profile": {
+              "type": "string"
             }
           },
           "required": [
             "model_path",
             "target_profile"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Deployment Advice using the local fovux-mcp server."
       },
@@ -1210,30 +1147,24 @@
           "system"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "checkpoint": {
-              "type": "string",
-              "description": "Model checkpoint path to profile.",
-              "examples": [
-                "best.pt"
-              ]
-            },
-            "imgsz": {
-              "type": "integer",
-              "description": "Inference dimension to calculate GFLOPs.",
-              "minimum": 32,
-              "default": 640
+              "type": "string"
             },
             "device": {
-              "type": "string",
-              "description": "Device to run profiling benchmarks on.",
-              "default": "auto"
+              "default": "auto",
+              "type": "string"
+            },
+            "imgsz": {
+              "default": 640,
+              "type": "integer"
             }
           },
           "required": [
             "checkpoint"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Profile Model using the local fovux-mcp server."
       },
@@ -1247,34 +1178,28 @@
           "system"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "run_id": {
-              "type": "string",
-              "description": "ID of the training run to delete.",
-              "examples": [
-                "yolov8_traffic_01"
-              ]
-            },
             "delete_files": {
-              "type": "boolean",
-              "description": "Whether to delete the run directory and all saved weights from disk.",
-              "default": true
-            },
-            "force": {
-              "type": "boolean",
-              "description": "Terminate the run first if it is currently active, then delete.",
-              "default": false
+              "default": true,
+              "type": "boolean"
             },
             "dry_run": {
-              "type": "boolean",
-              "description": "Calculate what files would be deleted without actually removing them.",
-              "default": false
+              "default": false,
+              "type": "boolean"
+            },
+            "force": {
+              "default": false,
+              "type": "boolean"
+            },
+            "run_id": {
+              "type": "string"
             }
           },
           "required": [
             "run_id"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Delete Run using the local fovux-mcp server."
       },
@@ -1288,32 +1213,30 @@
           "system"
         ],
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "run_id": {
-              "type": "string",
-              "description": "ID of the training run to tag.",
-              "examples": [
-                "yolov8_traffic_01"
-              ]
+              "type": "string"
             },
             "tags": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Complete list of new tags for the run.",
-              "examples": [
-                [
-                  "baseline",
-                  "v1.0"
-                ]
-              ]
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             }
           },
           "required": [
             "run_id"
-          ]
+          ],
+          "type": "object"
         },
         "userDescription": "Run Fovux Tag Run using the local fovux-mcp server."
       },
@@ -1326,12 +1249,13 @@
           "fovux",
           "system"
         ],
-        "canBeReferencedInPrompt": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {}
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
         },
-        "userDescription": "Run Fovux System Doctor using the local fovux-mcp server."
+        "userDescription": "Run Fovux System Doctor using the local fovux-mcp server.",
+        "canBeReferencedInPrompt": true
       }
     ],
     "viewsContainers": {
@@ -1612,6 +1536,8 @@
     "lint": "eslint src test",
     "lint:fix": "eslint src test --fix",
     "typecheck": "tsc --noEmit",
+    "lm-tools:generate": "python ../scripts/generate_studio_lm_tools.py",
+    "lm-tools:check": "python ../scripts/generate_studio_lm_tools.py --check",
     "test": "pnpm exec vitest run",
     "test:unit": "pnpm exec vitest run test/suite --coverage",
     "test:e2e": "vscode-test",

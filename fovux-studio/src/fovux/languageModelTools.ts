@@ -59,14 +59,21 @@ export function registerFovuxLanguageModelTool(context: vscode.ExtensionContext)
   for (const definition of GRANULAR_TOOLS) {
     const granularTool: vscode.LanguageModelTool<GranularToolInput> = {
       prepareInvocation(_options) {
-        const confirmation = getConfirmationMessage(definition.mcpToolName, _options.input);
-        return {
+        const invocation = {
           invocationMessage: `Running ${definition.displayName}`,
+        };
+        if (!definition.requiresConfirmation) {
+          return invocation;
+        }
+
+        const confirmation = getConfirmationMessage(definition.confirmationKind, _options.input);
+        return {
+          ...invocation,
           confirmationMessages: {
             title: `Run ${definition.displayName}?`,
             message:
               confirmation ||
-              `Fovux Studio will call ${definition.mcpToolName} on your local fovux-mcp server.`,
+              `Fovux Studio will call ${definition.mcpToolName} with scope ${definition.requiredScope}.`,
           },
         };
       },
@@ -92,10 +99,11 @@ export function registerFovuxLanguageModelTool(context: vscode.ExtensionContext)
 }
 
 function getConfirmationMessage(
-  mcpToolName: string,
+  mcpToolName: string | undefined,
   input: Record<string, any>
 ): vscode.MarkdownString | undefined {
   if (
+    !mcpToolName ||
     ![
       "train_start",
       "train_stop",

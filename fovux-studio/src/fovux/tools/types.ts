@@ -1,5 +1,18 @@
 /**
- * Type definition for a granular LM tool registration.
+ * Custom confirmation templates retained by the Studio UX layer.
+ */
+export type ConfirmationKind =
+  | "train_start"
+  | "train_stop"
+  | "train_resume"
+  | "export_onnx"
+  | "export_tflite"
+  | "quantize_int8"
+  | "run_delete"
+  | "run_tag";
+
+/**
+ * Type definition for a generated granular LM tool registration.
  */
 export interface GranularToolDefinition {
   /** Unique tool name registered with VS Code LM API. */
@@ -18,6 +31,14 @@ export interface GranularToolDefinition {
   canBeReferencedInPrompt: boolean;
   /** Corresponding fovux-mcp tool name. */
   mcpToolName: string;
-  /** JSON Schema for the tool input. */
+  /** Canonical backend JSON Schema for the tool input. */
   inputSchema: Record<string, unknown>;
+  /** Whether the backend HTTP policy requires explicit confirmation. */
+  requiresConfirmation: boolean;
+  /** Backend authorization scope required by the tool. */
+  requiredScope: string;
+  /** Backend policy category used for audit and UX decisions. */
+  policyCategory: string;
+  /** Optional Studio-specific rich confirmation template. */
+  confirmationKind?: ConfirmationKind;
 }
