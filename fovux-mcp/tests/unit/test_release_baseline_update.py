@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import tomllib
 from pathlib import Path
 from types import ModuleType
 
@@ -28,28 +29,46 @@ def _load_module() -> ModuleType:
         sys.path.remove(str(SCRIPTS))
 
 
-def _release_documents() -> dict[str, str]:
+def _expected_repository_versions() -> tuple[str, str, str]:
+    mcp_config = tomllib.loads(
+        (REPO_ROOT / "fovux-mcp" / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    npm_config = json.loads(
+        (REPO_ROOT / "fovux-mcp-npm" / "package.json").read_text(encoding="utf-8")
+    )
+    studio_config = json.loads(
+        (REPO_ROOT / "fovux-studio" / "package.json").read_text(encoding="utf-8")
+    )
+    return (
+        str(mcp_config["project"]["version"]),
+        str(npm_config["version"]),
+        str(studio_config["version"]),
+    )
+
+
+def _release_documents(mcp_version: str) -> dict[str, str]:
     return {
         "README.md": (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
         "fovux-mcp/README.md": (REPO_ROOT / "fovux-mcp" / "README.md").read_text(encoding="utf-8"),
         "ROADMAP.md": (REPO_ROOT / "ROADMAP.md").read_text(encoding="utf-8"),
         "RELEASE_NOTES.md": (REPO_ROOT / "RELEASE_NOTES.md").read_text(encoding="utf-8"),
-        "published_release_note": (REPO_ROOT / "docs" / "release-notes" / "1.5.0.md").read_text(
-            encoding="utf-8"
-        ),
+        "published_release_note": (
+            REPO_ROOT / "docs" / "release-notes" / f"{mcp_version}.md"
+        ).read_text(encoding="utf-8"),
     }
 
 
 def test_synchronize_release_content_is_deterministic() -> None:
     module = _load_module()
+    mcp_version, npm_version, studio_version = _expected_repository_versions()
     arguments = {
-        "mcp_version": "1.5.0",
-        "npm_version": "1.5.0",
-        "studio_version": "1.4.0",
+        "mcp_version": mcp_version,
+        "npm_version": npm_version,
+        "studio_version": studio_version,
         "reviewed_at": "2026-07-21",
     }
     manifest_text = (REPO_ROOT / "release-baseline.json").read_text(encoding="utf-8")
-    documents = _release_documents()
+    documents = _release_documents(mcp_version)
 
     first_manifest, first_documents = module.synchronize_release_content(
         manifest_text, documents, **arguments
@@ -61,10 +80,14 @@ def test_synchronize_release_content_is_deterministic() -> None:
     assert second_manifest == first_manifest
     assert second_documents == first_documents
     manifest = json.loads(first_manifest)
-    assert manifest["published_release"] == "1.5.0"
+    assert manifest["published_release"] == mcp_version
     assert manifest["reviewed_at"] == "2026-07-21"
     versions = {item["id"]: item["version"] for item in manifest["packages"]}
-    assert versions == {"python": "1.5.0", "npm": "1.5.0", "studio": "1.4.0"}
+    assert versions == {
+        "python": mcp_version,
+        "npm": npm_version,
+        "studio": studio_version,
+    }
 
     studio = next(item for item in manifest["packages"] if item["id"] == "studio")
     assert studio["status"] == "Published on VS Marketplace and Open VSX"
@@ -72,18 +95,19 @@ def test_synchronize_release_content_is_deterministic() -> None:
 
     for label in ("ROADMAP.md", "RELEASE_NOTES.md", "published_release_note"):
         text = first_documents[label]
-        assert "| `1.5.0` | Published on PyPI |" in text
-        assert "| `1.4.0` | Published on VS Marketplace and Open VSX |" in text
+        assert f"| `{mcp_version}` | Published on PyPI |" in text
+        assert f"| `{studio_version}` | Published on VS Marketplace and Open VSX |" in text
     assert (
-        "Fovux 1.5.0 is the current reviewed release baseline"
+        f"Fovux {mcp_version} is the current reviewed release baseline"
         in first_documents["RELEASE_NOTES.md"]
     )
-    assert "Python backend package `fovux-mcp` 1.5.0" in first_documents["README.md"]
-    assert "npm wrapper `fovux-mcp` 1.5.0" in first_documents["README.md"]
-    assert "VS Code companion `Fovux Studio` 1.4.0" in first_documents["README.md"]
-    assert "Fovux MCP 1.5.0 exposes 47 local tools" in first_documents["README.md"]
+    assert f"Python backend package `fovux-mcp` {mcp_version}" in first_documents["README.md"]
+    assert f"npm wrapper `fovux-mcp` {npm_version}" in first_documents["README.md"]
+    assert f"VS Code companion `Fovux Studio` {studio_version}" in first_documents["README.md"]
+    assert f"Fovux MCP {mcp_version} exposes 47 local tools" in first_documents["README.md"]
     assert (
-        "Fovux MCP 1.5.0 currently exposes 47 local tools" in first_documents["fovux-mcp/README.md"]
+        f"Fovux MCP {mcp_version} currently exposes 47 local tools"
+        in first_documents["fovux-mcp/README.md"]
     )
 
 
@@ -104,11 +128,14 @@ def test_synchronize_release_content_rejects_path_escape_version() -> None:
 def test_repository_paths_are_fixed_and_release_note_is_existing() -> None:
     module = _load_module()
 
+    expected_versions = _expected_repository_versions()
+    mcp_version = expected_versions[0]
+
     assert module.MANIFEST_PATH == REPO_ROOT / "release-baseline.json"
     assert module.ROOT_RELEASE_NOTES_PATH == REPO_ROOT / "RELEASE_NOTES.md"
-    assert module._repository_versions() == ("1.5.0", "1.5.0", "1.4.0")
-    release_note = module._published_release_note("1.5.0")
-    assert release_note == REPO_ROOT / "docs" / "release-notes" / "1.5.0.md"
+    assert module._repository_versions() == expected_versions
+    release_note = module._published_release_note(mcp_version)
+    assert release_note == REPO_ROOT / "docs" / "release-notes" / f"{mcp_version}.md"
     assert release_note.is_file()
     assert not release_note.is_symlink()
     assert release_note.parent == module.RELEASE_NOTES_DIRECTORY.resolve()
