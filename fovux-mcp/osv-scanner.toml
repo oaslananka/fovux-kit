@@ -1,9 +1,0 @@
-[[IgnoredVulns]]
-id = "GHSA-rrmf-rvhw-rf47"
-ignoreUntil = 2026-09-10
-reason = "torch is only pulled into uv.lock through the optional yolo extra, OSV reports no fixed version, and Fovux core/runtime installs do not include this extra by default. Re-evaluate once PyTorch or Ultralytics publishes a fixed path."
-
-[[IgnoredVulns]]
-id = "GHSA-h35f-9h28-mq5c"
-ignoreUntil = 2026-09-10
-reason = "setuptools 81.0.0 is pulled only through the optional Torch 2.12.1 YOLO path, which pins setuptools<82; the fixed Setuptools 83.0.0 path requires the separately validated Torch 2.13 upgrade tracked in #134. Fovux core/runtime installs do not include this extra by default."

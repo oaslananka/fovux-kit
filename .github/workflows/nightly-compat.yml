@@ -1,6 +1,14 @@
 name: Nightly Compatibility
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "fovux-mcp/pyproject.toml"
+      - "fovux-mcp/uv.lock"
+      - "fovux-mcp/osv-scanner.toml"
+      - "fovux-mcp/tests/compat/test_optional_ml_stack.py"
+      - ".github/workflows/nightly-compat.yml"
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
@@ -17,7 +25,8 @@ defaults:
     shell: bash
 
 jobs:
-  compat:
+  latest-deps:
+    name: Latest dependencies (Python ${{ matrix.python-version }})
     if: github.repository == 'oaslananka/fovux-kit'
     strategy:
       fail-fast: false
@@ -28,20 +37,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: ${{ matrix.python-version }}
-
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
+          version: "0.11.29"
           enable-cache: true
-
+          cache-dependency-glob: fovux-mcp/uv.lock
       - name: Test with latest deps
         working-directory: fovux-mcp
         run: bash scripts/test_with_latest_deps.sh
-
       - name: Upload compatibility report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -49,3 +59,43 @@ jobs:
           name: nightly-compat-report-python-${{ matrix.python-version }}
           path: fovux-mcp/nightly-compat-report.txt
           retention-days: 14
+
+  optional-ml:
+    name: Optional ML (${{ matrix.os }})
+    if: github.repository == 'oaslananka/fovux-kit'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          version: "0.11.29"
+          enable-cache: true
+          cache-dependency-glob: fovux-mcp/uv.lock
+      - name: Install optional ML stack
+        working-directory: fovux-mcp
+        run: uv sync --frozen --extra dev --extra yolo --no-install-project --no-build
+      - name: Prefer headless OpenCV
+        working-directory: fovux-mcp
+        run: |
+          uv pip uninstall opencv-python
+          uv pip install --reinstall --no-deps opencv-python-headless==4.13.0.92
+      - name: Run Torch, torchvision, checkpoint, and CUDA-if-available smoke
+        working-directory: fovux-mcp
+        env:
+          YOLO_CONFIG_DIR: ${{ runner.temp }}/ultralytics
+          FOVUX_TEST_OPTIONAL_ML: "1"
+          FOVUX_TEST_YOLO_E2E: ${{ runner.os == 'Linux' && '1' || '0' }}
+        run: uv run --no-sync --no-build pytest -q --no-header tests/compat/test_optional_ml_stack.py
