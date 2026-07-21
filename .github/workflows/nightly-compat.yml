@@ -91,7 +91,7 @@ jobs:
         working-directory: fovux-mcp
         run: |
           uv pip uninstall opencv-python
-          uv pip install --reinstall --no-deps opencv-python-headless==4.13.0.92
+          uv pip install --reinstall --no-deps --only-binary :all: opencv-python-headless==4.13.0.92
       - name: Run Torch, torchvision, checkpoint, and CUDA-if-available smoke
         working-directory: fovux-mcp
         env:

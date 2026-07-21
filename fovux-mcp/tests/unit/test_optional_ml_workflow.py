@@ -45,7 +45,7 @@ def test_nightly_workflow_covers_supported_platforms_and_real_smoke() -> None:
     assert "test_optional_ml_stack.py" in workflow
     assert "persist-credentials: false" in workflow
     assert "--no-install-project --no-build" in workflow
-    assert "--reinstall --no-deps opencv-python-headless" in workflow
+    assert "--reinstall --no-deps --only-binary :all: opencv-python-headless" in workflow
     assert "YOLO_CONFIG_DIR: ${{ runner.temp }}/ultralytics" in workflow
 
 
