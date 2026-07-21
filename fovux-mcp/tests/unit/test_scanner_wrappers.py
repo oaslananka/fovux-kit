@@ -1,4 +1,4 @@
-"""Tests for credential-aware local scanner wrappers."""
+"""Tests for safe local scanner wrappers."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ SCRIPTS_DIR = REPO_ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-import run_snyk  # noqa: E402
 import run_sonar  # noqa: E402
 import scanner_runner  # noqa: E402
 
@@ -24,22 +23,22 @@ def test_missing_executable_is_explicit_skip(monkeypatch: pytest.MonkeyPatch, ca
 
     result = scanner_runner.run_scanner(
         name="Example",
-        command=("snyk", "test"),
+        command=("osv-scanner", "scan", "source"),
         token_names=(),
         required=False,
         environ={},
     )
 
     assert result == 0
-    assert "SKIP: Example executable 'snyk' is not installed" in capsys.readouterr().out
+    assert "SKIP: Example executable 'osv-scanner' is not installed" in capsys.readouterr().out
 
 
 def test_missing_token_can_be_required(monkeypatch: pytest.MonkeyPatch, capsys: Any) -> None:
-    monkeypatch.setattr(scanner_runner.shutil, "which", lambda _name: "/usr/bin/snyk")
+    monkeypatch.setattr(scanner_runner.shutil, "which", lambda _name: "/usr/bin/sonar-scanner")
 
     result = scanner_runner.run_scanner(
         name="Example",
-        command=("snyk", "test"),
+        command=("sonar-scanner", "-Dsonar.branch.name=main"),
         token_names=("EXAMPLE_TOKEN",),
         required=True,
         environ={},
@@ -50,7 +49,7 @@ def test_missing_token_can_be_required(monkeypatch: pytest.MonkeyPatch, capsys: 
 
 
 def test_scanner_exit_code_is_propagated(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(scanner_runner.shutil, "which", lambda _name: "/usr/bin/snyk")
+    monkeypatch.setattr(scanner_runner.shutil, "which", lambda _name: "/usr/bin/osv-scanner")
     observed: dict[str, object] = {}
 
     def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -62,26 +61,26 @@ def test_scanner_exit_code_is_propagated(monkeypatch: pytest.MonkeyPatch) -> Non
 
     result = scanner_runner.run_scanner(
         name="Example",
-        command=("snyk", "test", "--flag"),
-        token_names=("EXAMPLE_TOKEN",),
+        command=("osv-scanner", "scan", "source", "--verbosity=error"),
+        token_names=(),
         required=False,
-        environ={"EXAMPLE_TOKEN": "top-secret"},
+        environ={},
         cwd=REPO_ROOT,
     )
 
     assert result == 23
-    assert observed["command"] == ["/usr/bin/snyk", "test", "--flag"]
+    assert observed["command"] == ["/usr/bin/osv-scanner", "scan", "source", "--verbosity=error"]
     assert observed["kwargs"] == {
         "check": False,
         "cwd": REPO_ROOT,
-        "env": {"EXAMPLE_TOKEN": "top-secret"},
+        "env": {},
         "text": True,
     }
 
 
 def test_display_command_redacts_environment_tokens() -> None:
     rendered = scanner_runner.format_command(
-        ("snyk", "--header", "Bearer top-secret"),
+        ("sonar-scanner", "-Dsonar.token=top-secret"),
         environ={"EXAMPLE_TOKEN": "top-secret"},
         token_names=("EXAMPLE_TOKEN",),
     )
@@ -105,29 +104,11 @@ def test_multiline_scanner_argument_is_rejected() -> None:
     with pytest.raises(ValueError, match="printable single-line"):
         scanner_runner.run_scanner(
             name="Example",
-            command=("snyk", "test\nsecond-command"),
+            command=("osv-scanner", "scan\nsecond-command"),
             token_names=(),
             required=False,
             environ={},
         )
-
-
-def test_snyk_runs_open_source_then_code(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls: list[tuple[str, ...]] = []
-
-    def fake_run_scanner(**kwargs: object) -> int:
-        command = kwargs["command"]
-        assert isinstance(command, tuple)
-        calls.append(command)
-        return 0
-
-    monkeypatch.setattr(run_snyk, "run_scanner", fake_run_scanner)
-
-    assert run_snyk.main([]) == 0
-    assert calls == [
-        ("snyk", "test", "--all-projects", "--severity-threshold=high"),
-        ("snyk", "code", "test", "--severity-threshold=high"),
-    ]
 
 
 def test_sonar_builds_branch_analysis_command(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -206,7 +187,6 @@ def test_scanner_outputs_are_ignored() -> None:
         ".sonar-scanner/",
         ".semgrep-cache/",
         "semgrep-results.sarif",
-        "snyk-results.json",
     ):
         assert ignored in gitignore
 
@@ -216,7 +196,7 @@ def test_taskfile_and_pre_commit_use_shared_wrappers() -> None:
     pre_commit = (REPO_ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
 
     assert "security:semgrep:" in taskfile
-    assert "security:snyk:" in taskfile
+    assert "security:osv:" in taskfile
     assert "security:sonar:" in taskfile
     developer_block = taskfile.split("  security:developer:\n", 1)[1].split("\n  security:\n", 1)[0]
     matrix_security_block = taskfile.split("\n  security:\n", 1)[1].split(
@@ -224,10 +204,10 @@ def test_taskfile_and_pre_commit_use_shared_wrappers() -> None:
     )[0]
     assert "task: security:semgrep" in developer_block
     assert "task: security:semgrep" not in matrix_security_block
-    assert "python scripts/run_snyk.py" in taskfile
+    assert "python scripts/run_osv.py --required" in taskfile
     assert "python scripts/run_sonar.py" in taskfile
-    assert "id: snyk-maintainer" in pre_commit
-    assert "entry: python scripts/run_snyk.py" in pre_commit
+    assert "id: osv-maintainer" in pre_commit
+    assert "entry: python scripts/run_osv.py" in pre_commit
     assert "stages: [pre-push, manual]" in pre_commit
     assert "id: sonar-maintainer" in pre_commit
     assert "entry: python scripts/run_sonar.py" in pre_commit

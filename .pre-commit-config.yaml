@@ -103,9 +103,9 @@ repos:
         pass_filenames: false
         stages: [pre-push]
         always_run: true
-      - id: snyk-maintainer
-        name: Snyk maintainer scan
-        entry: python scripts/run_snyk.py
+      - id: osv-maintainer
+        name: OSV dependency scan
+        entry: python scripts/run_osv.py
         language: system
         pass_filenames: false
         stages: [pre-push, manual]

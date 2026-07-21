@@ -1,7 +1,7 @@
 # Developer Security Gates
 
-Fovux Kit separates fast deterministic checks from credential-dependent cloud scanners. This keeps
-normal commits reliable while preserving authoritative pull-request analysis.
+Fovux Kit separates deterministic repository-owned checks from the one credential-dependent quality
+scanner. Normal commits and dependency scans do not require a third-party account.
 
 ## Semgrep
 
@@ -19,26 +19,30 @@ The normal pre-commit stage runs Semgrep only for staged production Python, Type
 JavaScript files. CI scans the complete production source set and publishes SARIF to GitHub code
 scanning. Local Semgrep runs use `--metrics=off`.
 
-## Snyk
+## OSV-Scanner
 
-Install the Snyk CLI separately and export `SNYK_TOKEN` in the shell or an ignored `.env` file. The
-token must never be committed.
+OSV-Scanner is the primary credential-free dependency vulnerability scanner. The bootstrap script
+installs the pinned `v2.3.8` CLI through Go; no account or token is required.
 
 ```bash
-SNYK_TOKEN=... task security:snyk
-python scripts/run_snyk.py --required
+task security:osv
+python scripts/run_osv.py --required
 ```
 
-The wrapper runs:
+The wrapper scans the Python, Studio, and npm-wrapper lockfiles. The pre-push hook invokes the same
+command. Its default mode prints an explicit `SKIP` when the executable is absent so contributors who
+have not run the bootstrap are not blocked; `--required` converts that condition into exit code `2`.
+Once scanning starts, the scanner exit code is propagated unchanged.
 
-1. `snyk test --all-projects --severity-threshold=high`;
-2. `snyk code test --severity-threshold=high`.
+GitHub Actions uses SHA-pinned OSV-Scanner v2 reusable workflows in two modes:
 
-The pre-push hook invokes the same wrapper. When the executable or token is absent, the default local
-command prints an explicit `SKIP` and exits successfully so unaffiliated contributors are not blocked.
-`--required` changes missing configuration into exit code `2`. Once a scan starts, its non-zero exit
-code is propagated unchanged. The hosted Snyk pull-request integration remains the authoritative
-cloud check.
+- pull requests and merge groups compare the base and head dependency sets and fail only when the
+  change introduces a new known vulnerability;
+- main pushes, schedules, and manual runs perform a full lockfile scan and publish SARIF to GitHub
+  code scanning.
+
+GitHub Dependency Review remains the PR dependency-policy gate, while Dependabot alerts and security
+updates remain enabled. This avoids replacing Snyk with another overlapping commercial SAST suite.
 
 ## SonarQube Cloud
 
@@ -60,15 +64,12 @@ SONAR_TOKEN=... task security:sonar
 Pull-request analysis:
 
 ```bash
-SONAR_TOKEN=... task security:sonar -- \
-  --pull-request 138 \
-  --branch feature/security \
-  --base main
+SONAR_TOKEN=... task security:sonar --   --pull-request 138   --branch feature/security   --base main
 ```
 
 The wrapper never puts `SONAR_TOKEN` on the command line. Missing local setup is an explicit `SKIP`
 unless `--required` is supplied. Scanner failures remain failures. The hosted SonarQube Cloud PR
-integration remains authoritative.
+integration remains authoritative for maintainability and quality.
 
 ## Pre-commit stages
 
@@ -81,14 +82,14 @@ task hooks
 The stages are:
 
 - `pre-commit`: formatting, linting, secret checks, and staged-file Semgrep;
-- `pre-push`: CI parity plus optional Snyk maintainer scan;
-- `manual`: Snyk and Sonar maintainer commands.
+- `pre-push`: CI parity plus the credential-free OSV dependency scan;
+- `manual`: OSV and Sonar maintainer commands.
 
 Run manual hooks directly:
 
 ```bash
 cd fovux-mcp
-uv run pre-commit run snyk-maintainer --hook-stage manual --all-files
+uv run pre-commit run osv-maintainer --hook-stage manual --all-files
 uv run pre-commit run sonar-maintainer --hook-stage manual --all-files
 ```
 
@@ -97,9 +98,12 @@ an explicit branch is required.
 
 ## Secrets and outputs
 
-`SNYK_TOKEN` and `SONAR_TOKEN` are read from environment variables only. Scanner wrappers use argument
-arrays rather than shell interpolation and redact known token values in displayed commands. Local
-caches, SARIF, JSON reports, and scanner logs are ignored through `.gitignore`.
+Only `SONAR_TOKEN` is read by the remaining credential-aware scanner wrapper. Scanner wrappers use
+argument arrays rather than shell interpolation and redact known token values in displayed commands.
+Local caches, SARIF, JSON reports, and scanner logs are ignored through `.gitignore`.
 
-Existing CodeQL, Trivy, OSV Scanner, pip-audit, npm/pnpm audits, Gitleaks, hosted Snyk, and hosted
-Sonar controls remain enabled.
+The active layered stack is CodeQL plus repository-owned Semgrep for SAST, OSV-Scanner plus GitHub
+Dependency Review and Dependabot for dependency risk, Trivy for filesystem/container/IaC coverage,
+pip/npm/pnpm audits for ecosystem-native checks, Gitleaks for secrets, and SonarQube Cloud for
+maintainability. Snyk was retired on 21 July 2026 because its account limits no longer matched the
+repository's open-source workflow.

@@ -4,6 +4,7 @@ set -euo pipefail
 TASK_VERSION="v3.50.0"
 ACTIONLINT_VERSION="v1.7.12"
 GITLEAKS_VERSION="v8.30.1"
+OSV_SCANNER_VERSION="v2.3.8"
 PNPM_VERSION="10.34.1"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -20,6 +21,7 @@ when Go is available:
   - go-task/task v3.50.0
   - actionlint v1.7.12
   - gitleaks v8.30.1
+  - OSV-Scanner v2.3.8
   - pnpm 10.34.1 via Corepack
 
 Options:
@@ -83,6 +85,7 @@ fi
 install_go_tool task github.com/go-task/task/v3/cmd/task "$TASK_VERSION"
 install_go_tool actionlint github.com/rhysd/actionlint/cmd/actionlint "$ACTIONLINT_VERSION"
 install_go_tool gitleaks github.com/zricethezav/gitleaks/v8 "$GITLEAKS_VERSION"
+install_go_tool osv-scanner github.com/google/osv-scanner/v2/cmd/osv-scanner "$OSV_SCANNER_VERSION"
 
 if command -v corepack >/dev/null 2>&1; then
   corepack enable
@@ -101,6 +104,7 @@ pnpm --version
 task --version
 actionlint --version
 gitleaks version
+osv-scanner --version
 
 if [[ "$INSTALL_DEPS" == "true" ]]; then
   task install

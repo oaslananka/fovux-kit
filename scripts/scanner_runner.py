@@ -10,7 +10,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 NOT_CONFIGURED_EXIT = 2
-_ALLOWED_EXECUTABLES = frozenset({"snyk", "sonar-scanner"})
+_ALLOWED_EXECUTABLES = frozenset({"osv-scanner", "sonar-scanner"})
 _MAX_ARGUMENT_LENGTH = 2048
 
 
