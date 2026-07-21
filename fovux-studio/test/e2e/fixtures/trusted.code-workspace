@@ -1,11 +1,10 @@
 {
   "folders": [
     {
-      "path": "trusted"
-    }
+      "path": "trusted",
+    },
   ],
   "settings": {
-    "fovux.httpPort": 65534,
-    "telemetry.telemetryLevel": "off"
-  }
+    "telemetry.telemetryLevel": "off",
+  },
 }
