@@ -12,6 +12,46 @@ GitHub milestones, not in package changelog sections.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.5.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.4.0...fovux-mcp-v1.5.0) (2026-07-21)
+
+
+### Features
+
+* **ci:** add Codecov and zizmor observability ([4f7f945](https://github.com/oaslananka/fovux-kit/commit/4f7f9457d11baf3eeb1bafc508c60bcdd9b0a968))
+* **security:** add layered developer scanner gates ([26d3e92](https://github.com/oaslananka/fovux-kit/commit/26d3e92a912e09b2cf02bde38dc5239cab147e2c))
+* **security:** add Snyk and Sonar developer wrappers ([d927964](https://github.com/oaslananka/fovux-kit/commit/d927964084ec39155f6dbf81cb7a7deca4dfcd08))
+
+
+### Bug Fixes
+
+* **ci:** harden compatibility bootstrap ([7544656](https://github.com/oaslananka/fovux-kit/commit/7544656b1fc3fcac3ccf628a9ed7ad566bf261b1))
+* **ci:** isolate Node compatibility tests ([a0175d5](https://github.com/oaslananka/fovux-kit/commit/a0175d5421ddbafe5579bb433726d6c8ac93447e))
+* **ci:** keep Semgrep out of compatibility matrix ([e2737cf](https://github.com/oaslananka/fovux-kit/commit/e2737cff51910c9c48224947c0ca0a2581908c2b))
+* **ci:** make compatibility installs deterministic ([ffa0dfb](https://github.com/oaslananka/fovux-kit/commit/ffa0dfb3c5cd3de1388f204bb19a28f71ac7a3a2))
+* **ci:** require binary optional ML wheels ([3b1c82f](https://github.com/oaslananka/fovux-kit/commit/3b1c82fa6f7a1f75a165f26a43ec6f9d2436b5bd))
+* **compliance:** harden license validation paths ([b1b931e](https://github.com/oaslananka/fovux-kit/commit/b1b931e02ce3a18e49c2e6ed79d602da446f1473))
+* **compliance:** normalize Apache-2.0 artifacts ([566dc07](https://github.com/oaslananka/fovux-kit/commit/566dc070c0943250d344e7d2c2efd6e496c36ea1))
+* **deps:** align Renovate with hosted app ([b90774d](https://github.com/oaslananka/fovux-kit/commit/b90774dcae145aa7fe8ba894a087336ec4f489b1))
+* **deps:** enable Renovate pre-commit manager ([8b6690b](https://github.com/oaslananka/fovux-kit/commit/8b6690b24419eb1cf080816af5ffc65b7990ee3b))
+* **deps:** validate Torch 2.13 optional stack ([b059c48](https://github.com/oaslananka/fovux-kit/commit/b059c487c5aa5aca5455d595e4d1ffb23ce1eb5f))
+* **governance:** enforce main ruleset drift checks ([f8d5897](https://github.com/oaslananka/fovux-kit/commit/f8d58977366be431cfb3dc9de09680a76335ffd4))
+* **governance:** handle restricted posture API views ([12e7a88](https://github.com/oaslananka/fovux-kit/commit/12e7a88d18ffc4e2eb57d7c90c53f536bb8c57f0))
+* **governance:** restore semantic release truth ([af8f509](https://github.com/oaslananka/fovux-kit/commit/af8f509ee3fcb9ad104a9a8add80f5785066bc18))
+* **security:** harden scanner command validation ([68d0022](https://github.com/oaslananka/fovux-kit/commit/68d0022cf501c74135836ddbe3eff757f8d29ebc))
+* **security:** remediate MCP and Pillow advisories ([0b88908](https://github.com/oaslananka/fovux-kit/commit/0b8890807c0a9ccd2dd841f73272f724118d9294))
+* **testing:** harden mutation gate inputs ([7ece94e](https://github.com/oaslananka/fovux-kit/commit/7ece94e58c3084af7ccef740a468f5645be0eb5c))
+* **testing:** restore meaningful mutation gate ([8eb20ec](https://github.com/oaslananka/fovux-kit/commit/8eb20ec4e7dfc72bb32f7ccc99ee282e1ed2071d))
+
+
+### Performance Improvements
+
+* **ci:** split quality and compatibility lanes ([7d47902](https://github.com/oaslananka/fovux-kit/commit/7d47902a76dfef97920164d4db28b1eafa7716ab))
+
+
+### Documentation
+
+* align release truth after 1.4.0 merge ([281b736](https://github.com/oaslananka/fovux-kit/commit/281b736438f9957386de5cf6069e04ed7268fc41))
+
 ## [1.4.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.3.0...fovux-mcp-v1.4.0) (2026-06-25)
 
 
