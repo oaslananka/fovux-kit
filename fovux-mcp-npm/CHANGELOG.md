@@ -12,6 +12,13 @@ GitHub milestones, not in package changelog sections.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.5.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-npm-v1.4.0...fovux-mcp-npm-v1.5.0) (2026-07-21)
+
+
+### Bug Fixes
+
+* **compliance:** normalize Apache-2.0 artifacts ([566dc07](https://github.com/oaslananka/fovux-kit/commit/566dc070c0943250d344e7d2c2efd6e496c36ea1))
+
 ## [1.4.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-npm-v1.3.0...fovux-mcp-npm-v1.4.0) (2026-06-25)
 
 

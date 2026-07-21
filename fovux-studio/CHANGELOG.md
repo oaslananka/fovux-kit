@@ -18,6 +18,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Renamed the Marketplace display name to `Fovux Studio Kit` so the first public VSIX publish uses
   a unique display name while keeping the `oaslananka.fovuxstudiokit` extension identifier stable.
 
+## [1.4.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.3.0...fovux-studio-v1.4.0) (2026-07-21)
+
+
+### Features
+
+* **ci:** add Codecov and zizmor observability ([4f7f945](https://github.com/oaslananka/fovux-kit/commit/4f7f9457d11baf3eeb1bafc508c60bcdd9b0a968))
+
+
+### Bug Fixes
+
+* **ci:** isolate Node compatibility tests ([a0175d5](https://github.com/oaslananka/fovux-kit/commit/a0175d5421ddbafe5579bb433726d6c8ac93447e))
+* **compliance:** normalize Apache-2.0 artifacts ([566dc07](https://github.com/oaslananka/fovux-kit/commit/566dc070c0943250d344e7d2c2efd6e496c36ea1))
+* **security:** patch brace-expansion advisories ([a972a2d](https://github.com/oaslananka/fovux-kit/commit/a972a2df17953a804b76aaf46139ff0a2ccb3ee1))
+* **security:** upgrade js-yaml to 4.3.0 ([c19e888](https://github.com/oaslananka/fovux-kit/commit/c19e88856423703b8b1cef5ee95fc7e43baae5ec))
+
 ## [1.3.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.2.0...fovux-studio-v1.3.0) (2026-06-25)
 
 
