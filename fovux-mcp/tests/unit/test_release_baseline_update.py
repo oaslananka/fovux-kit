@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = REPO_ROOT / "scripts"
 SCRIPT_PATH = SCRIPTS / "update_release_baseline.py"
@@ -95,3 +97,16 @@ def test_update_release_baseline_is_deterministic(tmp_path: Path) -> None:
     assert "Fovux MCP 1.5.0 currently exposes 47 local tools" in (
         tmp_path / "fovux-mcp" / "README.md"
     ).read_text(encoding="utf-8")
+
+
+def test_update_release_baseline_rejects_path_escape_version(tmp_path: Path) -> None:
+    module = _load_module()
+
+    with pytest.raises(ValueError, match="numeric semantic versioning"):
+        module.update_release_baseline(
+            tmp_path,
+            mcp_version="../1.5.0",
+            npm_version="1.5.0",
+            studio_version="1.4.0",
+            reviewed_at="2026-07-21",
+        )
