@@ -83,10 +83,10 @@ tasks:
         semgrep scan --config .semgrep/rules --metrics=off --error
         fovux-mcp/src fovux-studio/src fovux-mcp-npm/bin
 
-  security:snyk:
-    desc: Run credential-aware local Snyk scans
+  security:osv:
+    desc: Run the credential-free OSV lockfile vulnerability scan
     cmds:
-      - python scripts/run_snyk.py
+      - python scripts/run_osv.py --required
 
   security:sonar:
     desc: Run credential-aware local Sonar analysis
@@ -94,10 +94,10 @@ tasks:
       - python scripts/run_sonar.py {{.CLI_ARGS}}
 
   security:developer:
-    desc: Run deterministic and optional developer security scans
+    desc: Run deterministic credential-free developer security scans
     cmds:
       - task: security:semgrep
-      - task: security:snyk
+      - task: security:osv
 
   security:
     desc: Security scans

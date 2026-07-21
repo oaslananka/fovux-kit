@@ -16,7 +16,7 @@ This page is the canonical local developer workflow for the monorepo.
 | gitleaks     | 8.30.1                                             | Secret scanning                                |
 | Renovate CLI | 43.272.4, Node.js >=24.11                          | Optional full schema validation                |
 | Semgrep      | 1.170.0                                            | Repository-owned local and CI SAST rules       |
-| Snyk CLI     | optional                                           | Authenticated maintainer dependency/code scans |
+| OSV-Scanner  | 2.3.8                                              | Credential-free dependency vulnerability scans |
 | SonarScanner | optional                                           | Explicit authenticated branch or PR analysis   |
 | act          | optional                                           | Local GitHub Actions simulation                |
 
@@ -30,9 +30,9 @@ cd fovux-kit
 scripts/bootstrap-dev.sh --install-deps --hooks
 ```
 
-The script verifies Python, Node, npm, Go, `uv`, Task, actionlint, gitleaks, and pnpm. It installs
-Task/actionlint/gitleaks through `go install` when missing and enables `pnpm@10.34.1` through
-Corepack.
+The script verifies Python, Node, npm, Go, `uv`, Task, actionlint, gitleaks, OSV-Scanner, and
+pnpm. It installs the Go-based helpers through `go install` when missing and enables `pnpm@10.34.1`
+through Corepack.
 
 ### Windows PowerShell
 
@@ -44,6 +44,7 @@ corepack prepare pnpm@10.34.1 --activate
 go install github.com/go-task/task/v3/cmd/task@v3.50.0
 go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
 go install github.com/zricethezav/gitleaks/v8@v8.30.1
+go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.3.8
 $env:Path = "$(go env GOPATH)\bin;$env:Path"
 task install
 task hooks
@@ -65,7 +66,7 @@ task deps:renovate:validate  # static policy and Renovate schema validation
 task studio:lm-tools:generate  # regenerate Studio LM definitions/package metadata
 task studio:lm-tools:check     # fail on snapshot/override/generated drift
 task security:semgrep        # repository Semgrep fixtures and production scan
-task security:snyk           # optional Snyk scan; explicit SKIP without local config
+task security:osv            # required credential-free lockfile vulnerability scan
 task security:sonar -- --branch feature/name  # optional Sonar analysis
 task docs        # version/tool/docs truth checks, MkDocs strict build, docs code-block lint
 task build       # Python package, Studio bundle, npm wrapper dry-run pack
@@ -125,18 +126,18 @@ python scripts/generate_security_posture.py
 
 ```bash
 task security:semgrep
-task security:snyk
-SNYK_TOKEN=... task security:snyk
+task security:osv
+python scripts/run_osv.py --required
 SONAR_TOKEN=... task security:sonar -- --branch feature/security
 SONAR_TOKEN=... task security:sonar -- --pull-request 138 --branch feature/security --base main
 ```
 
-Semgrep is deterministic and runs in normal pre-commit plus the required security workflow. Snyk
-runs at pre-push/manual through `scripts/run_snyk.py`; missing CLI or `SNYK_TOKEN` produces an
-explicit local `SKIP`, while `--required` converts missing configuration to a failure. Sonar is
-manual-only because it uploads repository-wide analysis state. `scripts/run_sonar.py` uses the
-current git branch when `--branch` is omitted and never places `SONAR_TOKEN` on the command line.
-Hosted Snyk and SonarQube Cloud pull-request checks remain the authoritative cloud results.
+Semgrep is deterministic and runs in normal pre-commit plus the required security workflow.
+OSV-Scanner runs at pre-push/manual without an account or token; `--required` converts a missing local
+binary into a failure. Pull requests use the OSV base/head comparison workflow, while main and weekly
+runs perform a full SARIF-producing scan. Sonar is manual-only because it uploads repository-wide
+analysis state. `scripts/run_sonar.py` uses the current git branch when `--branch` is omitted and never
+places `SONAR_TOKEN` on the command line. SonarQube Cloud remains the hosted quality result.
 
 See [developer-security.md](developer-security.md) for installation, credentials, and failure
 semantics.

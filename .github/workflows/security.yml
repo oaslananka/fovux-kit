@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: "0 2 * * 4"
@@ -202,38 +204,44 @@ jobs:
           npm ci --ignore-scripts
           npm audit --omit=dev
 
-  osv-scan:
-    name: OSV lockfile scan
+  osv-pr-scan:
+    name: OSV pull-request dependency scan
     if: >
       github.repository == 'oaslananka/fovux-kit' &&
       (
-        github.event_name != 'pull_request' ||
-        github.event.pull_request.draft == false
+        github.event_name == 'merge_group' ||
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.draft == false
+        )
       )
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - name: Install OSV scanner
-        env:
-          OSV_SCANNER_VERSION: v2.3.6
-          OSV_SCANNER_SHA256: f689e183ef0d573d2459738aae457d411a26241ae58b5088de1af288b3355604
-        run: |
-          set -euo pipefail
-          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
-            --output osv-scanner \
-            "https://github.com/google/osv-scanner/releases/download/${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
-          echo "${OSV_SCANNER_SHA256}  osv-scanner" | sha256sum --check -
-          chmod +x osv-scanner
-          sudo install -m 0755 osv-scanner /usr/local/bin/osv-scanner
-      - name: Run OSV scanner
-        run: |
-          set -euo pipefail
-          osv-scanner scan source \
-            --lockfile fovux-mcp/uv.lock \
-            --lockfile fovux-studio/pnpm-lock.yaml \
-            --lockfile fovux-mcp-npm/package-lock.json \
-            .
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@9a498708959aeaef5ef730655706c5a1df1edbc2
+    with:
+      scan-args: |-
+        --lockfile=fovux-mcp/uv.lock
+        --lockfile=fovux-studio/pnpm-lock.yaml
+        --lockfile=fovux-mcp-npm/package-lock.json
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+  osv-full-scan:
+    name: OSV full dependency scan
+    if: >
+      github.repository == 'oaslananka/fovux-kit' &&
+      github.event_name != 'pull_request' &&
+      github.event_name != 'merge_group'
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@9a498708959aeaef5ef730655706c5a1df1edbc2
+    with:
+      scan-args: |-
+        --lockfile=fovux-mcp/uv.lock
+        --lockfile=fovux-studio/pnpm-lock.yaml
+        --lockfile=fovux-mcp-npm/package-lock.json
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
   posture:
     name: Security posture check
@@ -263,7 +271,17 @@ jobs:
   security-required:
     name: security-required
     needs:
-      [gitleaks, semgrep, trivy-fs, pip-audit, pnpm-audit, npm-wrapper-audit, osv-scan, posture]
+      [
+        gitleaks,
+        semgrep,
+        trivy-fs,
+        pip-audit,
+        pnpm-audit,
+        npm-wrapper-audit,
+        osv-pr-scan,
+        osv-full-scan,
+        posture,
+      ]
     if: always() && github.repository == 'oaslananka/fovux-kit'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -276,7 +294,9 @@ jobs:
           PIP_AUDIT_RESULT: ${{ needs.pip-audit.result }}
           PNPM_AUDIT_RESULT: ${{ needs.pnpm-audit.result }}
           NPM_WRAPPER_AUDIT_RESULT: ${{ needs.npm-wrapper-audit.result }}
-          OSV_SCAN_RESULT: ${{ needs.osv-scan.result }}
+          OSV_PR_RESULT: ${{ needs.osv-pr-scan.result }}
+          OSV_FULL_RESULT: ${{ needs.osv-full-scan.result }}
+          EVENT_NAME: ${{ github.event_name }}
           POSTURE_RESULT: ${{ needs.posture.result }}
         run: |
           set -euo pipefail
@@ -287,11 +307,21 @@ jobs:
             "$PIP_AUDIT_RESULT" \
             "$PNPM_AUDIT_RESULT" \
             "$NPM_WRAPPER_AUDIT_RESULT" \
-            "$OSV_SCAN_RESULT" \
             "$POSTURE_RESULT"; do
             if [[ "$result" != "success" ]]; then
               echo "::error::At least one security scan did not pass."
               exit 1
             fi
           done
+
+          if [[ "$EVENT_NAME" == "pull_request" || "$EVENT_NAME" == "merge_group" ]]; then
+            if [[ "$OSV_PR_RESULT" != "success" || "$OSV_FULL_RESULT" != "skipped" ]]; then
+              echo "::error::OSV pull-request scan routing failed."
+              exit 1
+            fi
+          elif [[ "$OSV_PR_RESULT" != "skipped" || "$OSV_FULL_RESULT" != "success" ]]; then
+            echo "::error::OSV full scan routing failed."
+            exit 1
+          fi
+
           echo "Security scans passed."
