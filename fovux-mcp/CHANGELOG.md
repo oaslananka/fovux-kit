@@ -12,6 +12,23 @@ GitHub milestones, not in package changelog sections.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.6.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.5.0...fovux-mcp-v1.6.0) (2026-07-21)
+
+
+### Features
+
+* **studio:** generate LM tools from backend schemas ([8241d12](https://github.com/oaslananka/fovux-kit/commit/8241d129ed3c6cde6e44ea8075a4c8db02d34881))
+
+
+### Bug Fixes
+
+* **release:** constrain baseline update paths ([de44986](https://github.com/oaslananka/fovux-kit/commit/de44986b5e33a22024d1faadda48bc89228a9ad7))
+* **release:** derive baseline test versions ([c63b1d2](https://github.com/oaslananka/fovux-kit/commit/c63b1d2bfdb0adbbc9df71aa7a6967c7e58152ee))
+* **release:** derive baseline versions from manifests ([01e4a22](https://github.com/oaslananka/fovux-kit/commit/01e4a22245338b27a5ef030b74929e562ccdf57f))
+* **release:** enforce release-note containment ([2916a09](https://github.com/oaslananka/fovux-kit/commit/2916a098daf3e61a49c71506c355d6f9d3ed2de9))
+* **release:** make candidate notes publication-aware ([a678032](https://github.com/oaslananka/fovux-kit/commit/a67803232b7963c8dce65ad01405e031f13e329e))
+* **security:** replace Snyk with OSV Scanner ([#163](https://github.com/oaslananka/fovux-kit/issues/163)) ([85e2397](https://github.com/oaslananka/fovux-kit/commit/85e2397d94345c60c4742388b34e2c6cbc789cc7)), closes [#162](https://github.com/oaslananka/fovux-kit/issues/162)
+
 ## [1.5.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.4.0...fovux-mcp-v1.5.0) (2026-07-21)
 
 
