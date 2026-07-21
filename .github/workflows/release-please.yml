@@ -544,7 +544,7 @@ jobs:
           fi
           if [[ "${{ needs.release-please.outputs.studio_release_created }}" == "true" ]]; then
             python scripts/verify_registry_releases.py \
-              --channel studio --retries 20 --delay 15 \
+              --channel studio --retries 40 --delay 15 \
               --evidence-path out/registry-verification-studio.json
           fi
       - name: Upload registry verification evidence

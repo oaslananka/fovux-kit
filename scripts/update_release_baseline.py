@@ -96,6 +96,32 @@ def _updated_once(text: str, pattern: str, replacement: str, *, label: str) -> s
     return updated
 
 
+def _updated_publication_wording(text: str, *, label: str) -> str:
+    """Promote candidate-only publication wording to verified release truth."""
+    updated = _updated_once(
+        text,
+        (
+            r"Package publication (?:remains pending until the release workflow verifies|"
+            r"has been verified by the release workflow across) every configured\s+"
+            r"registry and extension marketplace\."
+        ),
+        (
+            "Package publication has been verified by the release workflow across every "
+            "configured\nregistry and extension marketplace."
+        ),
+        label=label,
+    )
+    return _updated_once(
+        updated,
+        (
+            r"(?:The final GitHub Release evidence will include|"
+            r"The verified GitHub Release evidence includes):"
+        ),
+        "The verified GitHub Release evidence includes:",
+        label=label,
+    )
+
+
 def _update_manifest(
     source: Mapping[str, Any],
     *,
@@ -225,7 +251,8 @@ def synchronize_release_content(
     ):
         updated[label] = _updated_marked_table(updated[label], table, label=label)
     for label in (ROOT_RELEASE_NOTES_FILENAME, "published_release_note"):
-        updated[label] = _updated_baseline_phrase(updated[label], mcp_version, label=label)
+        published = _updated_baseline_phrase(updated[label], mcp_version, label=label)
+        updated[label] = _updated_publication_wording(published, label=label)
 
     return json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", updated
 

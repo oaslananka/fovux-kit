@@ -1,7 +1,7 @@
 # Fovux 1.6.0 Release Notes
 
 Fovux 1.6.0 is the current reviewed release baseline for the local-first edge-AI computer vision
-workbench. Package publication remains pending until the release workflow verifies every configured
+workbench. Package publication has been verified by the release workflow across every configured
 registry and extension marketplace.
 
 ## Package Versions and Release Evidence
@@ -14,7 +14,7 @@ registry and extension marketplace.
 | VS Code extension `oaslananka.fovuxstudiokit` | `1.5.0` | Published on VS Marketplace and Open VSX | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256`, `registry-verification-studio.json` |
 <!-- release-baseline:end -->
 
-The final GitHub Release evidence will include:
+The verified GitHub Release evidence includes:
 
 - VSIX packaging status and publish results for VS Marketplace and Open VSX;
 - SPDX SBOM files, checksums, and provenance attestations;

@@ -121,6 +121,12 @@ def test_sync_docs_replaces_stale_candidate_content(tmp_path: Path) -> None:
     assert module._sync_docs(tmp_path, "1.6.0", "1.6.0", "1.5.0") is False
 
 
+def test_studio_verification_allows_marketplace_propagation() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release-please.yml").read_text(encoding="utf-8")
+
+    assert "--channel studio --retries 40 --delay 15" in workflow
+
+
 def test_release_workflow_opens_post_release_baseline_pr() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release-please.yml").read_text(encoding="utf-8")
     for required in (
