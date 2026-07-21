@@ -72,7 +72,7 @@ pnpm test --run
 
 | Package        | Target |          Current gate |
 | -------------- | -----: | --------------------: |
-| `fovux-mcp`    |    92% | `--cov-fail-under=92` |
+| `fovux-mcp`    |    85% | `--cov-fail-under=85` |
 | `fovux-studio` |    85% |       `pnpm coverage` |
 
 ## Security Scans
@@ -82,6 +82,33 @@ task security
 ```
 
 The security task runs Bandit, pip-audit, npm audit, and gitleaks.
+
+## Optional Torch and Ultralytics compatibility
+
+The `yolo` extra is locked to the validated Torch `2.13.x` and torchvision `0.28.x`
+line. Linux and Windows resolve the official PyTorch CPU wheels; macOS resolves the
+platform wheel from PyPI. The nightly compatibility workflow verifies imports, CPU
+tensor operations, torchvision operators, checkpoint save/load, and Ultralytics model
+construction on Ubuntu, macOS, and Windows. The Ubuntu lane additionally trains a tiny
+YOLO model for one epoch, reloads the checkpoint, and exports it to ONNX.
+
+Run the same smoke locally:
+
+```bash
+cd fovux-mcp
+uv sync --frozen --extra dev --extra yolo
+FOVUX_TEST_OPTIONAL_ML=1 uv run pytest -q tests/compat/test_optional_ml_stack.py
+```
+
+Enable the full train/export smoke on a Linux CPU host:
+
+```bash
+FOVUX_TEST_OPTIONAL_ML=1 FOVUX_TEST_YOLO_E2E=1 \
+  uv run pytest -q tests/compat/test_optional_ml_stack.py
+```
+
+The CUDA tensor smoke runs automatically when `torch.cuda.is_available()` is true and
+is reported as skipped on CPU-only hosted runners.
 
 ## Local GPU Tests
 

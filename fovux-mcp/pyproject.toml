@@ -50,6 +50,8 @@ dependencies = [
 [project.optional-dependencies]
 yolo = [
     "ultralytics>=8.4.56",
+    "torch>=2.13,<2.14",
+    "torchvision>=0.28,<0.29",
 ]
 gpu = ["onnxruntime-gpu>=1.24.4"]
 tensorrt = ["tensorrt>=10.7"]
@@ -144,6 +146,19 @@ exclude = [
     "^scripts/",
     "^tests/",
 ]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
