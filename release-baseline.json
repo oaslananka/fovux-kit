@@ -1,40 +1,43 @@
 {
   "schema_version": 1,
-  "reviewed_at": "2026-07-20",
-  "published_release": "1.4.0",
+  "reviewed_at": "2026-07-21",
+  "published_release": "1.5.0",
   "packages": [
     {
       "id": "python",
       "component": "Python package `fovux-mcp`",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "status": "Published on PyPI",
       "evidence": [
-        "fovux_mcp-1.4.0-py3-none-any.whl",
-        "fovux_mcp-1.4.0.tar.gz",
+        "fovux_mcp-1.5.0-py3-none-any.whl",
+        "fovux_mcp-1.5.0.tar.gz",
         "fovux-mcp-sbom.spdx.json",
-        "fovux-mcp.sha256"
+        "fovux-mcp.sha256",
+        "registry-verification-python.json"
       ]
     },
     {
       "id": "npm",
       "component": "npm wrapper `fovux-mcp`",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "status": "Published on npm",
       "evidence": [
         "npm registry metadata",
         "wrapper CLI smoke result",
-        "fovux-mcp-v1.4.0 source release"
+        "fovux-mcp-npm-v1.5.0 source release",
+        "registry-verification-npm.json"
       ]
     },
     {
       "id": "studio",
       "component": "VS Code extension `oaslananka.fovuxstudiokit`",
-      "version": "1.3.0",
-      "status": "Published on VS Marketplace; Open VSX unavailable (404 verified 2026-07-20)",
+      "version": "1.4.0",
+      "status": "Published on VS Marketplace and Open VSX",
       "evidence": [
         "fovuxstudiokit.vsix",
         "fovux-studio-sbom.spdx.json",
-        "fovux-studio.sha256"
+        "fovux-studio.sha256",
+        "registry-verification-studio.json"
       ]
     }
   ],
@@ -64,7 +67,7 @@
     },
     {
       "number": 3,
-      "title": "v1.5.0 - Studio Workflow & Dataset Intelligence",
+      "title": "Studio Workflow & Dataset Intelligence",
       "state": "open",
       "due_on": "2026-10-15"
     },

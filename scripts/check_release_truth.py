@@ -25,7 +25,9 @@ def _packages(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     packages: list[dict[str, Any]] = []
     for index, item in enumerate(value):
         if not isinstance(item, dict):
-            raise ValueError(f"release-baseline.json packages[{index}] must be an object")
+            raise ValueError(
+                f"release-baseline.json packages[{index}] must be an object"
+            )
         packages.append(item)
     return packages
 
@@ -46,7 +48,9 @@ def render_release_table(manifest: dict[str, Any]) -> str:
             raise ValueError("every package requires component, version, and status")
         if not isinstance(evidence_value, list) or not evidence_value:
             raise ValueError(f"package {component} requires evidence entries")
-        evidence = ", ".join(f"`{item}`" for item in evidence_value if isinstance(item, str))
+        evidence = ", ".join(
+            f"`{item}`" for item in evidence_value if isinstance(item, str)
+        )
         if not evidence:
             raise ValueError(f"package {component} requires string evidence entries")
         lines.append(f"| {component} | `{version}` | {status} | {evidence} |")
@@ -88,7 +92,9 @@ def _validate_milestones(root: Path, manifest: dict[str, Any]) -> list[str]:
         section = roadmap[start : next_heading if next_heading >= 0 else len(roadmap)]
         state_phrase = f"**State:** {state.capitalize()}"
         if state_phrase not in section:
-            failures.append(f"ROADMAP.md is missing milestone state for {title}: {state_phrase}")
+            failures.append(
+                f"ROADMAP.md is missing milestone state for {title}: {state_phrase}"
+            )
     return failures
 
 
@@ -126,15 +132,19 @@ def validate_release_truth(root: Path) -> list[str]:
     release_note_path = root / "docs" / "release-notes" / f"{published_release}.md"
     try:
         release_note = release_note_path.read_text(encoding="utf-8")
-        baseline_phrase = f"Fovux {published_release} is the current reviewed release baseline"
+        baseline_phrase = (
+            f"Fovux {published_release} is the current reviewed release baseline"
+        )
         if baseline_phrase not in release_note:
             failures.append(
                 f"{release_note_path.relative_to(root)} does not identify the published baseline"
             )
-        studio = next(package for package in _packages(manifest) if package.get("id") == "studio")
+        studio = next(
+            package for package in _packages(manifest) if package.get("id") == "studio"
+        )
         studio_status = str(studio.get("status", ""))
-        if "Open VSX unavailable" not in studio_status:
-            failures.append("Studio baseline must state the verified Open VSX availability")
+        if "Open VSX" not in studio_status:
+            failures.append("Studio baseline must state the verified Open VSX status")
     except (OSError, StopIteration, ValueError) as exc:
         failures.append(f"Cannot validate published release note semantics: {exc}")
 

@@ -1,8 +1,10 @@
 # Fovux 1.5.0 Release Notes
 
-Fovux 1.4.0 is the current reviewed release baseline for the local-first edge-AI computer vision
-workbench. It consolidates the expanded MCP tool registry, active-learning queue workflow, policy and
-audit tools, support/reproducibility bundles, and Studio guarded-tool UX.
+Fovux 1.5.0 is the current reviewed release baseline for the local-first edge-AI computer vision
+workbench. It strengthens release truth, CI observability, mutation testing, workflow security,
+dependency automation, license packaging, and optional Torch 2.13 compatibility. Fovux Studio
+1.4.0 accompanies it with coverage/test analytics, dependency security fixes, and verified
+publishing to both VS Marketplace and Open VSX.
 
 
 ## Package Versions and Release Evidence
@@ -10,9 +12,9 @@ audit tools, support/reproducibility bundles, and Studio guarded-tool UX.
 <!-- release-baseline:start -->
 | Component | Published version | Channel status | Evidence |
 | --- | --- | --- | --- |
-| Python package `fovux-mcp` | `1.4.0` | Published on PyPI | `fovux_mcp-1.4.0-py3-none-any.whl`, `fovux_mcp-1.4.0.tar.gz`, `fovux-mcp-sbom.spdx.json`, `fovux-mcp.sha256` |
-| npm wrapper `fovux-mcp` | `1.4.0` | Published on npm | `npm registry metadata`, `wrapper CLI smoke result`, `fovux-mcp-v1.4.0 source release` |
-| VS Code extension `oaslananka.fovuxstudiokit` | `1.3.0` | Published on VS Marketplace; Open VSX unavailable (404 verified 2026-07-20) | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256` |
+| Python package `fovux-mcp` | `1.5.0` | Published on PyPI | `fovux_mcp-1.5.0-py3-none-any.whl`, `fovux_mcp-1.5.0.tar.gz`, `fovux-mcp-sbom.spdx.json`, `fovux-mcp.sha256`, `registry-verification-python.json` |
+| npm wrapper `fovux-mcp` | `1.5.0` | Published on npm | `npm registry metadata`, `wrapper CLI smoke result`, `fovux-mcp-npm-v1.5.0 source release`, `registry-verification-npm.json` |
+| VS Code extension `oaslananka.fovuxstudiokit` | `1.4.0` | Published on VS Marketplace and Open VSX | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256`, `registry-verification-studio.json` |
 <!-- release-baseline:end -->
 
 GitHub release notes for every future release must explicitly include:

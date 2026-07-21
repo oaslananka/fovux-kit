@@ -19,7 +19,7 @@
 
 ## What is Fovux?
 
-Fovux is a local-first vision workbench for YOLO datasets, training, evaluation, export, and edge inference. It combines the Python backend package `fovux-mcp` 1.4.0, the npm wrapper `fovux-mcp` 1.4.0, and the VS Code companion `Fovux Studio` 1.3.0 to streamline the computer vision engineering lifecycle.
+Fovux is a local-first vision workbench for YOLO datasets, training, evaluation, export, and edge inference. It combines the Python backend package `fovux-mcp` 1.5.0, the npm wrapper `fovux-mcp` 1.5.0, and the VS Code companion `Fovux Studio` 1.4.0 to streamline the computer vision engineering lifecycle.
 
 ## Why developers use it
 
@@ -103,7 +103,7 @@ Use the VS Code Command Palette (`Cmd/Ctrl+Shift+P`) and type `Fovux:` to discov
 
 ## Core tools
 
-Fovux MCP 1.4.0 exposes 47 local tools across dataset inspection, validation, active learning, training, evaluation, export, quantization, inference, benchmarking, run management, policy/audit, and support-bundle workflows.
+Fovux MCP 1.5.0 exposes 47 local tools across dataset inspection, validation, active learning, training, evaluation, export, quantization, inference, benchmarking, run management, policy/audit, and support-bundle workflows.
 
 The generated complete tool list lives in [`fovux-mcp/README.md`](fovux-mcp/README.md) and the MkDocs site; CI now fails if a registered tool is missing from docs, the schema snapshot, policy metadata, Studio mappings, or the MkDocs navigation.
 
@@ -152,7 +152,7 @@ task ci
 
 - `v1.3.1 - Stabilization & Documentation Truth`: documentation drift, local DX, registry verification, release metadata, and fail-fast quality gates.
 - `v1.4.0 - MCP Conformance & Agent Safety`: official MCP transport decision, conformance tests, schema snapshots, and agent approval safety.
-- `v1.5.0 - Studio Workflow & Dataset Intelligence`: guided dataset→training→evaluation→export workflows and Studio e2e smoke coverage.
+- `Studio Workflow & Dataset Intelligence`: guided dataset→training→evaluation→export workflows and Studio e2e smoke coverage.
 - `v1.6.0 - Edge Export & Deployment Intelligence`: current export matrix, target profiles, benchmark reproducibility, and quantization workflow.
 - `v2.0.0 - Extensibility, Supply Chain & Ecosystem Readiness`: plugin/API stability, trusted publishing, attestations, threat model, and marketplace release evidence.
 
