@@ -20,6 +20,7 @@ ROOT_README_FILENAME = "README.md"
 MCP_README_FILENAME = "fovux-mcp/README.md"
 ROADMAP_FILENAME = "ROADMAP.md"
 ROOT_RELEASE_NOTES_FILENAME = "RELEASE_NOTES.md"
+PUBLISHED_RELEASE_NOTE_KEY = "published_release_note"
 
 MANIFEST_PATH = ROOT / BASELINE_FILENAME
 ROOT_README_PATH = ROOT / ROOT_README_FILENAME
@@ -186,7 +187,7 @@ def synchronize_release_content(
         MCP_README_FILENAME,
         ROADMAP_FILENAME,
         ROOT_RELEASE_NOTES_FILENAME,
-        "published_release_note",
+        PUBLISHED_RELEASE_NOTE_KEY,
     }
     missing = sorted(required - documents.keys())
     if missing:
@@ -229,7 +230,7 @@ def synchronize_release_content(
     for label in (
         ROADMAP_FILENAME,
         ROOT_RELEASE_NOTES_FILENAME,
-        "published_release_note",
+        PUBLISHED_RELEASE_NOTE_KEY,
     ):
         updated[label] = _updated_marked_table(updated[label], table, label=label)
     for label in (ROOT_RELEASE_NOTES_FILENAME, "published_release_note"):
@@ -253,7 +254,14 @@ def _published_release_note(version: str) -> Path:
         raise ValueError(
             f"expected exactly one published release note for {version}, found {len(matches)}"
         )
-    return matches[0]
+    selected = matches[0]
+    resolved_directory = RELEASE_NOTES_DIRECTORY.resolve()
+    resolved_selected = selected.resolve()
+    if selected.is_symlink() or resolved_selected.parent != resolved_directory:
+        raise ValueError(
+            "published release note must be a regular file in the release-note directory"
+        )
+    return resolved_selected
 
 
 def update_repository_baseline(*, reviewed_at: str) -> list[Path]:
@@ -285,7 +293,10 @@ def update_repository_baseline(*, reviewed_at: str) -> list[Path]:
     ROOT_RELEASE_NOTES_PATH.write_text(
         updated[ROOT_RELEASE_NOTES_FILENAME], encoding="utf-8"
     )
-    release_note_path.write_text(updated["published_release_note"], encoding="utf-8")
+    # The path is an existing, non-symlink file selected from the fixed release-note directory.
+    release_note_path.write_text(  # NOSONAR -- containment is enforced by _published_release_note
+        updated[PUBLISHED_RELEASE_NOTE_KEY], encoding="utf-8"
+    )
 
     return [
         MANIFEST_PATH,

@@ -110,3 +110,5 @@ def test_repository_paths_are_fixed_and_release_note_is_existing() -> None:
     release_note = module._published_release_note("1.5.0")
     assert release_note == REPO_ROOT / "docs" / "release-notes" / "1.5.0.md"
     assert release_note.is_file()
+    assert not release_note.is_symlink()
+    assert release_note.parent == module.RELEASE_NOTES_DIRECTORY.resolve()
