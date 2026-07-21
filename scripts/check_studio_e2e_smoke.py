@@ -79,7 +79,7 @@ def main() -> int:
     )
 
     suite = _read(
-        STUDIO / "test" / "e2e" / "suite" / "installedExtension.test.ts", failures
+        STUDIO / "test" / "e2e" / "suite" / "installedExtensionAssertions.ts", failures
     )
     _require(
         suite,

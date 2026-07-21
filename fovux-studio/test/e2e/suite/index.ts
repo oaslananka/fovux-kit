@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { runInstalledExtensionAssertions } from "./installedExtension.test";
+import { runInstalledExtensionAssertions } from "./installedExtensionAssertions";
 
 const SCROT_EXECUTABLE = "/usr/bin/scrot";
 

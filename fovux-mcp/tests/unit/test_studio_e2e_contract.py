@@ -51,7 +51,7 @@ def test_runner_installs_vsix_and_runs_isolated_trust_scenarios() -> None:
 
 
 def test_extension_host_suite_covers_all_runtime_acceptance_boundaries() -> None:
-    suite = _read(STUDIO / "test" / "e2e" / "suite" / "installedExtension.test.ts")
+    suite = _read(STUDIO / "test" / "e2e" / "suite" / "installedExtensionAssertions.ts")
 
     for phrase in (
         "runInstalledExtensionAssertions",
@@ -106,7 +106,7 @@ def test_static_checker_requires_dependency_free_executable_e2e_files() -> None:
 
     for phrase in (
         "forbidden_dependencies",
-        "installedExtension.test.ts",
+        "installedExtensionAssertions.ts",
         "studio-e2e.yml",
         "--install-extension",
         "getDashboardDiagnostics",

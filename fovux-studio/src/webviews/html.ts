@@ -28,8 +28,8 @@ export function createWebviewDocument(
     .asWebviewUri(vscode.Uri.joinPath(extensionUri, "out", ...entryPath.split("/")))
     .toString();
   const nonce = getNonce();
-  const serializedState = JSON.stringify(initialState).replace(/</g, "\\u003c");
-  const escapedBundleUri = bundleUri.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const serializedState = JSON.stringify(initialState).replaceAll("<", String.raw`\u003c`);
+  const serializedBundleUri = JSON.stringify(bundleUri).replaceAll("<", String.raw`\u003c`);
   const contentSecurityPolicy = [
     "default-src 'none'",
     `img-src ${webview.cspSource} data: blob:`,
@@ -106,7 +106,7 @@ export function createWebviewDocument(
         });
 
         const script = document.createElement("script");
-        script.src = '${escapedBundleUri}';
+        script.src = ${serializedBundleUri};
         script.nonce = "${nonce}";
         script.addEventListener("error", () => {
           showError(

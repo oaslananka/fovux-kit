@@ -61,7 +61,7 @@
 - Create: `fovux-studio/test/e2e/harness/package.json`
 - Create: `fovux-studio/test/e2e/harness/extension.js`
 - Create: `fovux-studio/test/e2e/suite/index.ts`
-- Create: `fovux-studio/test/e2e/suite/installedExtension.test.ts`
+- Create: `fovux-studio/test/e2e/suite/installedExtensionAssertions.ts`
 - Create: `fovux-studio/test/e2e/fixtures/trusted.code-workspace`
 - Create: `fovux-studio/test/e2e/fixtures/untrusted/data.yaml`
 - Modify: `fovux-studio/package.json`

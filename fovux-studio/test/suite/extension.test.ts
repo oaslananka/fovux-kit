@@ -135,6 +135,12 @@ describe("Fovux Studio extension", () => {
 
     createdPanels[0]?.panel.webview.receiveMessage({
       type: "webviewReady",
+      view: "another-view",
+    } as never);
+    expect(getDashboardWebviewDiagnostics().ready).toBe(false);
+
+    createdPanels[0]?.panel.webview.receiveMessage({
+      type: "webviewReady",
       view: "dashboard",
     });
     expect(getDashboardWebviewDiagnostics().ready).toBe(true);

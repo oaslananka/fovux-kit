@@ -128,6 +128,25 @@ describe("Fovux client and webview host", () => {
     expect(document.html).toContain(`nonce="${document.nonce}"`);
   });
 
+  it("serializes a webview bundle URI without executable string injection", () => {
+    const document = createWebviewDocument(
+      {
+        cspSource: "vscode-webview-resource",
+        asWebviewUri: () => ({
+          toString: () => `vscode-resource:/bundle'\\path<unsafe>.js`,
+        }),
+      } as never,
+      { path: "/extension" } as never,
+      "ignored.js",
+      { unsafe: "<script>" }
+    );
+
+    expect(document.html).toContain(
+      String.raw`script.src = "vscode-resource:/bundle'\\path\u003cunsafe>.js";`
+    );
+    expect(document.html).not.toContain('window.__FOVUX_INITIAL_STATE__ = {"unsafe":"<script>"}');
+  });
+
   it("generates cryptographic base64url CSP nonces", () => {
     const first = getNonce();
     const second = getNonce();
