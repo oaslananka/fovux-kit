@@ -1,6 +1,7 @@
 """Verify MCP tool schema snapshots and cross-surface tool contracts."""
 
 from __future__ import annotations
+
 import argparse
 import asyncio
 import json
@@ -14,9 +15,11 @@ MCP_ROOT = ROOT / "fovux-mcp"
 STUDIO_ROOT = ROOT / "fovux-studio"
 SRC = MCP_ROOT / "src"
 SNAPSHOT = MCP_ROOT / "tests" / "snapshots" / "mcp_tool_schemas.json"
+STUDIO_OVERRIDES = STUDIO_ROOT / "src" / "fovux" / "tools" / "overrides.json"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 from fastmcp import Client  # noqa: E402
+
 from fovux.core.tool_registry import list_tool_names, resolve_tool  # noqa: E402
 from fovux.http.tool_proxy import HTTP_TOOL_POLICIES  # noqa: E402
 from fovux.server import mcp  # noqa: E402
@@ -42,23 +45,17 @@ def all_tests_text() -> str:
 
 
 def studio_mappings() -> tuple[list[str], list[str]]:
-    content = read(STUDIO_ROOT / "src" / "fovux" / "tools" / "definitions.ts")
-    blocks = re.findall(r'\{\n\s+name:\s+"fovux_[\s\S]*?\n\s+\},', content)
-    mapped = re.findall(r'mcpToolName:\s*"([^"]+)"', content)
-    studio_only = [
-        b for b in blocks if "mcpToolName:" not in b and "studioOnlyReason:" in b
-    ]
-    missing = []
-    for block in blocks:
-        if "mcpToolName:" not in block and "studioOnlyReason:" not in block:
-            m = re.search(r'name:\s*"([^"]+)"', block)
-            missing.append(m.group(1) if m else "<unknown>")
-    if missing:
-        raise AssertionError(
-            "Studio LM tools without mcpToolName or studioOnlyReason: "
-            + ", ".join(sorted(missing))
-        )
-    return mapped, studio_only
+    """Return the explicit curated backend subset from Studio UX overrides."""
+    overrides = json.loads(read(STUDIO_OVERRIDES))
+    if not isinstance(overrides, dict) or overrides.get("schemaVersion") != 1:
+        raise AssertionError("Studio LM overrides must be a schemaVersion 1 object")
+    tools = overrides.get("tools")
+    if not isinstance(tools, dict) or not tools:
+        raise AssertionError("Studio LM overrides must contain a non-empty tools object")
+    mapped = list(tools)
+    if any(not isinstance(name, str) or not name for name in mapped):
+        raise AssertionError("Studio LM override keys must be backend tool names")
+    return mapped, []
 
 
 async def records() -> list[dict[str, Any]]:

@@ -4,21 +4,21 @@ This page is the canonical local developer workflow for the monorepo.
 
 ## Required toolchain
 
-| Tool | Pinned / supported version | Purpose |
-| --- | --- | --- |
-| Python | 3.12, 3.13, or 3.14 | Backend runtime and tests |
-| `uv` | latest stable | Python dependency, build, and audit workflow |
-| Node.js | >=22.0.0; `.nvmrc` pins 24.16.0 for release builds | Studio and npm-wrapper runtime |
-| pnpm | 10.34.1 | Studio package manager |
-| Go | latest stable | Installs local CI helper binaries |
-| go-task/task | 3.50.0 | Monorepo task runner |
-| actionlint | 1.7.12 | GitHub Actions linting |
-| gitleaks | 8.30.1 | Secret scanning |
-| Renovate CLI | 43.272.4, Node.js >=24.11 | Optional full schema validation |
-| Semgrep | 1.170.0 | Repository-owned local and CI SAST rules |
-| Snyk CLI | optional | Authenticated maintainer dependency/code scans |
-| SonarScanner | optional | Explicit authenticated branch or PR analysis |
-| act | optional | Local GitHub Actions simulation |
+| Tool         | Pinned / supported version                         | Purpose                                        |
+| ------------ | -------------------------------------------------- | ---------------------------------------------- |
+| Python       | 3.12, 3.13, or 3.14                                | Backend runtime and tests                      |
+| `uv`         | latest stable                                      | Python dependency, build, and audit workflow   |
+| Node.js      | >=22.0.0; `.nvmrc` pins 24.16.0 for release builds | Studio and npm-wrapper runtime                 |
+| pnpm         | 10.34.1                                            | Studio package manager                         |
+| Go           | latest stable                                      | Installs local CI helper binaries              |
+| go-task/task | 3.50.0                                             | Monorepo task runner                           |
+| actionlint   | 1.7.12                                             | GitHub Actions linting                         |
+| gitleaks     | 8.30.1                                             | Secret scanning                                |
+| Renovate CLI | 43.272.4, Node.js >=24.11                          | Optional full schema validation                |
+| Semgrep      | 1.170.0                                            | Repository-owned local and CI SAST rules       |
+| Snyk CLI     | optional                                           | Authenticated maintainer dependency/code scans |
+| SonarScanner | optional                                           | Explicit authenticated branch or PR analysis   |
+| act          | optional                                           | Local GitHub Actions simulation                |
 
 ## One-time bootstrap
 
@@ -62,6 +62,8 @@ task typecheck   # static typing
 task test        # backend and Studio tests
 task security    # Bandit, pip-audit, pnpm audit, npm audit, gitleaks, security posture
 task deps:renovate:validate  # static policy and Renovate schema validation
+task studio:lm-tools:generate  # regenerate Studio LM definitions/package metadata
+task studio:lm-tools:check     # fail on snapshot/override/generated drift
 task security:semgrep        # repository Semgrep fixtures and production scan
 task security:snyk           # optional Snyk scan; explicit SKIP without local config
 task security:sonar -- --branch feature/name  # optional Sonar analysis
@@ -156,6 +158,8 @@ activation evidence.
 python scripts/check_versions.py
 python scripts/check_docs_truth.py
 python scripts/check_task_docs.py
+python scripts/generate_studio_lm_tools.py --check
+python scripts/check_studio_lm_tools.py
 cd fovux-mcp && uv run python scripts/check_tool_docs.py
 uv run mkdocs build --strict
 uv run python ../scripts/lint_docs_code.py ..

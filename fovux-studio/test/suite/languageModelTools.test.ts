@@ -120,7 +120,7 @@ describe("Fovux Language Model Tools", () => {
       expect(message.value).toContain("permanently delete");
     });
 
-    it("uses default fallback message for non-risky tools", () => {
+    it("does not request confirmation for generated read-only tools", () => {
       registerFovuxLanguageModelTool(context as any);
       const mockLm = vscode.lm as any;
       const tool = mockLm.registeredTools.get("fovux_inspect_dataset");
@@ -131,9 +131,36 @@ describe("Fovux Language Model Tools", () => {
         },
       });
 
+      expect(prepared.confirmationMessages).toBeUndefined();
+    });
+
+    it("uses backend policy fallback for risky tools without custom copy", () => {
+      registerFovuxLanguageModelTool(context as any);
+      const mockLm = vscode.lm as any;
+      const tool = mockLm.registeredTools.get("fovux_run_eval");
+
+      const prepared = tool.prepareInvocation({
+        input: {
+          checkpoint: "best.pt",
+          dataset_path: "/path/to/data",
+        },
+      });
+
+      expect(prepared.confirmationMessages.title).toBe("Run Run Evaluation?");
       expect(prepared.confirmationMessages.message).toBe(
-        "Fovux Studio will call dataset_inspect on your local fovux-mcp server."
+        "Fovux Studio will call eval_run with scope run:start."
       );
+    });
+
+    it("applies generated confirmation policy to every granular tool", () => {
+      registerFovuxLanguageModelTool(context as any);
+      const mockLm = vscode.lm as any;
+
+      for (const definition of GRANULAR_TOOLS) {
+        const tool = mockLm.registeredTools.get(definition.name);
+        const prepared = tool.prepareInvocation({ input: {} });
+        expect(Boolean(prepared.confirmationMessages)).toBe(definition.requiresConfirmation);
+      }
     });
 
     it("supports risky tools called through the generic fovux_call_tool fallback", () => {
@@ -159,6 +186,21 @@ describe("Fovux Language Model Tools", () => {
   });
 
   describe("invoke", () => {
+    it("forwards every generated tool to its mapped backend tool", async () => {
+      mockCallTool.mockResolvedValue({ ok: true });
+      registerFovuxLanguageModelTool(context as any);
+      const mockLm = vscode.lm as any;
+
+      for (const definition of GRANULAR_TOOLS) {
+        const tool = mockLm.registeredTools.get(definition.name);
+        await tool.invoke({ input: {} });
+      }
+
+      expect(mockCallTool.mock.calls.map(([name]) => name)).toEqual(
+        GRANULAR_TOOLS.map((definition) => definition.mcpToolName)
+      );
+    });
+
     it("returns structured summary and JSON parts for dataset_inspect", async () => {
       mockCallTool.mockResolvedValueOnce({
         format_detected: "yolo",

@@ -243,3 +243,7 @@ def test_sonar_project_properties_scope_sources_and_reports() -> None:
     assert "sonar.tests=fovux-mcp/tests,fovux-studio/test" in properties
     assert "sonar.python.coverage.reportPaths=fovux-mcp/coverage.xml" in properties
     assert "sonar.javascript.lcov.reportPaths=fovux-studio/coverage/lcov.info" in properties
+    assert (
+        "fovux-studio/src/fovux/tools/definitions.ts"
+        in properties.split("sonar.cpd.exclusions=", 1)[1].splitlines()[0]
+    )
