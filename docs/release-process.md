@@ -33,10 +33,7 @@ After the `Verify Release` job succeeds, update the machine-readable baseline us
 reported by release-please and the verified registry evidence:
 
 ```bash
-python scripts/update_release_baseline.py \
-  --mcp-version <python-version> \
-  --npm-version <npm-version> \
-  --studio-version <studio-version>
+python scripts/update_release_baseline.py
 python scripts/check_release_truth.py
 python scripts/check_docs_truth.py
 ```

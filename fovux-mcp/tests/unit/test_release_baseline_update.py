@@ -106,6 +106,7 @@ def test_repository_paths_are_fixed_and_release_note_is_existing() -> None:
 
     assert module.MANIFEST_PATH == REPO_ROOT / "release-baseline.json"
     assert module.ROOT_RELEASE_NOTES_PATH == REPO_ROOT / "RELEASE_NOTES.md"
+    assert module._repository_versions() == ("1.5.0", "1.5.0", "1.4.0")
     release_note = module._published_release_note("1.5.0")
     assert release_note == REPO_ROOT / "docs" / "release-notes" / "1.5.0.md"
     assert release_note.is_file()
