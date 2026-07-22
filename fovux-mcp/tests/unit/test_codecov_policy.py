@@ -19,6 +19,7 @@ def test_codecov_policy_is_nonduplicative_and_component_aware() -> None:
     assert codecov["notify"]["wait_for_ci"] is False
     assert codecov["notify"]["notify_error"] is True
     assert codecov["notify"]["manual_trigger"] is True
+    assert config["github_checks"] is False
     assert config["comment"]["require_changes"] is False
 
     project = config["coverage"]["status"]["project"]["default"]

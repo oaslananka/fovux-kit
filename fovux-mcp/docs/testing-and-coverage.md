@@ -76,11 +76,15 @@ same backend XML and Studio LCOV artifacts produced by the required lane.
 
 Codecov uploads remain OIDC-based. The combined project status uses an explicit **80% target** and
 the patch status uses an **85% target**; both allow **1% tolerance** and are non-informational, so
-their GitHub pass/fail state matches the thresholds shown in the Codecov comment. Codecov waits for
-exactly two coverage uploads (`backend` and `studio`), does not wait for unrelated CI providers,
-and uses an explicit final `send-notifications` step after all coverage and test-result uploads. The
-manual trigger produces one finalized status/comment set and surfaces processing errors. This keeps
-the external signal prompt and observable without making it the repository's merge authority.
+their GitHub pass/fail state matches the thresholds shown in the Codecov comment. Both results are
+published as classic commit statuses (`codecov/project` and `codecov/patch`) rather than GitHub
+Checks. This deliberately gives up patch annotations: Codecov's check-run integration had emitted
+the patch result while omitting the configured project result, which made comment/status comparison
+ambiguous. Codecov waits for exactly two coverage uploads (`backend` and `studio`), does not wait
+for unrelated CI providers, and uses an explicit final `send-notifications` step after all coverage
+and test-result uploads. The manual trigger produces one finalized status/comment set and surfaces
+processing errors. This keeps the external signal prompt and observable without making it the
+repository's merge authority.
 
 Backend and Studio remain separate through non-carryforward flags and named components. The
 documented backend omit list is mirrored in Codecov `ignore` and Sonar coverage exclusions so both

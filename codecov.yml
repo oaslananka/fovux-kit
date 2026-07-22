@@ -6,6 +6,10 @@ codecov:
     notify_error: true
     manual_trigger: true
 
+# Publish both project and patch results as classic commit statuses. GitHub Checks
+# is patch-focused and previously omitted the configured project result.
+github_checks: false
+
 coverage:
   precision: 2
   round: down
