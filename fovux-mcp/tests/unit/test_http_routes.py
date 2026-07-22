@@ -141,13 +141,20 @@ def test_stream_endpoint_requires_auth(tmp_fovux_home: Path) -> None:
     assert response.status_code == 401
 
 
-def test_tool_proxy_invokes_local_tool(tmp_fovux_home: Path) -> None:
+def test_tool_proxy_invokes_local_tool(
+    tmp_fovux_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """POST /tools/{name} should proxy to the local tool implementation."""
+    monkeypatch.setattr(
+        "fovux.http.tool_proxy.invoke_tool",
+        lambda name, payload: {"models": [], "total": 0, "tool": name, "payload": payload},
+    )
     with TestClient(create_app()) as client:
         response = client.post("/tools/model_list", json={}, headers=_auth_headers(client))
     assert response.status_code == 200
     payload = response.json()
     assert payload["total"] == 0
+    assert payload["tool"] == "model_list"
 
 
 def test_health_endpoint_returns_version(tmp_fovux_home: Path) -> None:
@@ -489,7 +496,7 @@ def test_timed_out_worker_exception_is_logged_before_semaphore_release(
         callback(future)
         await asyncio.wait_for(semaphore.acquire(), timeout=0.1)
 
-    monkeypatch.setattr("fovux.http.routes.get_logger", lambda _name: Logger())
+    monkeypatch.setattr("fovux.http.services.tool_runtime.get_logger", lambda _name: Logger())
 
     asyncio.run(scenario())
 
@@ -822,6 +829,7 @@ def test_sse_events_stream_and_resume(tmp_fovux_home: Path) -> None:
     from fovux.core.paths import ensure_fovux_dirs
     from fovux.core.runs import get_registry
     from fovux.http.routes import sse_events_route
+    from fovux.http.services.container import build_default_services
 
     paths = ensure_fovux_dirs()
     registry = get_registry(paths.runs_db)
@@ -835,6 +843,7 @@ def test_sse_events_stream_and_resume(tmp_fovux_home: Path) -> None:
     class MockApp:
         class State:
             shutdown_event = asyncio.Event()
+            http_services = build_default_services()
 
         state = State()
 

@@ -19,8 +19,7 @@ from fovux.core.checkpoints import (
     read_metrics_summary,
 )
 from fovux.core.logging import get_logger
-from fovux.core.paths import ensure_fovux_dirs
-from fovux.core.runs import RunRecord, RunRegistry, get_registry
+from fovux.core.runs import RunRecord, RunRegistry
 from fovux.http.services.errors import ServiceError
 
 RegistryProvider = Callable[[], RunRegistry]
@@ -39,9 +38,12 @@ class RunSearchFilters:
 
 
 def default_registry_provider() -> RunRegistry:
-    """Return the process-wide run registry for the configured Fovux home."""
-    paths = ensure_fovux_dirs()
-    return get_registry(paths.runs_db)
+    """Return the process-wide registry while preserving runtime overrides."""
+    from fovux.core import paths as path_module
+    from fovux.core import runs as runs_module
+
+    paths = path_module.ensure_fovux_dirs()
+    return runs_module.get_registry(paths.runs_db)
 
 
 class RunService:

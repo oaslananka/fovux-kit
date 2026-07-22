@@ -34,6 +34,8 @@ from fovux.core.auth import (
 )
 from fovux.core.errors import FovuxError
 from fovux.core.logging import get_logger
+from fovux.http.routes import build_http_router
+from fovux.http.services.container import HttpServices, build_default_services
 from fovux.http.thread_stream import install_thread_local_streams
 from fovux.http.tool_proxy import (
     HttpScopeError,
@@ -122,7 +124,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info("http_app_stop")
 
 
-def create_app(*, enable_metrics: bool = False) -> FastAPI:
+def create_app(*, enable_metrics: bool = False, services: HttpServices | None = None) -> FastAPI:
     """Create and configure the FastAPI application.
 
     Returns:
@@ -144,19 +146,14 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
     app.add_middleware(_ToolBodyLimitMiddleware, max_body_bytes=MAX_TOOL_BODY_BYTES)
     app.state.metrics_enabled = enable_metrics
     app.state.tool_body_max_bytes = MAX_TOOL_BODY_BYTES
-    from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
-
-    app.state.challenges = {}
-
-    app.state.tool_semaphores = {
-        name: asyncio.Semaphore(policy.concurrency_limit)
-        for name, policy in HTTP_TOOL_POLICIES.items()
-        if policy.enabled
-    }
-    app.state.tool_operations = {}
-    app.state.tool_operation_results = {}
-    app.state.active_operation_tasks = {}
-    app.state.sse_listeners = []
+    configured_services = services or build_default_services()
+    app.state.http_services = configured_services
+    app.state.challenges = configured_services.tool_runtime.challenges
+    app.state.tool_semaphores = configured_services.tool_runtime.semaphores
+    app.state.tool_operations = configured_services.tool_runtime.operations
+    app.state.tool_operation_results = configured_services.tool_runtime.operation_results
+    app.state.active_operation_tasks = configured_services.operation_runtime.active_tasks
+    app.state.sse_listeners = configured_services.operation_runtime.sse_listeners
 
     @app.middleware("http")
     async def _auth_and_rate_limit(
@@ -269,9 +266,7 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
 
         return await call_next(request)
 
-    from fovux.http.routes import router
-
-    app.include_router(router)
+    app.include_router(build_http_router())
     app.state.nonlocal_bind_allowed = _NON_LOCAL_BIND_ALLOWED
     return app
 

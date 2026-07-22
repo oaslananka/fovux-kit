@@ -23,13 +23,21 @@ from fovux.http.services.tool_runtime import (
 from fovux.http.tool_proxy import (
     HttpToolPolicy,
     HttpToolPolicyError,
-    invoke_tool,
     payload_hash,
     policy_for_tool,
 )
 from fovux.schemas.errors import ErrorDetail
 
 ToolInvoker = Callable[[str, Mapping[str, object]], dict[str, Any]]
+
+
+def default_tool_invoker(name: str, payload: Mapping[str, object]) -> dict[str, Any]:
+    """Resolve the invoker lazily so test and plugin overrides remain observable."""
+    from fovux import server as _server
+    from fovux.http import tool_proxy
+
+    del _server
+    return tool_proxy.invoke_tool(name, payload)
 
 
 @dataclass(frozen=True)
@@ -106,9 +114,9 @@ class ChallengeService:
 class ToolInvocationService:
     """Enforce policy and execute local tools with bounded concurrency."""
 
-    def __init__(self, invoker: ToolInvoker = invoke_tool) -> None:
+    def __init__(self, invoker: ToolInvoker | None = None) -> None:
         """Initialize with an injectable synchronous tool invoker."""
-        self._invoker = invoker
+        self._invoker = invoker or default_tool_invoker
 
     def now(self) -> float:
         """Return the monotonic clock used by retained operation results."""

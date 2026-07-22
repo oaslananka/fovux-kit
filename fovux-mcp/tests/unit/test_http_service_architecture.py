@@ -70,3 +70,53 @@ def test_http_route_and_service_source_budgets() -> None:
                 if size > function_budget:
                     failures.append(f"{path.name}:{node.name}: {size} > {function_budget} lines")
     assert failures == []
+
+
+def test_create_app_accepts_explicit_service_container() -> None:
+    from fovux.http.app import create_app
+    from fovux.http.services.container import build_default_services
+
+    services = build_default_services()
+    app = create_app(services=services)
+
+    assert app.state.http_services is services
+    assert app.state.challenges is services.tool_runtime.challenges
+    assert app.state.active_operation_tasks is services.operation_runtime.active_tasks
+
+
+def test_domain_router_preserves_historical_paths_and_methods() -> None:
+    from fovux.http.app import create_app
+
+    expected = {
+        "/datasets": {"GET"},
+        "/datasets/{fingerprint}": {"GET"},
+        "/events": {"GET"},
+        "/exports": {"GET"},
+        "/health": {"GET"},
+        "/metrics": {"GET"},
+        "/operations": {"POST"},
+        "/operations/{id}": {"GET"},
+        "/operations/{id}/cancel": {"POST"},
+        "/operations/{id}/logs": {"GET"},
+        "/operations/{id}/result": {"GET"},
+        "/runs": {"GET"},
+        "/runs/search": {"POST"},
+        "/runs/{run_id}": {"GET"},
+        "/runs/{run_id}/events": {"GET"},
+        "/runs/{run_id}/lineage": {"GET"},
+        "/runs/{run_id}/metrics": {"GET"},
+        "/runs/{run_id}/stream": {"GET"},
+        "/tools/{name}": {"POST"},
+        "/tools/{name}/challenge": {"POST"},
+    }
+    schema = create_app().openapi()
+    actual = {
+        path: {
+            method.upper()
+            for method in operations
+            if method.lower() in {"get", "post", "put", "patch", "delete"}
+        }
+        for path, operations in schema["paths"].items()
+    }
+
+    assert actual == expected

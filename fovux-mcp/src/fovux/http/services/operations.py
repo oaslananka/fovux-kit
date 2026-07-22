@@ -13,18 +13,28 @@ from typing import Any, cast
 
 from fovux.core.auth import Scope
 from fovux.core.logging import get_logger
-from fovux.core.paths import ensure_fovux_dirs
-from fovux.core.runs import OperationRecord, RunRegistry, get_registry
+from fovux.core.runs import OperationRecord, RunRegistry
 from fovux.http.challenge import prune_expired_challenges, verify_challenge
 from fovux.http.services.errors import ServiceError
 from fovux.http.services.tool_runtime import ToolRuntimeState
 from fovux.http.services.tools import ServiceOutcome
 from fovux.http.thread_stream import redirect_thread_output
-from fovux.http.tool_proxy import check_scope, invoke_tool, payload_hash, policy_for_tool
+from fovux.http.tool_proxy import check_scope, payload_hash, policy_for_tool
 
 RegistryProvider = Callable[[], RunRegistry]
 HomeProvider = Callable[[], Path]
 ToolInvoker = Callable[[str, Mapping[str, object]], dict[str, Any]]
+
+
+def default_operation_invoker(name: str, payload: Mapping[str, object]) -> dict[str, Any]:
+    """Resolve the tool invoker lazily for runtime overrides and tests."""
+    from fovux import server as _server
+    from fovux.http import tool_proxy
+
+    del _server
+    return tool_proxy.invoke_tool(name, payload)
+
+
 TrainStopper = Callable[[str], object]
 DisconnectCheck = Callable[[], Awaitable[bool]]
 OperationEvent = tuple[int, str, dict[str, Any]]
@@ -49,14 +59,19 @@ class OperationRuntimeState:
 
 
 def default_registry_provider() -> RunRegistry:
-    """Return the configured process-wide run registry."""
-    paths = ensure_fovux_dirs()
-    return get_registry(paths.runs_db)
+    """Return the configured registry while preserving runtime overrides."""
+    from fovux.core import paths as path_module
+    from fovux.core import runs as runs_module
+
+    paths = path_module.ensure_fovux_dirs()
+    return runs_module.get_registry(paths.runs_db)
 
 
 def default_home_provider() -> Path:
-    """Return the configured Fovux home directory."""
-    return ensure_fovux_dirs().home
+    """Return the configured Fovux home while preserving runtime overrides."""
+    from fovux.core import paths as path_module
+
+    return path_module.ensure_fovux_dirs().home
 
 
 def default_train_stopper(run_id: str) -> object:
@@ -74,14 +89,14 @@ class OperationService:
         *,
         registry_provider: RegistryProvider = default_registry_provider,
         home_provider: HomeProvider = default_home_provider,
-        invoker: ToolInvoker = invoke_tool,
+        invoker: ToolInvoker | None = None,
         train_stopper: TrainStopper = default_train_stopper,
         id_factory: Callable[[], str] | None = None,
     ) -> None:
         """Initialize the service with injectable local dependencies."""
         self._registry_provider = registry_provider
         self._home_provider = home_provider
-        self._invoker = invoker
+        self._invoker = invoker or default_operation_invoker
         self._train_stopper = train_stopper
         self._id_factory = id_factory or (lambda: f"op_{uuid.uuid4().hex[:12]}")
 
