@@ -29,3 +29,21 @@ structured JSON and human-readable remediation guidance.
 
 Remediation output must be explain-first and non-destructive by default. Generated scripts or suggested
 commands must be optional and scoped to the supplied dataset path.
+## Normalized inventory boundary
+
+YOLO and COCO adapters populate the same internal `DatasetInventory` contract. Shared analysis owns
+class statistics, normalized bounding-box findings, duplicate groups, and split leakage; inspect and
+validate only map those results to their existing public schemas. The dependency direction and adapter
+extension point are recorded in `fovux-mcp/docs/adr/0009-normalized-dataset-inventory.md`.
+
+`dataset_validate` supports both YOLO and COCO. Golden coverage includes healthy fixtures plus corrupt
+images, missing labels/images, malformed or out-of-bounds annotations, duplicate/leaked images, Unicode
+paths, and class-registry mismatch.
+
+## Performance evidence
+
+A same-worker `pytest-benchmark` comparison on the bundled `mini_yolo` fixture measured the original
+main implementation at 479.4 ms mean and the normalized-inventory implementation at 392.4 ms mean.
+The metadata-only normalized adapters measured 111.1 ms for 40 YOLO images/annotations and 6.5 ms for
+20 COCO images. These figures are evidence of no material regression, not hard timing gates; CI keeps
+benchmark cases so trends can be compared without flaky wall-clock assertions.

@@ -1,4 +1,4 @@
-"""dataset_inspect — comprehensive dataset statistics and quality intelligence tool."""
+"""dataset_inspect — shared statistics over a normalized dataset inventory."""
 
 from __future__ import annotations
 
@@ -6,22 +6,15 @@ import time
 from pathlib import Path
 from typing import Any
 
-from fovux.core.dataset_utils import (
-    bucket_distribution,
-    detect_format,
-    find_coco_jsons,
-    gini,
-    parse_yolo_label,
-    read_coco_json,
-    read_yolo_data_yaml,
-)
+from fovux.core.dataset_analysis import InventoryAnalysis, analyze_dataset_inventory
+from fovux.core.dataset_inventory import DatasetInventory, build_dataset_inventory
+from fovux.core.dataset_utils import bucket_distribution, detect_format, gini
 from fovux.core.errors import (
-    FovuxDatasetEmptyError,
     FovuxDatasetFormatError,
     FovuxDatasetNotFoundError,
 )
 from fovux.core.tooling import tool_event
-from fovux.core.validation import ensure_within_root, resolve_local_path, validate_file_size
+from fovux.core.validation import resolve_local_path
 from fovux.schemas.dataset import (
     AutoFixItem,
     ClassStat,
@@ -33,8 +26,6 @@ from fovux.schemas.dataset import (
     SizeHistogram,
 )
 from fovux.server import mcp
-
-_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 
 @mcp.tool()
@@ -65,347 +56,270 @@ def dataset_inspect(
 
 
 def _run_inspect(inp: DatasetInspectInput) -> DatasetInspectOutput:
-    t0 = time.perf_counter()
+    started_at = time.perf_counter()
     path = resolve_local_path(inp.dataset_path)
-
     if not path.exists():
         raise FovuxDatasetNotFoundError(str(path))
 
     fmt = inp.format if inp.format != "auto" else detect_format(path)
-
-    if fmt == "yolo":
-        return _inspect_yolo(path, inp, fmt, t0)
-    if fmt == "coco":
-        return _inspect_coco(path, inp, fmt, t0)
-    raise FovuxDatasetFormatError(
-        (f"dataset_inspect currently supports YOLO and COCO datasets only; received '{fmt}'."),
-        hint="Convert the dataset to YOLO or COCO before inspection.",
-    )
-
-
-def _calculate_iou(
-    box1: tuple[float, float, float, float], box2: tuple[float, float, float, float]
-) -> float:
-    cx1, cy1, w1, h1 = box1
-    cx2, cy2, w2, h2 = box2
-    x1_1, y1_1, x2_1, y2_1 = cx1 - w1 / 2, cy1 - h1 / 2, cx1 + w1 / 2, cy1 + h1 / 2
-    x1_2, y1_2, x2_2, y2_2 = cx2 - w2 / 2, cy2 - h2 / 2, cx2 + w2 / 2, cy2 + h2 / 2
-    inter_x1 = max(x1_1, x1_2)
-    inter_y1 = max(y1_1, y1_2)
-    inter_x2 = min(x2_1, x2_2)
-    inter_y2 = min(y2_1, y2_2)
-    if inter_x1 < inter_x2 and inter_y1 < inter_y2:
-        inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
-    else:
-        inter_area = 0.0
-    area1 = w1 * h1
-    area2 = w2 * h2
-    union_area = area1 + area2 - inter_area
-    if union_area <= 0.0:
-        return 0.0
-    return inter_area / union_area
-
-
-def _inspect_yolo(
-    path: Path, inp: DatasetInspectInput, fmt: str, t0: float
-) -> DatasetInspectOutput:
-    warnings: list[str] = []
-
-    try:
-        meta = read_yolo_data_yaml(path)
-        class_names: list[str] = meta.get("names", [])
-        if isinstance(class_names, dict):
-            class_names = list(class_names.values())
-    except Exception:
-        class_names = []
-        warnings.append("Could not parse data.yaml — class names unknown.")
-
-    images_dir = path / "images"
-    splits_detected: dict[str, int] = {}
-    if images_dir.is_dir():
-        for subdir in sorted(images_dir.iterdir()):
-            if subdir.is_dir():
-                cnt = sum(1 for f in subdir.rglob("*") if f.suffix.lower() in _IMAGE_EXTS)
-                if cnt:
-                    splits_detected[subdir.name] = cnt
-
-    class_counts: dict[int, int] = {}
-    bbox_areas: list[float] = []
-    bbox_counts_per_image: list[int] = []
-    orphan_images = 0
-    orphan_annotations = 0
-    missing_label_images: list[Path] = []
-    image_sizes: list[tuple[int, int]] = []
-    sample_paths: list[Path] = []
-    total_images = 0
-    total_annotations = 0
-    labels_dir = path / "labels"
-    image_paths = _discover_yolo_images(path)[: inp.max_images_analyzed]
-
-    if labels_dir.is_dir():
-        for label_path in sorted(labels_dir.rglob("*.txt")):
-            if not _matching_yolo_image_exists(path, label_path):
-                orphan_annotations += 1
-
-    import imagehash
-    from PIL import Image
-
-    img_hashes: dict[Path, Any] = {}
-    unreadable_count = 0
-    tiny_count = 0
-    oob_count = 0
-    empty_labels_count = 0
-    overlapping_count = 0
-
-    for img_path in image_paths:
-        label_path = _label_path_for_image(path, img_path)
-        total_images += 1
-
-        img_exists = True
-        label_exists = label_path.exists()
-
-        if img_exists and not label_exists:
-            orphan_images += 1
-            missing_label_images.append(img_path)
-
-        if img_exists and len(sample_paths) < 10 and inp.include_samples:
-            sample_paths.append(img_path)
-
-        if img_exists:
-            try:
-                safe_img_path = ensure_within_root(img_path, path)
-                validate_file_size(safe_img_path)
-                with Image.open(safe_img_path) as im:
-                    image_sizes.append(im.size)
-                    h = imagehash.phash(im)
-                    img_hashes[img_path] = h
-            except Exception:
-                unreadable_count += 1
-                warnings.append(f"Cannot read image: {img_path.name}")
-
-        anns = parse_yolo_label(label_path) if label_exists else []
-        bbox_counts_per_image.append(len(anns))
-        total_annotations += len(anns)
-
-        if label_exists:
-            if label_path.stat().st_size == 0 or not anns:
-                empty_labels_count += 1
-            for i, box1 in enumerate(anns):
-                cls1, cx1, cy1, w1, h1 = box1
-                class_counts[cls1] = class_counts.get(cls1, 0) + 1
-                bbox_areas.append(w1 * h1)
-
-                if (
-                    cx1 - w1 / 2 < 0.0
-                    or cx1 + w1 / 2 > 1.0
-                    or cy1 - h1 / 2 < 0.0
-                    or cy1 + h1 / 2 > 1.0
-                ):
-                    oob_count += 1
-
-                if w1 * h1 < 0.0005:
-                    tiny_count += 1
-
-                for j in range(i + 1, len(anns)):
-                    box2 = anns[j]
-                    cls2, cx2, cy2, w2, h2 = box2
-                    if cls1 == cls2:
-                        iou = _calculate_iou((cx1, cy1, w1, h1), (cx2, cy2, w2, h2))
-                        if iou > 0.90:
-                            overlapping_count += 1
-
-    if total_images == 0:
-        raise FovuxDatasetEmptyError(str(path))
-
-    class_ids = sorted(set(class_counts) | set(range(len(class_names))))
-    total_anns = sum(class_counts.values()) or 1
-    classes = [
-        ClassStat(
-            name=class_names[idx] if idx < len(class_names) else f"class_{idx}",
-            count=class_counts.get(idx, 0),
-            pct=round(class_counts.get(idx, 0) / total_anns * 100, 2),
+    if fmt not in {"yolo", "coco"}:
+        raise FovuxDatasetFormatError(
+            f"dataset_inspect currently supports YOLO and COCO datasets; received '{fmt}'.",
+            hint="Convert the dataset to YOLO or COCO before inspection.",
         )
-        for idx in class_ids
-    ]
+    inventory = build_dataset_inventory(
+        path,
+        fmt,
+        analyze_images=True,
+        compute_fingerprints=True,
+        max_images_analyzed=inp.max_images_analyzed,
+    )
+    return _inspect_inventory(inventory, inp, started_at)
 
-    duplicate_groups: list[list[Path]] = []
-    used_indices = set()
-    hash_list = list(img_hashes.items())
-    for i, (p1, h1) in enumerate(hash_list):
-        if i in used_indices:
-            continue
-        group = [p1]
-        for j in range(i + 1, len(hash_list)):
-            if j in used_indices:
-                continue
-            p2, h2 = hash_list[j]
-            dist = int(h1 - h2)
-            if dist <= 5:
-                group.append(p2)
-                used_indices.add(j)
-        if len(group) > 1:
-            used_indices.add(i)
-            duplicate_groups.append(group)
 
-    leaked_issues = []
-    from fovux.tools.dataset_find_duplicates import _split_key
-
-    for group in duplicate_groups:
-        splits: dict[str, list[Path]] = {}
-        for p in group:
-            sp = _split_key(path, p)
-            splits.setdefault(sp, []).append(p)
-        if len(splits) > 1:
-            train_imgs = splits.get("train", [])
-            val_imgs = splits.get("val", [])
-            test_imgs = splits.get("test", [])
-            for t_img in train_imgs or [group[0]]:
-                for v_img in val_imgs:
-                    leaked_issues.append(
-                        LeakageIssue(
-                            train_image=str(t_img.relative_to(path)),
-                            val_image=str(v_img.relative_to(path)),
-                            reason="Train image is duplicated in validation set.",
-                        )
-                    )
-                for ts_img in test_imgs:
-                    leaked_issues.append(
-                        LeakageIssue(
-                            train_image=str(t_img.relative_to(path)),
-                            test_image=str(ts_img.relative_to(path)),
-                            reason="Train image is duplicated in test set.",
-                        )
-                    )
-
-    quality_score, auto_fix_plan, dataset_card, class_balance_gini = _compute_quality_intelligence(
-        path=path,
-        fmt=fmt,
-        total_images=total_images,
-        total_annotations=total_annotations,
+def _inspect_inventory(
+    inventory: DatasetInventory,
+    inp: DatasetInspectInput,
+    started_at: float,
+) -> DatasetInspectOutput:
+    analysis = analyze_dataset_inventory(inventory)
+    classes = _build_class_statistics(inventory, analysis)
+    leaked_images = _build_leakage_issues(inventory, analysis)
+    quality_score, auto_fix_plan, dataset_card, class_balance_gini = _quality_intelligence(
+        inventory=inventory,
+        analysis=analysis,
         classes=classes,
-        class_ids=class_ids,
-        class_counts=class_counts,
-        duplicate_groups=duplicate_groups,
-        leaked_issues=leaked_issues,
-        unreadable_count=unreadable_count,
-        tiny_count=tiny_count,
-        oob_count=oob_count,
-        empty_labels_count=empty_labels_count,
-        overlapping_count=overlapping_count,
+        leaked_images=leaked_images,
     )
 
-    wl, wc = bucket_distribution([float(s[0]) for s in image_sizes])
-    img_size_hist = SizeHistogram(buckets=wl or ["N/A"], counts=wc or [0])
-    bal, bac = bucket_distribution([a * 100 for a in bbox_areas])
-    bbox_size_hist = SizeHistogram(buckets=bal or ["N/A"], counts=bac or [0])
-    bcl, bcc = bucket_distribution([float(c) for c in bbox_counts_per_image])
-    bbox_count_hist = Histogram(buckets=bcl or ["0"], counts=bcc or [total_images])
+    warnings = list(inventory.warnings)
+    warnings.extend(
+        f"Cannot read image: {image.path.name}"
+        for image in inventory.images
+        if image.analyzed and image.readable is False
+    )
+    sample_paths = (
+        [image.path for image in inventory.images if image.analyzed and image.exists][:10]
+        if inp.include_samples
+        else []
+    )
+    image_size_histogram = _image_size_histogram(inventory, analysis)
+    bbox_size_histogram = _bbox_size_histogram(inventory, analysis)
+    bbox_count_values = analysis.annotation_counts
+    if inventory.format == "coco":
+        bbox_count_values = [value for value in bbox_count_values if value > 0]
+    bbox_count_labels, bbox_count_counts = bucket_distribution(
+        [float(value) for value in bbox_count_values]
+    )
 
     return DatasetInspectOutput(
-        format_detected=fmt,
-        total_images=total_images,
-        total_annotations=total_annotations,
-        num_classes=len(class_ids),
+        format_detected=inventory.format,
+        total_images=len(inventory.images),
+        total_annotations=len(inventory.annotations),
+        num_classes=len(analysis.class_ids),
         classes=classes,
-        image_size_distribution=img_size_hist,
-        bbox_size_distribution=bbox_size_hist,
-        bbox_size_buckets=_normalized_bbox_size_buckets(bbox_areas),
-        bbox_count_per_image=bbox_count_hist,
-        orphan_images=orphan_images,
-        missing_label_images=missing_label_images,
-        orphan_annotations=orphan_annotations,
+        image_size_distribution=image_size_histogram,
+        bbox_size_distribution=bbox_size_histogram,
+        bbox_size_buckets=(
+            _normalized_bbox_size_buckets(analysis.normalized_bbox_areas)
+            if inventory.format == "yolo"
+            else {}
+        ),
+        bbox_count_per_image=Histogram(
+            buckets=bbox_count_labels or ["0"],
+            counts=bbox_count_counts
+            or ([len(inventory.images)] if inventory.format == "yolo" else [0]),
+        ),
+        orphan_images=len(inventory.missing_annotation_images),
+        missing_label_images=inventory.missing_annotation_images,
+        orphan_annotations=len(inventory.orphan_annotation_sources),
         class_balance_gini=class_balance_gini,
-        splits_detected=splits_detected,
+        splits_detected=inventory.splits,
         warnings=warnings,
         sample_paths=sample_paths,
-        analysis_duration_seconds=round(time.perf_counter() - t0, 3),
+        analysis_duration_seconds=round(time.perf_counter() - started_at, 3),
         quality_score=quality_score,
         label_anomalies=LabelAnomalySummary(
-            tiny_boxes=tiny_count,
-            out_of_bounds=oob_count,
-            empty_labels=empty_labels_count,
-            suspiciously_overlapping=overlapping_count,
+            tiny_boxes=analysis.tiny_count,
+            out_of_bounds=analysis.out_of_bounds_count,
+            empty_labels=analysis.empty_annotation_count,
+            suspiciously_overlapping=analysis.overlapping_count,
         ),
-        duplicate_groups_count=len(duplicate_groups),
-        total_duplicates_found=sum(len(g) for g in duplicate_groups),
-        leaked_images=leaked_issues,
+        duplicate_groups_count=len(analysis.duplicate_groups),
+        total_duplicates_found=sum(len(group) for group in analysis.duplicate_groups),
+        leaked_images=leaked_images,
         auto_fix_plan=auto_fix_plan,
         dataset_card=dataset_card,
     )
 
 
-def _compute_quality_intelligence(
-    path: Path,
-    fmt: str,
-    total_images: int,
-    total_annotations: int,
-    classes: list[ClassStat],
-    class_ids: list[int],
-    class_counts: dict[int, int],
-    duplicate_groups: list[list[Path]],
-    leaked_issues: list[LeakageIssue],
-    unreadable_count: int,
-    tiny_count: int,
-    oob_count: int,
-    empty_labels_count: int,
-    overlapping_count: int,
-) -> tuple[float, list[AutoFixItem], str, float]:
-    class_balance_gini = gini([class_counts.get(idx, 0) for idx in class_ids])
+def _build_class_statistics(
+    inventory: DatasetInventory,
+    analysis: InventoryAnalysis,
+) -> list[ClassStat]:
+    total_annotations = sum(analysis.class_counts.values()) or 1
+    return [
+        ClassStat(
+            name=inventory.class_names.get(class_id, f"class_{class_id}"),
+            count=analysis.class_counts.get(class_id, 0),
+            pct=round(analysis.class_counts.get(class_id, 0) / total_annotations * 100, 2),
+        )
+        for class_id in analysis.class_ids
+    ]
 
+
+def _build_leakage_issues(
+    inventory: DatasetInventory,
+    analysis: InventoryAnalysis,
+) -> list[LeakageIssue]:
+    issues: list[LeakageIssue] = []
+    for item in analysis.leakage:
+        if item.val_image is not None:
+            issues.append(
+                LeakageIssue(
+                    train_image=_relative_path(inventory, item.train_image),
+                    val_image=_relative_path(inventory, item.val_image),
+                    reason="Train image is duplicated in validation set.",
+                )
+            )
+        if item.test_image is not None:
+            issues.append(
+                LeakageIssue(
+                    train_image=_relative_path(inventory, item.train_image),
+                    test_image=_relative_path(inventory, item.test_image),
+                    reason="Train image is duplicated in test set.",
+                )
+            )
+    return issues
+
+
+def _relative_path(inventory: DatasetInventory, path: Path) -> str:
+    try:
+        return str(path.relative_to(inventory.root))
+    except ValueError:
+        return str(path)
+
+
+def _image_size_histogram(
+    inventory: DatasetInventory,
+    analysis: InventoryAnalysis,
+) -> SizeHistogram:
+    if inventory.format == "coco":
+        return SizeHistogram(buckets=["N/A"], counts=[len(inventory.images)])
+    labels, counts = bucket_distribution(analysis.image_widths)
+    return SizeHistogram(buckets=labels or ["N/A"], counts=counts or [0])
+
+
+def _bbox_size_histogram(
+    inventory: DatasetInventory,
+    analysis: InventoryAnalysis,
+) -> SizeHistogram:
+    values = (
+        [area * 100 for area in analysis.normalized_bbox_areas]
+        if inventory.format == "yolo"
+        else analysis.raw_bbox_areas
+    )
+    labels, counts = bucket_distribution(values)
+    return SizeHistogram(buckets=labels or ["N/A"], counts=counts or [0])
+
+
+def _quality_intelligence(
+    *,
+    inventory: DatasetInventory,
+    analysis: InventoryAnalysis,
+    classes: list[ClassStat],
+    leaked_images: list[LeakageIssue],
+) -> tuple[float, list[AutoFixItem], str, float]:
+    class_balance_gini = gini(
+        [analysis.class_counts.get(class_id, 0) for class_id in analysis.class_ids]
+    )
+    total_images = len(inventory.images)
+    total_duplicates = sum(len(group) for group in analysis.duplicate_groups)
     quality_score = 100.0
     quality_score -= class_balance_gini * 30.0
-    pct_corrupt = (unreadable_count / total_images) if total_images > 0 else 0.0
-    quality_score -= pct_corrupt * 200.0
-    total_dups = sum(len(g) for g in duplicate_groups)
-    pct_dup = (total_dups / total_images) if total_images > 0 else 0.0
-    quality_score -= pct_dup * 150.0
-    if leaked_issues:
+    quality_score -= (analysis.unreadable_count / total_images if total_images else 0.0) * 200.0
+    quality_score -= (total_duplicates / total_images if total_images else 0.0) * 150.0
+    if leaked_images:
         quality_score -= 25.0
-    total_anomalies = tiny_count + oob_count + empty_labels_count + overlapping_count
-    if total_anomalies > 0:
-        quality_score -= min(total_anomalies * 1.0, 10.0)
+    anomaly_count = (
+        analysis.tiny_count
+        + analysis.out_of_bounds_count
+        + analysis.empty_annotation_count
+        + analysis.overlapping_count
+    )
+    quality_score -= min(float(anomaly_count), 10.0)
     quality_score = max(0.0, min(100.0, round(quality_score, 1)))
 
-    auto_fix_plan = []
-    if total_dups > 0:
-        auto_fix_plan.append(
+    auto_fix_plan = _auto_fix_plan(
+        analysis=analysis,
+        total_duplicates=total_duplicates,
+        leaked_images=leaked_images,
+        class_balance_gini=class_balance_gini,
+    )
+    dataset_card = _dataset_card(
+        inventory=inventory,
+        analysis=analysis,
+        classes=classes,
+        leaked_images=leaked_images,
+        total_duplicates=total_duplicates,
+        quality_score=quality_score,
+        class_balance_gini=class_balance_gini,
+        auto_fix_plan=auto_fix_plan,
+    )
+    return quality_score, auto_fix_plan, dataset_card, class_balance_gini
+
+
+def _auto_fix_plan(
+    *,
+    analysis: InventoryAnalysis,
+    total_duplicates: int,
+    leaked_images: list[LeakageIssue],
+    class_balance_gini: float,
+) -> list[AutoFixItem]:
+    plan: list[AutoFixItem] = []
+    if total_duplicates:
+        plan.append(
             AutoFixItem(
                 action="Remove duplicate images",
                 description=(
-                    f"Identified {total_dups} duplicate or near-duplicate images across splits."
+                    f"Identified {total_duplicates} duplicate or near-duplicate images "
+                    "across splits."
                 ),
                 estimated_impact=(
                     "Reduces training overfitting and evaluation bias, improving generalization."
                 ),
             )
         )
-    if leaked_issues:
-        auto_fix_plan.append(
+    if leaked_images:
+        plan.append(
             AutoFixItem(
                 action="Remove train-val/test leakage",
-                description=f"Found {len(leaked_issues)} images leaked across different splits.",
+                description=f"Found {len(leaked_images)} images leaked across different splits.",
                 estimated_impact=(
                     "Eliminates evaluation metric inflation, providing honest test performance."
                 ),
             )
         )
-    if oob_count > 0:
-        auto_fix_plan.append(
+    if analysis.out_of_bounds_count:
+        plan.append(
             AutoFixItem(
                 action="Clip out-of-bounds bounding boxes",
-                description=f"Found {oob_count} bounding boxes escaping image limits.",
+                description=(
+                    f"Found {analysis.out_of_bounds_count} bounding boxes escaping image limits."
+                ),
                 estimated_impact=(
                     "Stabilizes YOLO regression loss and prevents infinite gradient issues "
                     "during training."
                 ),
             )
         )
-    if tiny_count > 0:
-        auto_fix_plan.append(
+    if analysis.tiny_count:
+        plan.append(
             AutoFixItem(
                 action="Filter tiny bounding boxes",
                 description=(
-                    f"Identified {tiny_count} bounding boxes smaller than 0.05% of the image size."
+                    f"Identified {analysis.tiny_count} bounding boxes smaller than 0.05% "
+                    "of the image size."
                 ),
                 estimated_impact=(
                     "Removes potential background noise or labelling mistakes, "
@@ -413,19 +327,19 @@ def _compute_quality_intelligence(
                 ),
             )
         )
-    if overlapping_count > 0:
-        auto_fix_plan.append(
+    if analysis.overlapping_count:
+        plan.append(
             AutoFixItem(
                 action="Merge overlapping bounding boxes",
                 description=(
-                    f"Found {overlapping_count} duplicate bounding boxes with IoU > 90% "
+                    f"Found {analysis.overlapping_count} duplicate bounding boxes with IoU > 90% "
                     "in the same class."
                 ),
                 estimated_impact="Reduces model confusion and multi-detection penalties.",
             )
         )
     if class_balance_gini > 0.4:
-        auto_fix_plan.append(
+        plan.append(
             AutoFixItem(
                 action="Rebalance class distribution",
                 description=(
@@ -437,328 +351,51 @@ def _compute_quality_intelligence(
                 ),
             )
         )
+    return plan
 
-    dataset_card = f"""# Dataset Card: {path.name}
+
+def _dataset_card(
+    *,
+    inventory: DatasetInventory,
+    analysis: InventoryAnalysis,
+    classes: list[ClassStat],
+    leaked_images: list[LeakageIssue],
+    total_duplicates: int,
+    quality_score: float,
+    class_balance_gini: float,
+    auto_fix_plan: list[AutoFixItem],
+) -> str:
+    card = f"""# Dataset Card: {inventory.root.name}
 
 ## Dataset Summary
-- **Format:** {fmt.upper()}
-- **Total Images:** {total_images}
-- **Total Annotations:** {total_annotations}
+- **Format:** {inventory.format.upper()}
+- **Total Images:** {len(inventory.images)}
+- **Total Annotations:** {len(inventory.annotations)}
 - **Number of Classes:** {len(classes)}
 
 ## Quality Assessment
 - **Quality Score:** {quality_score}/100
 - **Class Balance (Gini):** {class_balance_gini:.3f} (0=balanced, 1=imbalanced)
-- **Leaked Images:** {len(leaked_issues)}
-- **Duplicates Found:** {total_dups} in {len(duplicate_groups)} groups
+- **Leaked Images:** {len(leaked_images)}
+- **Duplicates Found:** {total_duplicates} in {len(analysis.duplicate_groups)} groups
 
 ## Label Health & Anomalies
-- **Tiny Boxes:** {tiny_count}
-- **Out of Bounds Boxes:** {oob_count}
-- **Empty Annotation Files:** {empty_labels_count}
-- **Suspiciously Overlapping Annotations:** {overlapping_count}
+- **Tiny Boxes:** {analysis.tiny_count}
+- **Out of Bounds Boxes:** {analysis.out_of_bounds_count}
+- **Empty Annotation Files:** {analysis.empty_annotation_count}
+- **Suspiciously Overlapping Annotations:** {analysis.overlapping_count}
 
 ## Recommendations & Auto-Fix Plan
 """
-    if auto_fix_plan:
-        for idx, item in enumerate(auto_fix_plan, 1):
-            detail_line = (
-                f"{idx}. **{item.action}**\n"
-                f"   - *Detail:* {item.description}\n"
-                f"   - *Impact:* {item.estimated_impact}\n"
-            )
-            dataset_card += detail_line
-    else:
-        dataset_card += "No auto-fix actions recommended. Dataset quality is excellent!"
-
-    return quality_score, auto_fix_plan, dataset_card, class_balance_gini
-
-
-def _calculate_coco_iou(
-    box1: tuple[float, float, float, float], box2: tuple[float, float, float, float]
-) -> float:
-    x1, y1, w1, h1 = box1
-    x2, y2, w2, h2 = box2
-    inter_x1 = max(x1, x2)
-    inter_y1 = max(y1, y2)
-    inter_x2 = min(x1 + w1, x2 + w2)
-    inter_y2 = min(y1 + h1, y2 + h2)
-    if inter_x1 < inter_x2 and inter_y1 < inter_y2:
-        inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
-    else:
-        inter_area = 0.0
-    area1 = w1 * h1
-    area2 = w2 * h2
-    union_area = area1 + area2 - inter_area
-    if union_area <= 0.0:
-        return 0.0
-    return inter_area / union_area
-
-
-def _inspect_coco(
-    path: Path, inp: DatasetInspectInput, fmt: str, t0: float
-) -> DatasetInspectOutput:
-    warnings: list[str] = []
-    json_files = find_coco_jsons(path)
-    if not json_files:
-        raise FovuxDatasetEmptyError(str(path))
-
-    class_counts: dict[int, int] = {}
-    id_to_name: dict[int, str] = {}
-    total_images = 0
-    total_annotations = 0
-    splits_detected: dict[str, int] = {}
-    bbox_areas: list[float] = []
-    bbox_per_img: dict[int, int] = {}
-    sample_paths: list[Path] = []
-
-    import imagehash
-    from PIL import Image
-
-    img_hashes: dict[Path, Any] = {}
-    unreadable_count = 0
-    tiny_count = 0
-    oob_count = 0
-    empty_labels_count = 0
-    overlapping_count = 0
-
-    for jf in json_files:
-        try:
-            data = read_coco_json(jf)
-        except Exception as e:
-            warnings.append(f"Cannot parse {jf.name}: {e}")
-            continue
-
-        for cat in data.get("categories", []):
-            id_to_name[cat["id"]] = cat["name"]
-
-        imgs = data.get("images", [])
-        total_images += len(imgs)
-        split_name = jf.stem.split("_")[-1] if "_" in jf.stem else jf.stem
-        splits_detected[split_name] = len(imgs)
-
-        images_dir = path / "images"
-        if not images_dir.is_dir():
-            images_dir = path
-
-        for img_info in imgs[: inp.max_images_analyzed]:
-            file_name = img_info.get("file_name", "")
-            img_path = images_dir / file_name
-            if img_path.exists():
-                if len(sample_paths) < 10:
-                    sample_paths.append(img_path)
-                try:
-                    safe_img_path = ensure_within_root(img_path, path)
-                    validate_file_size(safe_img_path)
-                    with Image.open(safe_img_path) as im:
-                        h = imagehash.phash(im)
-                        img_hashes[img_path] = h
-                except Exception:
-                    unreadable_count += 1
-                    warnings.append(f"Cannot read image: {file_name}")
-
-        img_id_to_size = {img.get("id"): (img.get("width"), img.get("height")) for img in imgs}
-        ann_list = data.get("annotations", [])
-        total_annotations += len(ann_list)
-
-        anns_by_img: dict[int, list[dict[str, Any]]] = {}
-        for ann in ann_list:
-            img_id = ann.get("image_id")
-            if img_id is not None:
-                anns_by_img.setdefault(img_id, []).append(ann)
-
-        for img in imgs:
-            img_id = img.get("id")
-            if img_id not in anns_by_img or not anns_by_img[img_id]:
-                empty_labels_count += 1
-
-        for img_id, img_anns in anns_by_img.items():
-            img_size = img_id_to_size.get(img_id, (None, None))
-            img_w, img_h = img_size
-            bbox_per_img[img_id] = len(img_anns)
-
-            for i, ann1 in enumerate(img_anns):
-                cat_id1 = ann1.get("category_id", 0)
-                class_counts[cat_id1] = class_counts.get(cat_id1, 0) + 1
-                bbox1 = ann1.get("bbox", [0, 0, 1, 1])
-                if len(bbox1) >= 4:
-                    x1, y1, w1, h1 = (
-                        float(bbox1[0]),
-                        float(bbox1[1]),
-                        float(bbox1[2]),
-                        float(bbox1[3]),
-                    )
-                    area1 = w1 * h1
-                    bbox_areas.append(area1)
-
-                    if img_w and img_h:
-                        if x1 < 0 or y1 < 0 or x1 + w1 > img_w or y1 + h1 > img_h:
-                            oob_count += 1
-                        if (area1 / (img_w * img_h)) < 0.0005:
-                            tiny_count += 1
-                    else:
-                        if x1 < 0 or y1 < 0:
-                            oob_count += 1
-                        if area1 < 100:
-                            tiny_count += 1
-
-                    for j in range(i + 1, len(img_anns)):
-                        ann2 = img_anns[j]
-                        cat_id2 = ann2.get("category_id", 0)
-                        if cat_id1 == cat_id2:
-                            bbox2 = ann2.get("bbox", [0, 0, 1, 1])
-                            if len(bbox2) >= 4:
-                                x2, y2, w2, h2 = (
-                                    float(bbox2[0]),
-                                    float(bbox2[1]),
-                                    float(bbox2[2]),
-                                    float(bbox2[3]),
-                                )
-                                iou = _calculate_coco_iou((x1, y1, w1, h1), (x2, y2, w2, h2))
-                                if iou > 0.90:
-                                    overlapping_count += 1
-
-    if total_images == 0:
-        raise FovuxDatasetEmptyError(str(path))
-
-    class_ids = sorted(set(class_counts) | set(id_to_name))
-    total_anns = sum(class_counts.values()) or 1
-    classes = [
-        ClassStat(
-            name=id_to_name.get(cid, f"class_{cid}"),
-            count=class_counts.get(cid, 0),
-            pct=round(class_counts.get(cid, 0) / total_anns * 100, 2),
+    if not auto_fix_plan:
+        return card + "No auto-fix actions recommended. Dataset quality is excellent!"
+    for index, item in enumerate(auto_fix_plan, 1):
+        card += (
+            f"{index}. **{item.action}**\n"
+            f"   - *Detail:* {item.description}\n"
+            f"   - *Impact:* {item.estimated_impact}\n"
         )
-        for cid in class_ids
-    ]
-
-    duplicate_groups: list[list[Path]] = []
-    used_indices = set()
-    hash_list = list(img_hashes.items())
-    for i, (p1, h1) in enumerate(hash_list):
-        if i in used_indices:
-            continue
-        group = [p1]
-        for j in range(i + 1, len(hash_list)):
-            if j in used_indices:
-                continue
-            p2, h2 = hash_list[j]
-            dist = int(h1 - h2)
-            if dist <= 5:
-                group.append(p2)
-                used_indices.add(j)
-        if len(group) > 1:
-            used_indices.add(i)
-            duplicate_groups.append(group)
-
-    leaked_issues = []
-    from fovux.tools.dataset_find_duplicates import _split_key
-
-    for group in duplicate_groups:
-        splits: dict[str, list[Path]] = {}
-        for p in group:
-            sp = _split_key(path, p)
-            splits.setdefault(sp, []).append(p)
-        if len(splits) > 1:
-            train_imgs = splits.get("train", [])
-            val_imgs = splits.get("val", [])
-            test_imgs = splits.get("test", [])
-            for t_img in train_imgs or [group[0]]:
-                for v_img in val_imgs:
-                    leaked_issues.append(
-                        LeakageIssue(
-                            train_image=str(t_img.relative_to(path)),
-                            val_image=str(v_img.relative_to(path)),
-                            reason="Train image is duplicated in validation set.",
-                        )
-                    )
-                for ts_img in test_imgs:
-                    leaked_issues.append(
-                        LeakageIssue(
-                            train_image=str(t_img.relative_to(path)),
-                            test_image=str(ts_img.relative_to(path)),
-                            reason="Train image is duplicated in test set.",
-                        )
-                    )
-
-    quality_score, auto_fix_plan, dataset_card, class_balance_gini = _compute_quality_intelligence(
-        path=path,
-        fmt=fmt,
-        total_images=total_images,
-        total_annotations=total_annotations,
-        classes=classes,
-        class_ids=class_ids,
-        class_counts=class_counts,
-        duplicate_groups=duplicate_groups,
-        leaked_issues=leaked_issues,
-        unreadable_count=unreadable_count,
-        tiny_count=tiny_count,
-        oob_count=oob_count,
-        empty_labels_count=empty_labels_count,
-        overlapping_count=overlapping_count,
-    )
-
-    bal, bac = bucket_distribution(bbox_areas)
-    bcl, bcc = bucket_distribution([float(v) for v in bbox_per_img.values()])
-
-    return DatasetInspectOutput(
-        format_detected=fmt,
-        total_images=total_images,
-        total_annotations=total_annotations,
-        num_classes=len(class_ids),
-        classes=classes,
-        image_size_distribution=SizeHistogram(buckets=["N/A"], counts=[total_images]),
-        bbox_size_distribution=SizeHistogram(buckets=bal or ["N/A"], counts=bac or [0]),
-        bbox_size_buckets={},
-        bbox_count_per_image=Histogram(buckets=bcl or ["0"], counts=bcc or [0]),
-        orphan_images=0,
-        missing_label_images=[],
-        orphan_annotations=0,
-        class_balance_gini=class_balance_gini,
-        splits_detected=splits_detected,
-        warnings=warnings,
-        sample_paths=sample_paths,
-        analysis_duration_seconds=round(time.perf_counter() - t0, 3),
-        quality_score=quality_score,
-        label_anomalies=LabelAnomalySummary(
-            tiny_boxes=tiny_count,
-            out_of_bounds=oob_count,
-            empty_labels=empty_labels_count,
-            suspiciously_overlapping=overlapping_count,
-        ),
-        duplicate_groups_count=len(duplicate_groups),
-        total_duplicates_found=sum(len(g) for g in duplicate_groups),
-        leaked_images=leaked_issues,
-        auto_fix_plan=auto_fix_plan,
-        dataset_card=dataset_card,
-    )
-
-
-def _discover_yolo_images(dataset_path: Path) -> list[Path]:
-    images_root = dataset_path / "images"
-    if not images_root.is_dir():
-        return []
-    return sorted(path for path in images_root.rglob("*") if path.suffix.lower() in _IMAGE_EXTS)
-
-
-def _label_path_for_image(dataset_path: Path, image_path: Path) -> Path:
-    images_root = dataset_path / "images"
-    labels_root = dataset_path / "labels"
-    try:
-        relative = image_path.relative_to(images_root)
-    except ValueError:
-        relative = Path(image_path.name)
-    return labels_root / relative.with_suffix(".txt")
-
-
-def _matching_yolo_image_exists(dataset_path: Path, label_path: Path) -> bool:
-    labels_root = dataset_path / "labels"
-    images_root = dataset_path / "images"
-    try:
-        relative = label_path.relative_to(labels_root).with_suffix("")
-    except ValueError:
-        relative = Path(label_path.stem)
-    return any((images_root / relative).with_suffix(ext).exists() for ext in _IMAGE_EXTS)
+    return card
 
 
 def _normalized_bbox_size_buckets(areas: list[float]) -> dict[str, int]:
