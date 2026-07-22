@@ -20,8 +20,8 @@ class RunsSearchInput(BaseModel):
     """Input payload for run search filters."""
 
     query: str | None = None
-    tags: list[str] = Field(default_factory=list)
-    status: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list, json_schema_extra={"default": []})
+    status: list[str] = Field(default_factory=list, json_schema_extra={"default": []})
     min_map50: float | None = None
     limit: int = 50
 

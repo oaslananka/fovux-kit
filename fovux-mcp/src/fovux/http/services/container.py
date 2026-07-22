@@ -28,7 +28,10 @@ class HttpServices:
 
 
 def build_default_services() -> HttpServices:
-    """Build production services with their default local dependencies."""
+    """Build production services after completing the shared tool registry bootstrap."""
+    from fovux import server as _server
+
+    del _server
     return HttpServices(
         health=HealthService(),
         lineage=LineageService(),

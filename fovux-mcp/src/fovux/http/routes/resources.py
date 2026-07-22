@@ -23,13 +23,13 @@ def _raise_http(error: ServiceError) -> Never:
 
 @router.get("/datasets")
 async def list_datasets(request: Request) -> JSONResponse:
-    """List registered datasets."""
+    """List all registered datasets in the ledger."""
     return JSONResponse(_services(request).lineage.list_datasets())
 
 
 @router.get("/datasets/{fingerprint}")
 async def get_dataset(fingerprint: str, request: Request) -> JSONResponse:
-    """Fetch one dataset by fingerprint."""
+    """Fetch single dataset record by fingerprint."""
     try:
         return JSONResponse(_services(request).lineage.get_dataset(fingerprint))
     except ServiceError as error:
@@ -38,5 +38,5 @@ async def get_dataset(fingerprint: str, request: Request) -> JSONResponse:
 
 @router.get("/exports")
 async def list_exports(request: Request) -> JSONResponse:
-    """List recorded model exports."""
+    """List all model exports recorded in the ledger."""
     return JSONResponse(_services(request).lineage.list_exports())

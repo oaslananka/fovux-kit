@@ -21,7 +21,7 @@ class CreateOperationInput(BaseModel):
     """Input parameters to create a background operation."""
 
     tool: str
-    arguments: dict[str, Any] = Field(default_factory=dict)
+    arguments: dict[str, Any] = Field(default_factory=dict, json_schema_extra={"default": {}})
     idempotency_key: str | None = None
     challenge_id: str | None = None
 
@@ -43,7 +43,7 @@ async def create_operation_route(
     request: Request,
     body: CreateOperationInput,
 ) -> JSONResponse:
-    """Create a persistent background operation with optional idempotency."""
+    """Create a persistent background operation with an optional idempotency key."""
     services = _services(request)
     raw_token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
     scopes = resolve_session_scopes(raw_token) if is_known_session_token(raw_token) else ALL_SCOPES
@@ -111,7 +111,7 @@ async def get_operation_result_route(id: str, request: Request) -> JSONResponse:
 
 @router.get("/events")
 async def sse_events_route(request: Request) -> StreamingResponse:
-    """Stream operation events with resume support."""
+    """Server-Sent Events (SSE) stream of all operations events with resume support."""
     services = _services(request)
     raw_last_id = request.headers.get("Last-Event-ID") or request.query_params.get("last_event_id")
     try:

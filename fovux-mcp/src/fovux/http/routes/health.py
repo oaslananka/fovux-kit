@@ -23,13 +23,13 @@ def _raise_http(error: ServiceError) -> Never:
 
 @router.get("/health")
 async def health(request: Request) -> dict[str, str]:
-    """Return the stable local service health payload."""
+    """Health check endpoint."""
     return _services(request).health.health()
 
 
 @router.get("/metrics")
 async def prometheus_metrics(request: Request) -> PlainTextResponse:
-    """Expose a Prometheus-compatible metrics snapshot when enabled."""
+    """Expose a small Prometheus-compatible metrics snapshot when enabled."""
     try:
         body = _services(request).health.prometheus_metrics(
             enabled=bool(getattr(request.app.state, "metrics_enabled", False))

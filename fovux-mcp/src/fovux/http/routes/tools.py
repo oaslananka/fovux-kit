@@ -30,7 +30,11 @@ async def request_challenge(
     name: str,
     payload: dict[str, object] = _EMPTY_PAYLOAD,
 ) -> JSONResponse:
-    """Request an exact-payload confirmation challenge for a risky tool."""
+    """Request a confirmation challenge for a risky tool call.
+
+    Returns a challenge_id that must be included when calling the tool
+    via POST /tools/{name}. Read-only tools do not require challenges.
+    """
     services = _services(request)
     try:
         outcome = services.challenges.request(services.tool_runtime, name, payload)
@@ -45,7 +49,11 @@ async def proxy_tool(
     name: str,
     payload: dict[str, object] = _EMPTY_PAYLOAD,
 ) -> JSONResponse:
-    """Invoke a policy-governed local Fovux tool."""
+    """Invoke a local Fovux tool through the Studio local API.
+
+    Tools that require confirmation must include a valid challenge_id
+    obtained from POST /tools/{name}/challenge.
+    """
     services = _services(request)
     origin = request.headers.get("origin")
     if origin is None and request.client is not None:

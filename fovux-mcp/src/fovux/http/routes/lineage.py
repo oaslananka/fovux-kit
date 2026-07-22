@@ -32,7 +32,7 @@ async def get_run_lineage(run_id: str, request: Request) -> JSONResponse:
 
 @router.get("/runs/{run_id}/events")
 async def get_run_events(run_id: str, request: Request) -> JSONResponse:
-    """Fetch lifecycle and audit events for one run."""
+    """Fetch all lifecycle and audit events for a single run."""
     try:
         return JSONResponse(_services(request).lineage.run_events(run_id))
     except ServiceError as error:

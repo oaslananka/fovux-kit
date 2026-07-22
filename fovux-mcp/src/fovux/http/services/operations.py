@@ -28,10 +28,8 @@ ToolInvoker = Callable[[str, Mapping[str, object]], dict[str, Any]]
 
 def default_operation_invoker(name: str, payload: Mapping[str, object]) -> dict[str, Any]:
     """Resolve the tool invoker lazily for runtime overrides and tests."""
-    from fovux import server as _server
     from fovux.http import tool_proxy
 
-    del _server
     return tool_proxy.invoke_tool(name, payload)
 
 
