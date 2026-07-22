@@ -6,8 +6,8 @@ published package versions, registry/channel status, release evidence, and miles
 <!-- release-baseline:start -->
 | Component | Published version | Channel status | Evidence |
 | --- | --- | --- | --- |
-| Python package `fovux-mcp` | `1.6.1` | Published on PyPI | `fovux_mcp-1.6.1-py3-none-any.whl`, `fovux_mcp-1.6.1.tar.gz`, `fovux-mcp-sbom.spdx.json`, `fovux-mcp.sha256`, `registry-verification-python.json` |
-| npm wrapper `fovux-mcp` | `1.6.1` | Published on npm | `npm registry metadata`, `wrapper CLI smoke result`, `fovux-mcp-npm-v1.6.1 source release`, `registry-verification-npm.json` |
+| Python package `fovux-mcp` | `1.6.2` | Published on PyPI | `fovux_mcp-1.6.2-py3-none-any.whl`, `fovux_mcp-1.6.2.tar.gz`, `fovux-mcp-sbom.spdx.json`, `fovux-mcp.sha256`, `registry-verification-python.json` |
+| npm wrapper `fovux-mcp` | `1.6.2` | Published on npm | `npm registry metadata`, `wrapper CLI smoke result`, `fovux-mcp-npm-v1.6.2 source release`, `registry-verification-npm.json` |
 | VS Code extension `oaslananka.fovuxstudiokit` | `1.5.1` | Published on VS Marketplace and Open VSX | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256`, `registry-verification-studio.json` |
 <!-- release-baseline:end -->
 
