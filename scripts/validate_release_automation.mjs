@@ -152,6 +152,11 @@ if (!hasMcpLinkedVersions) {
   fail("fovux-mcp and fovux-mcp-npm must use release-please linked-versions");
 }
 
+const mcpExcludePaths = config.packages?.["fovux-mcp"]?.["exclude-paths"] ?? [];
+if (!mcpExcludePaths.includes("fovux-mcp/tests")) {
+  fail("fovux-mcp release config must exclude test-only commits");
+}
+
 const mcpExtraFiles = config.packages?.["fovux-mcp"]?.["extra-files"] ?? [];
 for (const requiredPath of [
   "src/fovux/__init__.py",
@@ -165,6 +170,41 @@ for (const requiredPath of [
     )
   ) {
     fail(`fovux-mcp extra-files must update ${requiredPath}`);
+  }
+}
+
+if (!workflowNames.includes("ci.yml")) {
+  fail("CI workflow is required");
+} else {
+  const ciWorkflow = await readFile(join(workflowsPath, "ci.yml"), "utf8");
+  const qualityStart = ciWorkflow.indexOf("  quality:\n");
+  const qualityEnd = ciWorkflow.indexOf("\n  compatibility:\n", qualityStart);
+  const qualityJob = ciWorkflow.slice(qualityStart, qualityEnd);
+  const sonarStart = qualityJob.indexOf(
+    "      - name: Analyze coverage and new code with SonarQube Cloud\n",
+  );
+  const sonarEnd = qualityJob.indexOf("\n      - name:", sonarStart + 1);
+  const sonarStep = qualityJob.slice(sonarStart, sonarEnd);
+  const confirmStart = qualityJob.indexOf(
+    "      - name: Confirm deterministic quality gate passed\n",
+  );
+  const confirmStep = qualityJob.slice(confirmStart);
+
+  for (const required of [
+    "SONAR_REQUIRED: >-",
+    "github.event_name == 'push'",
+    "github.event_name == 'merge_group'",
+    "github.event_name == 'pull_request'",
+  ]) {
+    if (!qualityJob.includes(required)) {
+      fail(`CI Sonar event policy must reference ${required}`);
+    }
+  }
+  if (!sonarStep.includes("env.SONAR_REQUIRED == 'true'")) {
+    fail("Sonar analysis must use the centralized SONAR_REQUIRED event policy");
+  }
+  if (confirmStep.includes("github.event_name != 'pull_request'")) {
+    fail("quality confirmation must not require Sonar for synthetic workflow dispatches");
   }
 }
 

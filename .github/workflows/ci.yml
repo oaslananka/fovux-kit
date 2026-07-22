@@ -43,6 +43,14 @@ jobs:
       )
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      SONAR_REQUIRED: >-
+        ${{ github.event_name == 'push' ||
+            github.event_name == 'merge_group' ||
+            (
+              github.event_name == 'pull_request' &&
+              github.event.pull_request.head.repo.full_name == github.repository
+            ) }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -117,10 +125,7 @@ jobs:
         if: >-
           !cancelled() &&
           steps.coverage-reports.outcome == 'success' &&
-          (
-            github.event_name != 'pull_request' ||
-            github.event.pull_request.head.repo.full_name == github.repository
-          )
+          env.SONAR_REQUIRED == 'true'
         continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f
         env:
@@ -187,9 +192,6 @@ jobs:
           QUALITY_OUTCOME: ${{ steps.quality-gate.outcome }}
           COVERAGE_OUTCOME: ${{ steps.coverage-reports.outcome }}
           SONAR_OUTCOME: ${{ steps.sonar-scan.outcome }}
-          SONAR_REQUIRED: >-
-            ${{ github.event_name != 'pull_request' ||
-                github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           set -euo pipefail
           failed=0
