@@ -1,6 +1,6 @@
 # HTTP Service Boundary Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace the cyclic 1,500-line HTTP route module with domain route adapters and independently testable services while preserving every existing local API and security behavior.
 
@@ -31,13 +31,13 @@
 - Produces: `redirect_thread_output(stream: TextIO) -> ContextManager[None]`
 - Enforces: no `fovux.http.app` imports below routes/services and source budgets.
 
-- [ ] **Step 1: Write failing architecture and thread-redirection tests**
+- [x] **Step 1: Write failing architecture and thread-redirection tests**
 
 Add tests that scan `src/fovux/http/routes/**/*.py` and `src/fovux/http/services/**/*.py` for imports
 from `fovux.http.app`, enforce the global budgets, and verify a `StringIO` receives output only inside
 `redirect_thread_output()`.
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run:
 
@@ -48,13 +48,13 @@ PYTHONPATH=src python -m pytest -q tests/unit/test_http_service_architecture.py
 Expected: FAIL because `thread_stream.py`, route package, and service package do not exist and the
 current monolithic route file exceeds the budget.
 
-- [ ] **Step 3: Move thread-local stream infrastructure**
+- [x] **Step 3: Move thread-local stream infrastructure**
 
 Implement `ThreadLocalStream`, `_THREAD_LOCAL`, `install_thread_local_streams()`, and
 `redirect_thread_output()` in `thread_stream.py`. Replace the definitions in `app.py` with an import
 and one `install_thread_local_streams()` call. Do not change fallback writes or flush behavior.
 
-- [ ] **Step 4: Run focused stream and HTTP baseline tests**
+- [x] **Step 4: Run focused stream and HTTP baseline tests**
 
 ```bash
 PYTHONPATH=src python -m pytest -q \
@@ -64,7 +64,7 @@ PYTHONPATH=src python -m pytest -q \
 
 Expected: PASS for thread redirection; architecture budget tests remain RED until later tasks.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add fovux-mcp/src/fovux/http/thread_stream.py fovux-mcp/src/fovux/http/app.py \
@@ -88,13 +88,13 @@ git commit -m "refactor(http): isolate thread-local output capture"
   `resolve_run_dir(run_id)`, `metric_event_stream(...)`, and metric helper methods.
 - Produces: `HttpServices.runs: RunService`.
 
-- [ ] **Step 1: Write service-level tests with a fake registry**
+- [x] **Step 1: Write service-level tests with a fake registry**
 
 Cover status-file precedence, malformed tag JSON fallback, query/status/tag/min-mAP filtering, missing
 run errors, initial metric snapshots, appended metric deltas, and terminal SSE completion without a
 FastAPI client.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```bash
 PYTHONPATH=src python -m pytest -q tests/unit/http/services/test_run_service.py
@@ -102,19 +102,19 @@ PYTHONPATH=src python -m pytest -q tests/unit/http/services/test_run_service.py
 
 Expected: import failure because `RunService` does not exist.
 
-- [ ] **Step 3: Implement RunService and typed ServiceError**
+- [x] **Step 3: Implement RunService and typed ServiceError**
 
 Move run serialization and metric-stream orchestration from the monolith. Inject a registry provider
 and checkpoint readers with production defaults. Keep JSON field names and stream strings byte-for-byte
 compatible.
 
-- [ ] **Step 4: Add thin run routes**
+- [x] **Step 4: Add thin run routes**
 
 Each handler obtains `request.app.state.http_services.runs`, calls one service method, and maps
 `ServiceError` to `HTTPException`. Streaming handlers only create `StreamingResponse` with the existing
 headers.
 
-- [ ] **Step 5: Verify service and existing run tests**
+- [x] **Step 5: Verify service and existing run tests**
 
 ```bash
 PYTHONPATH=src python -m pytest -q \
@@ -124,7 +124,7 @@ PYTHONPATH=src python -m pytest -q \
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add fovux-mcp/src/fovux/http/services fovux-mcp/src/fovux/http/routes/runs.py \
@@ -145,13 +145,13 @@ git commit -m "refactor(http): extract run service"
 - Produces: `ToolInvocationService.invoke(context, tool_name, payload) -> ToolOutcome`.
 - Consumes: existing `policy_for_tool`, `payload_hash`, `invoke_tool`, challenge verification, and audit logger.
 
-- [ ] **Step 1: Write failing service tests**
+- [x] **Step 1: Write failing service tests**
 
 Cover read-only challenge rejection, risky challenge creation/effect summary, exact argument binding,
 completed timeout-result replay, in-flight operation 202 outcome, semaphore rejection, validation/domain
 error mapping, successful invocation, and audit metadata.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```bash
 PYTHONPATH=src python -m pytest -q tests/unit/http/services/test_tool_services.py
@@ -159,18 +159,18 @@ PYTHONPATH=src python -m pytest -q tests/unit/http/services/test_tool_services.p
 
 Expected: import failure because the services do not exist.
 
-- [ ] **Step 3: Implement service state and outcomes**
+- [x] **Step 3: Implement service state and outcomes**
 
 Move helper functions and the 240-line invocation orchestration into focused service methods and
 private helpers. Service code must not import FastAPI or Starlette. Preserve operation IDs, result TTL,
 maximum retained results, timeout continuation, deferred semaphore release, and audit field values.
 
-- [ ] **Step 4: Implement thin tool routes**
+- [x] **Step 4: Implement thin tool routes**
 
 Map `ChallengeOutcome` and `ToolOutcome` to the existing response codes/content. Convert typed service
 errors to the exact existing `HTTPException` details.
 
-- [ ] **Step 5: Verify all challenge/tool tests**
+- [x] **Step 5: Verify all challenge/tool tests**
 
 ```bash
 PYTHONPATH=src python -m pytest -q \
@@ -182,7 +182,7 @@ PYTHONPATH=src python -m pytest -q \
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add fovux-mcp/src/fovux/http/services/tools.py fovux-mcp/src/fovux/http/routes/tools.py \
@@ -203,13 +203,13 @@ git commit -m "refactor(http): extract tool services"
   `run_in_background`.
 - Consumes: registry provider, tool policy/scope/check/invoker dependencies, `redirect_thread_output`.
 
-- [ ] **Step 1: Write failing service tests**
+- [x] **Step 1: Write failing service tests**
 
 Use a fake registry and invoker to cover idempotent create, pending-to-running-to-success persistence,
 result persistence, failure persistence, cancellation, listener notification, event replay, and scoped
 operation-log output without `TestClient`.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```bash
 PYTHONPATH=src python -m pytest -q tests/unit/http/services/test_operation_service.py
@@ -217,18 +217,18 @@ PYTHONPATH=src python -m pytest -q tests/unit/http/services/test_operation_servi
 
 Expected: import failure because `OperationService` does not exist.
 
-- [ ] **Step 3: Implement OperationService**
+- [x] **Step 3: Implement OperationService**
 
 Move background operation logic and serializers. Inject registry/invoker/train-stop dependencies. Use
 `redirect_thread_output()` instead of importing application thread state. Keep registry event ordering,
 status values, log file locations, cancellation behavior, and listener payloads unchanged.
 
-- [ ] **Step 4: Add operation routes**
+- [x] **Step 4: Add operation routes**
 
 Keep request parsing and auth-scope extraction in the route adapter. Delegate policy/challenge checks
 and orchestration to the service. Keep existing response codes and SSE headers.
 
-- [ ] **Step 5: Verify operation routes and services**
+- [x] **Step 5: Verify operation routes and services**
 
 ```bash
 PYTHONPATH=src python -m pytest -q \
@@ -238,7 +238,7 @@ PYTHONPATH=src python -m pytest -q \
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add fovux-mcp/src/fovux/http/services/operations.py \
@@ -262,12 +262,12 @@ git commit -m "refactor(http): extract operation service"
 - Produces: `LineageService.run_lineage`, `run_events`, `list_datasets`, `get_dataset`, `list_exports`.
 - Produces: `HealthService.health()` and `prometheus_metrics(enabled)`.
 
-- [ ] **Step 1: Write failing service tests**
+- [x] **Step 1: Write failing service tests**
 
 Cover missing records, JSON decoding fallbacks, artifact/export/event serialization, dataset lookup,
 export listing, health version payload, disabled metrics, and active/total run metrics.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```bash
 PYTHONPATH=src python -m pytest -q \
@@ -277,12 +277,12 @@ PYTHONPATH=src python -m pytest -q \
 
 Expected: import failure.
 
-- [ ] **Step 3: Implement services and thin routes**
+- [x] **Step 3: Implement services and thin routes**
 
 Move serialization unchanged. `HealthService` raises a typed not-enabled error; route mapping retains
 404. `LineageService` uses an injected registry provider and returns plain mappings/lists.
 
-- [ ] **Step 4: Verify lineage, resource, and health coverage**
+- [x] **Step 4: Verify lineage, resource, and health coverage**
 
 ```bash
 PYTHONPATH=src python -m pytest -q \
@@ -295,7 +295,7 @@ PYTHONPATH=src python -m pytest -q \
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add fovux-mcp/src/fovux/http/services/lineage.py \
@@ -323,12 +323,12 @@ git commit -m "refactor(http): extract lineage and health services"
 - Produces: `build_default_services() -> HttpServices`.
 - Changes: `create_app(*, enable_metrics=False, services: HttpServices | None=None) -> FastAPI`.
 
-- [ ] **Step 1: Add failing composition tests**
+- [x] **Step 1: Add failing composition tests**
 
 Assert injected fake services are stored on app state, all historical OpenAPI paths/methods remain,
 route names are unique, and importing every route/service module never imports `fovux.http.app`.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```bash
 PYTHONPATH=src python -m pytest -q \
@@ -338,17 +338,17 @@ PYTHONPATH=src python -m pytest -q \
 
 Expected: FAIL while the monolith and old composition remain.
 
-- [ ] **Step 3: Assemble routers and service container**
+- [x] **Step 3: Assemble routers and service container**
 
 Include all domain routers once. Store the container and compatibility state aliases on `app.state`.
 Keep middleware order, lifespan, CORS, rate limiter, and non-local bind behavior unchanged.
 
-- [ ] **Step 4: Remove monolith and preserve internal helper exports**
+- [x] **Step 4: Remove monolith and preserve internal helper exports**
 
 Delete `routes.py`. Re-export metric and timed-tool helpers from `routes/__init__.py` so existing internal
 unit imports continue to resolve while patch targets are updated to their owning service modules.
 
-- [ ] **Step 5: Run architecture, OpenAPI, HTTP, security, and integration tests**
+- [x] **Step 5: Run architecture, OpenAPI, HTTP, security, and integration tests**
 
 ```bash
 PYTHONPATH=src python -m pytest -q \
@@ -365,7 +365,7 @@ PYTHONPATH=src python -m pytest -q \
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A fovux-mcp/src/fovux/http fovux-mcp/tests/unit/test_http_routes.py \
@@ -383,12 +383,12 @@ git commit -m "refactor(http): compose domain routers and services"
 **Interfaces:**
 - Documents: one-way dependency direction, injection boundary, compatibility guarantees, and extension points.
 
-- [ ] **Step 1: Write ADR and architecture documentation**
+- [x] **Step 1: Write ADR and architecture documentation**
 
 Record context, decision, route/service ownership, thread-stream extraction, error mapping,
 consequences, and validation commands. Link the ADR from the architecture document.
 
-- [ ] **Step 2: Run formatting and strict type checks**
+- [x] **Step 2: Run formatting and strict type checks**
 
 ```bash
 PYTHONPATH=src python -m ruff check src/fovux/http tests/unit/http tests/unit/test_http_service_architecture.py
@@ -398,7 +398,7 @@ PYTHONPATH=src python -m mypy --strict src/fovux/http
 
 Expected: zero findings.
 
-- [ ] **Step 3: Run all repository verification gates**
+- [x] **Step 3: Run all repository verification gates**
 
 ```bash
 PYTHONPATH=src python -m pytest -q --ignore=tests/contract/test_mcp_protocol.py
@@ -412,12 +412,12 @@ git diff --check
 Expected: all commands exit 0. If the raw stdio contract is run on a clean GitHub runner, it must pass
 there before merge.
 
-- [ ] **Step 4: Verify acceptance criteria explicitly**
+- [x] **Step 4: Verify acceptance criteria explicitly**
 
 Confirm the architecture test reports no cycle, all route/service budgets pass, service tests use no
 `TestClient`, OpenAPI is unchanged, HTTP/security tests pass, and the ADR exists.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add fovux-mcp/docs/adr/0010-http-service-boundary.md docs/architecture.md \
