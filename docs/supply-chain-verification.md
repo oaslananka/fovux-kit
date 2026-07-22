@@ -26,3 +26,10 @@ Fovux releases must minimize long-lived registry tokens and publish verifiable a
 3. Verify provenance/attestations from the GitHub release page or GitHub CLI.
 4. Run `scripts/verify_registry_releases.py` for registry package checks.
 5. Use `scripts/verify_signatures.sh` where Sigstore bundle assets are available.
+## Registry verification evidence semantics
+
+Registry evidence uses schema version 2. Step statuses are terminal `passed`, terminal `failed`,
+intentional `skipped`, or non-terminal `retry`. Registry propagation polling can therefore record
+multiple retries before one successful terminal observation without inflating the failure count. The
+summary exposes `passed`, `failed`, `skipped`, and `retries` separately; only an exhausted final
+attempt is counted as failed. Retry limits and delays remain workflow-controlled.
