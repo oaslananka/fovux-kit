@@ -2,6 +2,7 @@
 
 from fovux.http.services.container import HttpServices, build_default_services
 from fovux.http.services.errors import ServiceError
+from fovux.http.services.operations import OperationRuntimeState, OperationService
 from fovux.http.services.runs import RunSearchFilters, RunService
 from fovux.http.services.tool_runtime import ToolRuntimeState
 from fovux.http.services.tools import ChallengeService, ToolInvocationContext, ToolInvocationService
@@ -9,6 +10,8 @@ from fovux.http.services.tools import ChallengeService, ToolInvocationContext, T
 __all__ = [
     "ChallengeService",
     "HttpServices",
+    "OperationRuntimeState",
+    "OperationService",
     "RunSearchFilters",
     "RunService",
     "ServiceError",

@@ -971,10 +971,9 @@ async def _run_operation_in_background(
     await semaphore.acquire()
 
     def target() -> dict[str, Any]:
-        from fovux.http.app import _thread_local
+        from fovux.http.thread_stream import redirect_thread_output
 
-        with open(log_file, "a", encoding="utf-8") as f:
-            _thread_local.stream = f
+        with open(log_file, "a", encoding="utf-8") as f, redirect_thread_output(f):
             try:
                 f.write(
                     f"--- Operation {op_id} started at {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n"
@@ -985,7 +984,6 @@ async def _run_operation_in_background(
             finally:
                 f.write(f"--- Operation {op_id} finished ---\n")
                 f.flush()
-                _thread_local.stream = None
 
     try:
         worker_task = asyncio.create_task(asyncio.to_thread(target))
