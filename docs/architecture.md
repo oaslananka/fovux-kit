@@ -46,6 +46,27 @@ flowchart LR
   Artifacts --> Decorations
 ```
 
+## Studio HTTP Service Boundary
+
+The Studio local API is composed as a one-way dependency chain:
+
+```text
+app.py -> routes/* -> services/* -> core registries and tool policy
+       -> thread_stream.py
+```
+
+`app.py` retains authentication, Origin validation, body limits, rate limiting, lifespan, and CORS.
+Domain route modules map FastAPI requests and responses. Transport-neutral services own run queries,
+metric streams, confirmation challenges, tool invocation, persistent operations, lineage, datasets,
+exports, and health metrics. Neither routes nor services imports the application factory.
+
+`create_app()` accepts an injectable `HttpServices` container, while production uses the default local
+registry and tool dependencies. Existing state attributes remain aliases to service-owned runtime state
+for compatibility with shutdown and security behavior.
+
+The decision, dependency direction, error mapping, and source budgets are recorded in
+[`ADR 0010`](../fovux-mcp/docs/adr/0010-http-service-boundary.md).
+
 ## Data Flow
 
 1. Studio reads `fovux.home` or `FOVUX_HOME` and starts `fovux-mcp serve --http --tcp` on demand. This is the Studio local API/custom bridge; MCP agent clients should use the stdio server unless and until the Streamable HTTP milestone is implemented.

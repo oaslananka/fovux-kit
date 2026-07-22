@@ -47,15 +47,19 @@ def main() -> int:
     for phrase in required_phrases:
         if phrase not in security:
             failures.append(f"Security docs missing policy phrase: {phrase}")
-    routes = _read(MCP_ROOT / "src" / "fovux" / "http" / "routes.py")
+    challenge_service = _read(
+        MCP_ROOT / "src" / "fovux" / "http" / "services" / "tools.py"
+    )
     for phrase in ["_challenge_effects", "input_paths", "output_paths"]:
-        if phrase not in routes:
+        if phrase not in challenge_service:
             failures.append(f"Challenge response missing field: {phrase}")
     for phrase, left, right in [
         (high_impact, "des", "tructive_impact"),
         (irreversible, "ir", "reversible_effects"),
     ]:
-        if phrase not in routes and not (left in routes and right in routes):
+        if phrase not in challenge_service and not (
+            left in challenge_service and right in challenge_service
+        ):
             failures.append(f"Challenge response missing field: {phrase}")
     tests = _read(MCP_ROOT / "tests" / "unit" / "tools" / "test_bundles.py") + _read(
         MCP_ROOT / "tests" / "unit" / "test_http_policy_modes.py"

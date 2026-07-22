@@ -8,14 +8,11 @@ endpoint. Binds to 127.0.0.1 by default.
 from __future__ import annotations
 
 import asyncio
-import sys
-import threading
 import time
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
@@ -37,47 +34,12 @@ from fovux.core.auth import (
 )
 from fovux.core.errors import FovuxError
 from fovux.core.logging import get_logger
-from fovux.http.tool_proxy import (
-    HttpScopeError,
-    HttpToolPolicyError,
-    check_scope,
-    policy_for_tool,
-)
+from fovux.http.routes import build_http_router
+from fovux.http.services.container import HttpServices, build_default_services
+from fovux.http.thread_stream import install_thread_local_streams
+from fovux.http.tool_proxy import check_scope, policy_for_tool
 
-_thread_local = threading.local()
-
-
-class ThreadLocalStream:
-    """Stream wrapper that redirects output based on thread-local context."""
-
-    def __init__(self, original_stream: Any) -> None:  # noqa: ANN401
-        """Initialize the thread local stream wrapper."""
-        self.original_stream = original_stream
-
-    def write(self, data: str) -> int:
-        """Write data to the active thread local stream or default stream."""
-        stream = getattr(_thread_local, "stream", None)
-        if stream is not None:
-            return stream.write(data)  # type: ignore[no-any-return]
-        return self.original_stream.write(data)  # type: ignore[no-any-return]
-
-    def flush(self) -> None:
-        """Flush the active thread local stream or default stream."""
-        stream = getattr(_thread_local, "stream", None)
-        if stream is not None:
-            stream.flush()
-        else:
-            self.original_stream.flush()
-
-    def __getattr__(self, name: str) -> Any:  # noqa: ANN401
-        """Delegate missing attributes to the original stream."""
-        return getattr(self.original_stream, name)
-
-
-if not isinstance(sys.stdout, ThreadLocalStream):
-    sys.stdout = ThreadLocalStream(sys.stdout)
-if not isinstance(sys.stderr, ThreadLocalStream):
-    sys.stderr = ThreadLocalStream(sys.stderr)
+install_thread_local_streams()
 
 
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -86,6 +48,7 @@ _ALLOWED_ORIGIN_SCHEMES = {"https", "vscode-webview"}
 DEFAULT_TOOL_RATE_LIMIT = 100
 TOOL_RATE_LIMITS = {"train_start": 5}
 MAX_TOOL_BODY_BYTES = 1024 * 1024
+_TOOL_PATH_PREFIX = "/tools/"
 _NON_LOCAL_BIND_ALLOWED: bool = False
 
 
@@ -157,7 +120,148 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info("http_app_stop")
 
 
-def create_app(*, enable_metrics: bool = False) -> FastAPI:
+def _configure_app_state(
+    app: FastAPI,
+    *,
+    enable_metrics: bool,
+    services: HttpServices,
+) -> None:
+    """Expose service-owned runtime state through compatibility app aliases."""
+    app.state.metrics_enabled = enable_metrics
+    app.state.tool_body_max_bytes = MAX_TOOL_BODY_BYTES
+    app.state.http_services = services
+    app.state.challenges = services.tool_runtime.challenges
+    app.state.tool_semaphores = services.tool_runtime.semaphores
+    app.state.tool_operations = services.tool_runtime.operations
+    app.state.tool_operation_results = services.tool_runtime.operation_results
+    app.state.active_operation_tasks = services.operation_runtime.active_tasks
+    app.state.sse_listeners = services.operation_runtime.sse_listeners
+
+
+def _unauthorized_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=401,
+        content={"detail": "Missing or invalid bearer token."},
+    )
+
+
+def _forbidden_error_response(error: FovuxError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={
+            "detail": {
+                "code": error.code,
+                "message": error.message,
+                "hint": error.hint,
+            }
+        },
+    )
+
+
+def _resolve_request_scopes(request: Request) -> tuple[set[Scope] | None, JSONResponse | None]:
+    auth_header = request.headers.get("Authorization", "")
+    raw_token = auth_header.removeprefix("Bearer ").strip()
+    if raw_token == request.app.state.auth_token:
+        return ALL_SCOPES, None
+    if is_known_session_token(raw_token):
+        return resolve_session_scopes(raw_token), None
+    return None, _unauthorized_response()
+
+
+def _nonlocal_request_rejection(request: Request, client_ip: str) -> JSONResponse | None:
+    if request.app.state.nonlocal_bind_allowed or client_ip in _LOCAL_HOSTS:
+        return None
+    return JSONResponse(
+        status_code=403,
+        content={
+            "detail": "Non-local requests are not allowed. "
+            "Restart with --allow-nonlocal-bind to accept external connections."
+        },
+    )
+
+
+def _tool_policy_rejection(tool_name: str, scopes: set[Scope]) -> JSONResponse | None:
+    try:
+        policy = policy_for_tool(tool_name)
+        check_scope(policy, scopes)
+    except FovuxError as exc:
+        return _forbidden_error_response(exc)
+    return None
+
+
+def _tool_request_rejection(
+    request: Request,
+    *,
+    client_ip: str,
+    scopes: set[Scope],
+) -> JSONResponse | None:
+    if request.method.upper() != "POST" or not request.url.path.startswith(_TOOL_PATH_PREFIX):
+        return None
+    content_length = _parse_content_length(request.headers.get("content-length"))
+    if content_length is not None and content_length > MAX_TOOL_BODY_BYTES:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": "Tool request body is too large."},
+        )
+    path_rest = request.url.path.removeprefix(_TOOL_PATH_PREFIX)
+    tool_name = path_rest.split("/", maxsplit=1)[0]
+    is_challenge = path_rest.endswith("/challenge")
+    if not is_challenge:
+        rejection = _tool_policy_rejection(tool_name, scopes)
+        if rejection is not None:
+            return rejection
+    limit = (
+        DEFAULT_TOOL_RATE_LIMIT
+        if is_challenge
+        else TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
+    )
+    bucket_kind = "challenge" if is_challenge else "tool"
+    limited, retry_after = request.app.state.rate_limiter.check(
+        f"{client_ip}:{bucket_kind}:{tool_name}",
+        limit=limit,
+    )
+    if not limited:
+        return None
+    return JSONResponse(
+        status_code=429,
+        headers={"Retry-After": str(retry_after)},
+        content={"detail": "Tool request rate limit exceeded."},
+    )
+
+
+def _authenticated_request_rejection(request: Request) -> JSONResponse | None:
+    if request.url.path == "/health":
+        return None
+    scopes, rejection = _resolve_request_scopes(request)
+    if rejection is not None or scopes is None:
+        return rejection
+    client_ip = request.client.host if request.client is not None else "unknown"
+    rejection = _nonlocal_request_rejection(request, client_ip)
+    if rejection is not None:
+        return rejection
+    return _tool_request_rejection(request, client_ip=client_ip, scopes=scopes)
+
+
+async def _auth_and_rate_limit(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    """Apply Origin, authentication, bind, policy, body, and rate-limit checks."""
+    origin = request.headers.get("Origin")
+    if not _is_allowed_origin(origin):
+        return _reject_invalid_origin(origin or "")
+    is_preflight = (
+        request.method.upper() == "OPTIONS"
+        and bool(origin)
+        and bool(request.headers.get("Access-Control-Request-Method"))
+    )
+    if is_preflight:
+        return await call_next(request)
+    rejection = _authenticated_request_rejection(request)
+    return rejection if rejection is not None else await call_next(request)
+
+
+def create_app(*, enable_metrics: bool = False, services: HttpServices | None = None) -> FastAPI:
     """Create and configure the FastAPI application.
 
     Returns:
@@ -177,136 +281,13 @@ def create_app(*, enable_metrics: bool = False) -> FastAPI:
         max_age=600,
     )
     app.add_middleware(_ToolBodyLimitMiddleware, max_body_bytes=MAX_TOOL_BODY_BYTES)
-    app.state.metrics_enabled = enable_metrics
-    app.state.tool_body_max_bytes = MAX_TOOL_BODY_BYTES
-    from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
-
-    app.state.challenges = {}
-
-    app.state.tool_semaphores = {
-        name: asyncio.Semaphore(policy.concurrency_limit)
-        for name, policy in HTTP_TOOL_POLICIES.items()
-        if policy.enabled
-    }
-    app.state.tool_operations = {}
-    app.state.tool_operation_results = {}
-    app.state.active_operation_tasks = {}
-    app.state.sse_listeners = []
-
-    @app.middleware("http")
-    async def _auth_and_rate_limit(
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        origin = request.headers.get("Origin")
-        if not _is_allowed_origin(origin):
-            return _reject_invalid_origin(origin or "")
-
-        if (
-            request.method.upper() == "OPTIONS"
-            and origin
-            and request.headers.get("Access-Control-Request-Method")
-        ):
-            return await call_next(request)
-
-        if request.url.path != "/health":
-            auth_header = request.headers.get("Authorization", "")
-            raw_token = auth_header.removeprefix("Bearer ").strip()
-            full_token = request.app.state.auth_token
-
-            scopes: set[Scope] = ALL_SCOPES
-            if raw_token == full_token:
-                scopes = ALL_SCOPES
-            elif is_known_session_token(raw_token):
-                scopes = resolve_session_scopes(raw_token)
-            else:
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "Missing or invalid bearer token."},
-                )
-
-            client_ip = request.client.host if request.client is not None else "unknown"
-            if not request.app.state.nonlocal_bind_allowed:
-                if client_ip not in _LOCAL_HOSTS:
-                    return JSONResponse(
-                        status_code=403,
-                        content={
-                            "detail": "Non-local requests are not allowed. "
-                            "Restart with --allow-nonlocal-bind to accept external connections."
-                        },
-                    )
-
-            if request.method.upper() == "POST" and request.url.path.startswith("/tools/"):
-                content_length = _parse_content_length(request.headers.get("content-length"))
-                if content_length is not None and content_length > MAX_TOOL_BODY_BYTES:
-                    return JSONResponse(
-                        status_code=413,
-                        content={"detail": "Tool request body is too large."},
-                    )
-                path_rest = request.url.path.removeprefix("/tools/")
-                tool_name = path_rest.split("/", maxsplit=1)[0]
-                is_challenge = path_rest.endswith("/challenge")
-
-                if not is_challenge:
-                    try:
-                        policy = policy_for_tool(tool_name)
-                        check_scope(policy, scopes)
-                    except HttpToolPolicyError as exc:
-                        return JSONResponse(
-                            status_code=403,
-                            content={
-                                "detail": {
-                                    "code": exc.code,
-                                    "message": exc.message,
-                                    "hint": exc.hint,
-                                }
-                            },
-                        )
-                    except HttpScopeError as exc:
-                        return JSONResponse(
-                            status_code=403,
-                            content={
-                                "detail": {
-                                    "code": exc.code,
-                                    "message": exc.message,
-                                    "hint": exc.hint,
-                                }
-                            },
-                        )
-                    except FovuxError as exc:
-                        return JSONResponse(
-                            status_code=403,
-                            content={
-                                "detail": {
-                                    "code": exc.code,
-                                    "message": exc.message,
-                                    "hint": exc.hint,
-                                }
-                            },
-                        )
-
-                limit = (
-                    DEFAULT_TOOL_RATE_LIMIT
-                    if is_challenge
-                    else TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
-                )
-                bucket_key = f"{client_ip}:{'challenge' if is_challenge else 'tool'}:{tool_name}"
-                limited, retry_after = request.app.state.rate_limiter.check(
-                    bucket_key,
-                    limit=limit,
-                )
-                if limited:
-                    return JSONResponse(
-                        status_code=429,
-                        headers={"Retry-After": str(retry_after)},
-                        content={"detail": "Tool request rate limit exceeded."},
-                    )
-
-        return await call_next(request)
-
-    from fovux.http.routes import router
-
-    app.include_router(router)
+    _configure_app_state(
+        app,
+        enable_metrics=enable_metrics,
+        services=services or build_default_services(),
+    )
+    app.middleware("http")(_auth_and_rate_limit)
+    app.include_router(build_http_router())
     app.state.nonlocal_bind_allowed = _NON_LOCAL_BIND_ALLOWED
     return app
 

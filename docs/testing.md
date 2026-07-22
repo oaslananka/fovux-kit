@@ -150,3 +150,17 @@ python ../scripts/check_mutation_stats.py \
   --max-survived 120 \
   --max-timeouts 0
 ```
+
+## HTTP services and route adapters
+
+The Studio local API uses two complementary test layers:
+
+- Service tests under `fovux-mcp/tests/unit/http/services/` inject temporary registries, fake tool
+  invokers, and in-memory runtime state. They must not use Starlette `TestClient`.
+- Route, security, contract, and real-server smoke tests verify authentication, scopes, challenges,
+  Origin policy, response/status compatibility, SSE framing, OpenAPI paths, middleware, and application
+  composition.
+
+`test_http_service_architecture.py` enforces the one-way dependency direction and route/service
+source/function budgets. Adding an HTTP domain requires focused service coverage plus route/security
+coverage where transport behavior changes.
