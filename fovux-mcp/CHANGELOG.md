@@ -12,6 +12,13 @@ GitHub milestones, not in package changelog sections.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.6.2](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.6.1...fovux-mcp-v1.6.2) (2026-07-22)
+
+
+### Bug Fixes
+
+* **release:** distinguish registry retries from failures ([#184](https://github.com/oaslananka/fovux-kit/issues/184)) ([647b0ff](https://github.com/oaslananka/fovux-kit/commit/647b0ffb4ae5cdf229047b62d5684be27aa07b7a)), closes [#183](https://github.com/oaslananka/fovux-kit/issues/183)
+
 ## [1.6.1](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.6.0...fovux-mcp-v1.6.1) (2026-07-22)
 
 

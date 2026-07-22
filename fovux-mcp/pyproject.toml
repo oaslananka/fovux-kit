@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fovux-mcp"
-version = "1.6.1"
+version = "1.6.2"
 description = "Local-first edge-AI computer vision workbench MCP server"
 readme = "README.md"
 license = "Apache-2.0"
