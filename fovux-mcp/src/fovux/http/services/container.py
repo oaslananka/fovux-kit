@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from fovux.http.services.health import HealthService
+from fovux.http.services.lineage import LineageService
 from fovux.http.services.operations import OperationRuntimeState, OperationService
 from fovux.http.services.runs import RunService
 from fovux.http.services.tool_runtime import ToolRuntimeState
@@ -15,6 +17,8 @@ from fovux.http.tool_proxy import HTTP_TOOL_POLICIES
 class HttpServices:
     """Explicit service dependencies used by HTTP route adapters."""
 
+    health: HealthService
+    lineage: LineageService
     runs: RunService
     operations: OperationService
     operation_runtime: OperationRuntimeState
@@ -26,6 +30,8 @@ class HttpServices:
 def build_default_services() -> HttpServices:
     """Build production services with their default local dependencies."""
     return HttpServices(
+        health=HealthService(),
+        lineage=LineageService(),
         runs=RunService(),
         operations=OperationService(),
         operation_runtime=OperationRuntimeState(),
