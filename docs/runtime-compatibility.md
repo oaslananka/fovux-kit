@@ -39,9 +39,10 @@ UTC timestamps as ISO-8601 text and deserializes them back to naive UTC `datetim
 backward-compatible ORM behavior. Raw migration writes serialize timestamps before binding.
 
 HTTP route tests use Starlette's `TestClient` import path and the dev dependency set includes
-`httpx2`, which is the non-deprecated backend expected by the current Starlette test client.
-Compatibility tests run affected modules with `DeprecationWarning` and `StarletteDeprecationWarning`
-promoted to errors.
+`httpx2>=2.7.0,<3`, which is the non-deprecated backend expected by Starlette 1.3.x. The contract
+suite asserts that Starlette selected `httpx2` rather than its deprecated `httpx` fallback, and the
+matching `StarletteDeprecationWarning` is promoted to an error through the repository pytest policy.
+Affected modules also run with general `DeprecationWarning` failures during compatibility review.
 
 ## MCP client compatibility
 
