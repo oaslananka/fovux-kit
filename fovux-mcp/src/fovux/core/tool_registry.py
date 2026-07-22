@@ -81,34 +81,49 @@ _TOOL_SPECS: dict[str, str] = {
 }
 
 
-def _load_runtime_manifest() -> dict[str, Any]:
-    """Load and validate the packaged schema manifest without importing implementations."""
-    manifest_path = files("fovux").joinpath("tool_manifest.json")
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+def _manifest_records(payload: object) -> list[dict[str, Any]]:
+    """Return the manifest records after validating the top-level envelope."""
     if not isinstance(payload, dict) or payload.get("schema_version") != 1:
         raise RuntimeError("Invalid Fovux runtime tool manifest.")
     tools = payload.get("tools")
     if not isinstance(tools, list) or len(tools) != len(_TOOL_SPECS):
         raise RuntimeError("Fovux runtime tool manifest does not match the registry.")
-    names: list[str] = []
-    for raw_record in tools:
-        if not isinstance(raw_record, dict):
-            raise RuntimeError("Fovux runtime tool manifest contains a non-object record.")
-        name = raw_record.get("name")
-        target = raw_record.get("callable")
-        input_schema = raw_record.get("inputSchema")
-        output_schema = raw_record.get("outputSchema")
-        if not isinstance(name, str) or target != _TOOL_SPECS.get(name):
-            raise RuntimeError(f"Runtime tool manifest target drifted for {name!r}.")
-        if not isinstance(input_schema, dict) or input_schema.get("type") != "object":
-            raise RuntimeError(f"Runtime tool manifest input schema drifted for {name}.")
-        if output_schema is not None and (
-            not isinstance(output_schema, dict) or output_schema.get("type") != "object"
-        ):
-            raise RuntimeError(f"Runtime tool manifest output schema drifted for {name}.")
-        names.append(name)
+    if any(not isinstance(record, dict) for record in tools):
+        raise RuntimeError("Fovux runtime tool manifest contains a non-object record.")
+    return cast(list[dict[str, Any]], tools)
+
+
+def _validate_object_schema(name: str, field: str, schema: object) -> None:
+    """Require one manifest schema field to describe an object."""
+    if not isinstance(schema, dict) or schema.get("type") != "object":
+        raise RuntimeError(f"Runtime tool manifest {field} schema drifted for {name}.")
+
+
+def _validate_manifest_record(record: dict[str, Any]) -> str:
+    """Validate one lazy tool record and return its stable name."""
+    name = record.get("name")
+    if not isinstance(name, str) or record.get("callable") != _TOOL_SPECS.get(name):
+        raise RuntimeError(f"Runtime tool manifest target drifted for {name!r}.")
+    _validate_object_schema(name, "input", record.get("inputSchema"))
+    output_schema = record.get("outputSchema")
+    if output_schema is not None:
+        _validate_object_schema(name, "output", output_schema)
+    return name
+
+
+def _validate_manifest_order(records: list[dict[str, Any]]) -> list[str]:
+    """Validate every record and enforce stable registry ordering."""
+    names = [_validate_manifest_record(record) for record in records]
     if names != sorted(_TOOL_SPECS):
         raise RuntimeError("Fovux runtime tool manifest order or names drifted.")
+    return names
+
+
+def _load_runtime_manifest() -> dict[str, Any]:
+    """Load and validate the packaged schema manifest without importing implementations."""
+    manifest_path = files("fovux").joinpath("tool_manifest.json")
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    names = _validate_manifest_order(_manifest_records(payload))
     startup_checkpoint("tool_manifest_loaded", total_tools=len(names))
     return cast(dict[str, Any], payload)
 

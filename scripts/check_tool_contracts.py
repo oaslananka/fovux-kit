@@ -144,10 +144,12 @@ def readme_tools(path: Path) -> list[str]:
     return re.findall(r"\| `([a-z0-9_]+)`", match.group("table"))
 
 
-def validate_static(snapshot: dict[str, Any]) -> list[str]:
+def _validate_registry_alignment(
+    names: list[str],
+    records: list[dict[str, Any]],
+) -> list[str]:
+    """Validate snapshot ordering and HTTP policy membership."""
     failures: list[str] = []
-    names = list_tool_names()
-    records = cast(list[dict[str, Any]], snapshot["tools"])
     record_names = [str(record["name"]) for record in records]
     if record_names != names:
         failures.append(f"Snapshot tool order mismatch: {record_names} != {names}")
@@ -158,25 +160,35 @@ def validate_static(snapshot: dict[str, Any]) -> list[str]:
             f"missing={sorted(set(names) - set(policy_names))} "
             f"extra={sorted(set(policy_names) - set(names))}"
         )
-    test_text = all_tests_text()
-    for record in records:
-        name = str(record["name"])
-        if not docs_path(name).exists():
-            failures.append(f"Missing docs page for tool: {name}")
-        if name not in test_text:
-            failures.append(f"Missing test reference for tool: {name}")
-        if record["owner"] != "oaslananka" or record["component"] != "fovux-mcp":
-            failures.append(f"Missing owner/component metadata for tool: {name}")
-        if not record["description"]:
-            failures.append(f"Missing description for tool: {name}")
-        input_schema = record["inputSchema"]
-        output_schema = record["outputSchema"]
-        if not isinstance(input_schema, dict) or input_schema.get("type") != "object":
-            failures.append(f"Input schema for {name} must be object")
-        if output_schema is not None and (
-            not isinstance(output_schema, dict) or output_schema.get("type") != "object"
-        ):
-            failures.append(f"Output schema for {name} must be object")
+    return failures
+
+
+def _validate_record(record: dict[str, Any], test_text: str) -> list[str]:
+    """Validate documentation, ownership, and schemas for one tool record."""
+    failures: list[str] = []
+    name = str(record["name"])
+    if not docs_path(name).exists():
+        failures.append(f"Missing docs page for tool: {name}")
+    if name not in test_text:
+        failures.append(f"Missing test reference for tool: {name}")
+    if record["owner"] != "oaslananka" or record["component"] != "fovux-mcp":
+        failures.append(f"Missing owner/component metadata for tool: {name}")
+    if not record["description"]:
+        failures.append(f"Missing description for tool: {name}")
+    input_schema = record["inputSchema"]
+    output_schema = record["outputSchema"]
+    if not isinstance(input_schema, dict) or input_schema.get("type") != "object":
+        failures.append(f"Input schema for {name} must be object")
+    if output_schema is not None and (
+        not isinstance(output_schema, dict) or output_schema.get("type") != "object"
+    ):
+        failures.append(f"Output schema for {name} must be object")
+    return failures
+
+
+def _validate_cross_surface_docs(names: list[str]) -> list[str]:
+    """Validate Studio mappings and generated README references."""
+    failures: list[str] = []
     mapped, _ = studio_mappings()
     unknown = sorted(set(mapped) - set(names))
     if unknown:
@@ -189,6 +201,18 @@ def validate_static(snapshot: dict[str, Any]) -> list[str]:
         or "generated complete tool list" not in root_readme
     ):
         failures.append("Root README must link to the generated MCP tool table")
+    return failures
+
+
+def validate_static(snapshot: dict[str, Any]) -> list[str]:
+    """Validate static registry, per-tool, and cross-surface contracts."""
+    names = list_tool_names()
+    records = cast(list[dict[str, Any]], snapshot["tools"])
+    failures = _validate_registry_alignment(names, records)
+    test_text = all_tests_text()
+    for record in records:
+        failures.extend(_validate_record(record, test_text))
+    failures.extend(_validate_cross_surface_docs(names))
     return failures
 
 
