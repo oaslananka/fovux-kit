@@ -24,6 +24,7 @@ from fovux.http.services.errors import ServiceError
 
 RegistryProvider = Callable[[], RunRegistry]
 DisconnectCheck = Callable[[], Awaitable[bool]]
+METRICS_JSONL_FILENAME = "metrics.jsonl"
 
 
 @dataclass(frozen=True)
@@ -91,19 +92,16 @@ class RunService:
         required_tags = {tag.lower() for tag in filters.tags}
 
         for record in records:
-            record_tags = {tag.lower() for tag in _decode_tags(record.tags_json)}
-            haystack = _run_search_haystack(record, record_tags)
-            if lowered_query and lowered_query not in haystack:
+            match = _match_run(
+                record,
+                lowered_query=lowered_query,
+                required_statuses=required_statuses,
+                required_tags=required_tags,
+                min_map50=filters.min_map50,
+            )
+            if match is None:
                 continue
-            if required_statuses and str(record.status).lower() not in required_statuses:
-                continue
-            if required_tags and not required_tags.issubset(record_tags):
-                continue
-            _, best_map50 = read_metrics_summary(Path(record.run_path))
-            if filters.min_map50 is not None and (
-                best_map50 is None or best_map50 < filters.min_map50
-            ):
-                continue
+            record_tags, best_map50 = match
             matched.append(_search_result(record, record_tags, best_map50))
             if len(matched) >= filters.limit:
                 break
@@ -201,6 +199,27 @@ def _run_search_haystack(record: RunRecord, tags: set[str]) -> str:
     ).lower()
 
 
+def _match_run(
+    record: RunRecord,
+    *,
+    lowered_query: str | None,
+    required_statuses: set[str],
+    required_tags: set[str],
+    min_map50: float | None,
+) -> tuple[set[str], float | None] | None:
+    record_tags = {tag.lower() for tag in _decode_tags(record.tags_json)}
+    if lowered_query and lowered_query not in _run_search_haystack(record, record_tags):
+        return None
+    if required_statuses and str(record.status).lower() not in required_statuses:
+        return None
+    if required_tags and not required_tags.issubset(record_tags):
+        return None
+    _, best_map50 = read_metrics_summary(Path(record.run_path))
+    if min_map50 is not None and (best_map50 is None or best_map50 < min_map50):
+        return None
+    return record_tags, best_map50
+
+
 def _search_result(
     record: RunRecord,
     tags: set[str],
@@ -227,7 +246,7 @@ async def _metric_event_stream(
     shutdown_event: asyncio.Event,
 ) -> AsyncIterator[str]:
     yield "retry: 5000\n\n"
-    metrics_jsonl = run_dir / "metrics.jsonl"
+    metrics_jsonl = run_dir / METRICS_JSONL_FILENAME
     snapshot = _load_metric_payloads(run_id, run_dir)
     for payload in snapshot:
         yield f"event: metric\ndata: {json.dumps(payload)}\n\n"
@@ -243,21 +262,20 @@ async def _metric_event_stream(
         if await disconnect_check():
             get_logger(__name__).info("metrics_stream_disconnected", run_id=run_id)
             break
-        try:
-            changes = await asyncio.wait_for(watcher.__anext__(), timeout=15.0)
-        except TimeoutError:
+        changes, timed_out = await _next_metric_changes(watcher)
+        if timed_out:
             yield ": keep-alive\n\n"
             last_heartbeat = time.monotonic()
             continue
-        except StopAsyncIteration:
+        if changes is None:
             break
-        if _contains_metrics_jsonl_change(changes):
-            emitted_count, jsonl_offset, delta_payloads = _load_metric_payload_delta(
-                run_id, run_dir, emitted_count, jsonl_offset
-            )
-        else:
-            delta_payloads = _load_metric_payloads(run_id, run_dir)[emitted_count:]
-            emitted_count += len(delta_payloads)
+        emitted_count, jsonl_offset, delta_payloads = _metric_delta_after_changes(
+            changes,
+            run_id=run_id,
+            run_dir=run_dir,
+            emitted_count=emitted_count,
+            jsonl_offset=jsonl_offset,
+        )
         for payload in delta_payloads:
             yield f"event: metric\ndata: {json.dumps(payload)}\n\n"
             last_heartbeat = time.monotonic()
@@ -267,6 +285,31 @@ async def _metric_event_stream(
         if time.monotonic() - last_heartbeat >= 15.0:
             yield ": keep-alive\n\n"
             last_heartbeat = time.monotonic()
+
+
+async def _next_metric_changes(
+    watcher: AsyncIterator[set[tuple[Change, str]]],
+) -> tuple[set[tuple[Change, str]] | None, bool]:
+    try:
+        return await asyncio.wait_for(watcher.__anext__(), timeout=15.0), False
+    except TimeoutError:
+        return None, True
+    except StopAsyncIteration:
+        return None, False
+
+
+def _metric_delta_after_changes(
+    changes: set[tuple[Change, str]],
+    *,
+    run_id: str,
+    run_dir: Path,
+    emitted_count: int,
+    jsonl_offset: int,
+) -> tuple[int, int, list[dict[str, object]]]:
+    if _contains_metrics_jsonl_change(changes):
+        return _load_metric_payload_delta(run_id, run_dir, emitted_count, jsonl_offset)
+    delta_payloads = _load_metric_payloads(run_id, run_dir)[emitted_count:]
+    return emitted_count + len(delta_payloads), jsonl_offset, delta_payloads
 
 
 def _load_metric_payloads(run_id: str, run_dir: Path) -> list[dict[str, object]]:
@@ -282,7 +325,7 @@ def _load_metrics_jsonl(run_id: str, run_dir: Path) -> list[dict[str, object]]:
 
 
 def _contains_metrics_jsonl_change(changes: set[tuple[Change, str]]) -> bool:
-    return any(Path(changed_path).name == "metrics.jsonl" for _, changed_path in changes)
+    return any(Path(changed_path).name == METRICS_JSONL_FILENAME for _, changed_path in changes)
 
 
 def _load_metric_payload_delta(
@@ -291,7 +334,7 @@ def _load_metric_payload_delta(
     emitted_count: int,
     previous_offset: int,
 ) -> tuple[int, int, list[dict[str, object]]]:
-    metrics_path = run_dir / "metrics.jsonl"
+    metrics_path = run_dir / METRICS_JSONL_FILENAME
     if not metrics_path.exists():
         full_payloads = _load_metric_payloads(run_id, run_dir)
         new_payloads = full_payloads[emitted_count:]

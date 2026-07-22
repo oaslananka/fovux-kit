@@ -322,6 +322,22 @@ def test_invalid_origin_rejected_before_authenticated_tool_call() -> None:
 
 
 @pytest.mark.security
+def test_invalid_origin_rejected_before_cors_preflight() -> None:
+    """Untrusted origins must fail before the CORS preflight bypass."""
+    with TestClient(create_app()) as client:
+        response = client.options(
+            "/runs",
+            headers={
+                "Origin": "https://evil.example",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+    assert response.status_code == 403
+    assert "origin" in response.text.lower()
+
+
+@pytest.mark.security
 def test_invalid_origin_rejected_for_public_health_probe() -> None:
     """Even public health checks should reject browser DNS-rebinding origins."""
     with TestClient(create_app()) as client:

@@ -294,31 +294,50 @@ class OperationService:
         record = registry.get_operation(operation_id)
         if record is None:
             raise ServiceError(404, f"Operation {operation_id} not found.")
-        log_file = self._operation_log_file(operation_id)
-        if record.run_id:
-            run_log = self._home_provider() / "runs" / str(record.run_id) / "stdout.log"
-            if run_log.exists():
-                log_file = run_log
-        for _ in range(20):
-            if log_file.exists():
-                break
-            await asyncio.sleep(0.1)
-        if not log_file.exists():
+        log_file = self._resolve_log_file(operation_id, record)
+        if not await self._wait_for_log_file(log_file):
             yield "Log file not found.\n"
             return
+        async for line in self._read_log_lines(registry, operation_id, log_file):
+            yield line
+
+    def _resolve_log_file(self, operation_id: str, record: OperationRecord) -> Path:
+        operation_log = self._operation_log_file(operation_id)
+        if not record.run_id:
+            return operation_log
+        run_log = self._home_provider() / "runs" / str(record.run_id) / "stdout.log"
+        return run_log if run_log.exists() else operation_log
+
+    async def _wait_for_log_file(self, log_file: Path) -> bool:
+        for _ in range(20):
+            if log_file.exists():
+                return True
+            await asyncio.sleep(0.1)
+        return False
+
+    async def _read_log_lines(
+        self,
+        registry: RunRegistry,
+        operation_id: str,
+        log_file: Path,
+    ) -> AsyncIterator[str]:
         with log_file.open(encoding="utf-8", errors="replace") as handle:
             while True:
                 line = handle.readline()
                 if line:
                     yield line
                     continue
-                current = registry.get_operation(operation_id)
-                if current is None or current.status in ("succeeded", "failed", "cancelled"):
-                    remaining = handle.read()
-                    if remaining:
-                        yield remaining
+                if self._operation_is_terminal(registry, operation_id):
                     break
                 await asyncio.sleep(0.5)
+            remaining = handle.read()
+            if remaining:
+                yield remaining
+
+    @staticmethod
+    def _operation_is_terminal(registry: RunRegistry, operation_id: str) -> bool:
+        current = registry.get_operation(operation_id)
+        return current is None or current.status in {"succeeded", "failed", "cancelled"}
 
     async def event_stream(
         self,
@@ -390,7 +409,7 @@ class OperationService:
         """Persist one canonical event and deliver that exact event to live subscribers."""
         payload = {"operation_id": operation_id, "event_type": event_type, "data": data}
         event = registry.create_operation_event(operation_id, event_type, payload)
-        for queue in list(runtime.sse_listeners):
+        for queue in runtime.sse_listeners:
             try:
                 queue.put_nowait((cast(int, event.id), event_type, payload))
             except Exception as exc:

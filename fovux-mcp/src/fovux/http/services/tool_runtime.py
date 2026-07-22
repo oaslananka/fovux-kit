@@ -67,6 +67,35 @@ def release_semaphore_after_worker(
     return release
 
 
+def _completed_worker_result(
+    task: asyncio.Future[Any],
+    operation_id: str,
+) -> tuple[dict[str, object], BaseException | None]:
+    finished_at = time.monotonic()
+    try:
+        result = task.result()
+    except asyncio.CancelledError:
+        return {
+            "operation_id": operation_id,
+            "status": "cancelled",
+            "finished_at": finished_at,
+        }, None
+    except Exception as exc:
+        return {
+            "operation_id": operation_id,
+            "status": "failed",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "finished_at": finished_at,
+        }, exc
+    return {
+        "operation_id": operation_id,
+        "status": "succeeded",
+        "result": result,
+        "finished_at": finished_at,
+    }, None
+
+
 def remember_timed_out_tool_worker(
     *,
     semaphore: asyncio.Semaphore,
@@ -80,42 +109,9 @@ def remember_timed_out_tool_worker(
 
     def complete(task: asyncio.Future[Any]) -> None:
         try:
-            error = task.exception()
-        except asyncio.CancelledError:
-            error = None
-            results[operation_key] = {
-                "operation_id": operation_id,
-                "status": "cancelled",
-                "finished_at": time.monotonic(),
-            }
-        except Exception as exc:
-            error = exc
-            logger.warning(
-                "http_tool_worker_exception_inspection_failed",
-                error_type=type(exc).__name__,
-                error=str(exc),
-            )
-        else:
-            if error is None:
-                try:
-                    result = task.result()
-                except Exception as exc:
-                    error = exc
-                else:
-                    results[operation_key] = {
-                        "operation_id": operation_id,
-                        "status": "succeeded",
-                        "result": result,
-                        "finished_at": time.monotonic(),
-                    }
+            outcome, error = _completed_worker_result(task, operation_id)
+            results[operation_key] = outcome
             if error is not None:
-                results[operation_key] = {
-                    "operation_id": operation_id,
-                    "status": "failed",
-                    "error_type": type(error).__name__,
-                    "error": str(error),
-                    "finished_at": time.monotonic(),
-                }
                 logger.error(
                     "http_tool_worker_failed_after_timeout",
                     error_type=type(error).__name__,

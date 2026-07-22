@@ -115,14 +115,10 @@ async def test_tool_service_enforces_concurrency_limit() -> None:
     )
     await runtime.semaphores["model_list"].acquire()
     service = ToolInvocationService(invoker=lambda _name, _payload: {})
+    context = ToolInvocationContext(actor="actor", origin="local")
 
     with pytest.raises(ServiceError) as exc_info:
-        await service.invoke(
-            runtime,
-            ToolInvocationContext(actor="actor", origin="local"),
-            "model_list",
-            {},
-        )
+        await service.invoke(runtime, context, "model_list", {})
 
     assert exc_info.value.status_code == 429
     assert exc_info.value.detail == "Tool concurrency limit exceeded."

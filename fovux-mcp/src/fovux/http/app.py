@@ -124,6 +124,147 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info("http_app_stop")
 
 
+def _configure_app_state(
+    app: FastAPI,
+    *,
+    enable_metrics: bool,
+    services: HttpServices,
+) -> None:
+    """Expose service-owned runtime state through compatibility app aliases."""
+    app.state.metrics_enabled = enable_metrics
+    app.state.tool_body_max_bytes = MAX_TOOL_BODY_BYTES
+    app.state.http_services = services
+    app.state.challenges = services.tool_runtime.challenges
+    app.state.tool_semaphores = services.tool_runtime.semaphores
+    app.state.tool_operations = services.tool_runtime.operations
+    app.state.tool_operation_results = services.tool_runtime.operation_results
+    app.state.active_operation_tasks = services.operation_runtime.active_tasks
+    app.state.sse_listeners = services.operation_runtime.sse_listeners
+
+
+def _unauthorized_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=401,
+        content={"detail": "Missing or invalid bearer token."},
+    )
+
+
+def _forbidden_error_response(error: FovuxError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={
+            "detail": {
+                "code": error.code,
+                "message": error.message,
+                "hint": error.hint,
+            }
+        },
+    )
+
+
+def _resolve_request_scopes(request: Request) -> tuple[set[Scope] | None, JSONResponse | None]:
+    auth_header = request.headers.get("Authorization", "")
+    raw_token = auth_header.removeprefix("Bearer ").strip()
+    if raw_token == request.app.state.auth_token:
+        return ALL_SCOPES, None
+    if is_known_session_token(raw_token):
+        return resolve_session_scopes(raw_token), None
+    return None, _unauthorized_response()
+
+
+def _nonlocal_request_rejection(request: Request, client_ip: str) -> JSONResponse | None:
+    if request.app.state.nonlocal_bind_allowed or client_ip in _LOCAL_HOSTS:
+        return None
+    return JSONResponse(
+        status_code=403,
+        content={
+            "detail": "Non-local requests are not allowed. "
+            "Restart with --allow-nonlocal-bind to accept external connections."
+        },
+    )
+
+
+def _tool_policy_rejection(tool_name: str, scopes: set[Scope]) -> JSONResponse | None:
+    try:
+        policy = policy_for_tool(tool_name)
+        check_scope(policy, scopes)
+    except (HttpToolPolicyError, HttpScopeError, FovuxError) as exc:
+        return _forbidden_error_response(exc)
+    return None
+
+
+def _tool_request_rejection(
+    request: Request,
+    *,
+    client_ip: str,
+    scopes: set[Scope],
+) -> JSONResponse | None:
+    if request.method.upper() != "POST" or not request.url.path.startswith("/tools/"):
+        return None
+    content_length = _parse_content_length(request.headers.get("content-length"))
+    if content_length is not None and content_length > MAX_TOOL_BODY_BYTES:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": "Tool request body is too large."},
+        )
+    path_rest = request.url.path.removeprefix("/tools/")
+    tool_name = path_rest.split("/", maxsplit=1)[0]
+    is_challenge = path_rest.endswith("/challenge")
+    if not is_challenge:
+        rejection = _tool_policy_rejection(tool_name, scopes)
+        if rejection is not None:
+            return rejection
+    limit = (
+        DEFAULT_TOOL_RATE_LIMIT
+        if is_challenge
+        else TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
+    )
+    bucket_kind = "challenge" if is_challenge else "tool"
+    limited, retry_after = request.app.state.rate_limiter.check(
+        f"{client_ip}:{bucket_kind}:{tool_name}",
+        limit=limit,
+    )
+    if not limited:
+        return None
+    return JSONResponse(
+        status_code=429,
+        headers={"Retry-After": str(retry_after)},
+        content={"detail": "Tool request rate limit exceeded."},
+    )
+
+
+def _authenticated_request_rejection(request: Request) -> JSONResponse | None:
+    if request.url.path == "/health":
+        return None
+    scopes, rejection = _resolve_request_scopes(request)
+    if rejection is not None or scopes is None:
+        return rejection
+    client_ip = request.client.host if request.client is not None else "unknown"
+    rejection = _nonlocal_request_rejection(request, client_ip)
+    if rejection is not None:
+        return rejection
+    return _tool_request_rejection(request, client_ip=client_ip, scopes=scopes)
+
+
+async def _auth_and_rate_limit(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    """Apply Origin, authentication, bind, policy, body, and rate-limit checks."""
+    origin = request.headers.get("Origin")
+    if not _is_allowed_origin(origin):
+        return _reject_invalid_origin(origin or "")
+    is_preflight = (
+        request.method.upper() == "OPTIONS"
+        and bool(origin)
+        and bool(request.headers.get("Access-Control-Request-Method"))
+    )
+    if is_preflight:
+        return await call_next(request)
+    rejection = _authenticated_request_rejection(request)
+    return rejection if rejection is not None else await call_next(request)
+
+
 def create_app(*, enable_metrics: bool = False, services: HttpServices | None = None) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -144,128 +285,12 @@ def create_app(*, enable_metrics: bool = False, services: HttpServices | None = 
         max_age=600,
     )
     app.add_middleware(_ToolBodyLimitMiddleware, max_body_bytes=MAX_TOOL_BODY_BYTES)
-    app.state.metrics_enabled = enable_metrics
-    app.state.tool_body_max_bytes = MAX_TOOL_BODY_BYTES
-    configured_services = services or build_default_services()
-    app.state.http_services = configured_services
-    app.state.challenges = configured_services.tool_runtime.challenges
-    app.state.tool_semaphores = configured_services.tool_runtime.semaphores
-    app.state.tool_operations = configured_services.tool_runtime.operations
-    app.state.tool_operation_results = configured_services.tool_runtime.operation_results
-    app.state.active_operation_tasks = configured_services.operation_runtime.active_tasks
-    app.state.sse_listeners = configured_services.operation_runtime.sse_listeners
-
-    @app.middleware("http")
-    async def _auth_and_rate_limit(
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        origin = request.headers.get("Origin")
-        if not _is_allowed_origin(origin):
-            return _reject_invalid_origin(origin or "")
-
-        if (
-            request.method.upper() == "OPTIONS"
-            and origin
-            and request.headers.get("Access-Control-Request-Method")
-        ):
-            return await call_next(request)
-
-        if request.url.path != "/health":
-            auth_header = request.headers.get("Authorization", "")
-            raw_token = auth_header.removeprefix("Bearer ").strip()
-            full_token = request.app.state.auth_token
-
-            scopes: set[Scope] = ALL_SCOPES
-            if raw_token == full_token:
-                scopes = ALL_SCOPES
-            elif is_known_session_token(raw_token):
-                scopes = resolve_session_scopes(raw_token)
-            else:
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "Missing or invalid bearer token."},
-                )
-
-            client_ip = request.client.host if request.client is not None else "unknown"
-            if not request.app.state.nonlocal_bind_allowed:
-                if client_ip not in _LOCAL_HOSTS:
-                    return JSONResponse(
-                        status_code=403,
-                        content={
-                            "detail": "Non-local requests are not allowed. "
-                            "Restart with --allow-nonlocal-bind to accept external connections."
-                        },
-                    )
-
-            if request.method.upper() == "POST" and request.url.path.startswith("/tools/"):
-                content_length = _parse_content_length(request.headers.get("content-length"))
-                if content_length is not None and content_length > MAX_TOOL_BODY_BYTES:
-                    return JSONResponse(
-                        status_code=413,
-                        content={"detail": "Tool request body is too large."},
-                    )
-                path_rest = request.url.path.removeprefix("/tools/")
-                tool_name = path_rest.split("/", maxsplit=1)[0]
-                is_challenge = path_rest.endswith("/challenge")
-
-                if not is_challenge:
-                    try:
-                        policy = policy_for_tool(tool_name)
-                        check_scope(policy, scopes)
-                    except HttpToolPolicyError as exc:
-                        return JSONResponse(
-                            status_code=403,
-                            content={
-                                "detail": {
-                                    "code": exc.code,
-                                    "message": exc.message,
-                                    "hint": exc.hint,
-                                }
-                            },
-                        )
-                    except HttpScopeError as exc:
-                        return JSONResponse(
-                            status_code=403,
-                            content={
-                                "detail": {
-                                    "code": exc.code,
-                                    "message": exc.message,
-                                    "hint": exc.hint,
-                                }
-                            },
-                        )
-                    except FovuxError as exc:
-                        return JSONResponse(
-                            status_code=403,
-                            content={
-                                "detail": {
-                                    "code": exc.code,
-                                    "message": exc.message,
-                                    "hint": exc.hint,
-                                }
-                            },
-                        )
-
-                limit = (
-                    DEFAULT_TOOL_RATE_LIMIT
-                    if is_challenge
-                    else TOOL_RATE_LIMITS.get(tool_name, DEFAULT_TOOL_RATE_LIMIT)
-                )
-                bucket_key = f"{client_ip}:{'challenge' if is_challenge else 'tool'}:{tool_name}"
-                limited, retry_after = request.app.state.rate_limiter.check(
-                    bucket_key,
-                    limit=limit,
-                )
-                if limited:
-                    return JSONResponse(
-                        status_code=429,
-                        headers={"Retry-After": str(retry_after)},
-                        content={"detail": "Tool request rate limit exceeded."},
-                    )
-
-        return await call_next(request)
-
+    _configure_app_state(
+        app,
+        enable_metrics=enable_metrics,
+        services=services or build_default_services(),
+    )
+    app.middleware("http")(_auth_and_rate_limit)
     app.include_router(build_http_router())
     app.state.nonlocal_bind_allowed = _NON_LOCAL_BIND_ALLOWED
     return app
