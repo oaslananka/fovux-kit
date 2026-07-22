@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 import pytest
-from starlette.testclient import TestClient
+from starlette import testclient as starlette_testclient
 
 from fovux.http.app import create_app
+
+TestClient = starlette_testclient.TestClient
+
+
+def test_starlette_testclient_uses_httpx2_backend() -> None:
+    """Starlette should use its supported httpx2 test backend without fallback warnings."""
+    assert starlette_testclient.httpx.__name__ == "httpx2"
 
 
 @pytest.mark.contract

@@ -69,6 +69,7 @@ dev = [
     "pip-audit>=2.10",
     "pre-commit>=4.0",
     "hypothesis>=6.153.2",
+    "httpx2>=2.7.0,<3",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7",
     "mkdocstrings[python]>=1.0.4",
@@ -179,6 +180,7 @@ markers = [
     "security: marks security/pentest related tests",
 ]
 filterwarnings = [
+    'error:Using `httpx` with `starlette\.testclient` is deprecated; install `httpx2` instead\.:starlette.exceptions.StarletteDeprecationWarning',
     "ignore:Palette images with Transparency expressed in bytes should be converted to RGBA images:UserWarning:PIL.Image",
 ]
 
