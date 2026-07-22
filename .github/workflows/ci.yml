@@ -45,6 +45,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
 
       - name: Check action SHA pinning
         run: |
@@ -99,6 +101,31 @@ jobs:
         continue-on-error: true
         run: task ci
 
+      - name: Validate coverage reports
+        id: coverage-reports
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: >-
+          python scripts/check_coverage_reports.py
+          --backend-report fovux-mcp/coverage.xml
+          --studio-report fovux-studio/coverage/lcov.info
+          --backend-minimum-percent 85
+          --studio-minimum-percent 45
+
+      - name: Analyze coverage and new code with SonarQube Cloud
+        id: sonar-scan
+        if: >-
+          !cancelled() &&
+          steps.coverage-reports.outcome == 'success' &&
+          (
+            github.event_name != 'pull_request' ||
+            github.event.pull_request.head.repo.full_name == github.repository
+          )
+        continue-on-error: true
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
       - name: Upload backend coverage to Codecov
         if: ${{ !cancelled() && hashFiles('fovux-mcp/coverage.xml') != '' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
@@ -145,16 +172,40 @@ jobs:
           disable_search: true
           fail_ci_if_error: false
 
+      - name: Finalize Codecov notifications
+        if: ${{ !cancelled() && steps.coverage-reports.outcome == 'success' }}
+        continue-on-error: true
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
+        with:
+          use_oidc: true
+          run_command: send-notifications
+          fail_ci_if_error: false
+
       - name: Confirm deterministic quality gate passed
         if: always()
         env:
           QUALITY_OUTCOME: ${{ steps.quality-gate.outcome }}
+          COVERAGE_OUTCOME: ${{ steps.coverage-reports.outcome }}
+          SONAR_OUTCOME: ${{ steps.sonar-scan.outcome }}
+          SONAR_REQUIRED: >-
+            ${{ github.event_name != 'pull_request' ||
+                github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           set -euo pipefail
+          failed=0
           if [[ "$QUALITY_OUTCOME" != "success" ]]; then
             echo "::error::Deterministic quality gate result was $QUALITY_OUTCOME."
-            exit 1
+            failed=1
           fi
+          if [[ "$COVERAGE_OUTCOME" != "success" ]]; then
+            echo "::error::Coverage report validation result was $COVERAGE_OUTCOME."
+            failed=1
+          fi
+          if [[ "$SONAR_REQUIRED" == "true" && "$SONAR_OUTCOME" != "success" ]]; then
+            echo "::error::SonarQube Cloud analysis result was $SONAR_OUTCOME."
+            failed=1
+          fi
+          exit "$failed"
 
   compatibility:
     name: Compatibility (${{ matrix.os }}, Python ${{ matrix.python-version }})
