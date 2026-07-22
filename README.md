@@ -19,7 +19,7 @@
 
 ## What is Fovux?
 
-Fovux is a local-first vision workbench for YOLO datasets, training, evaluation, export, and edge inference. It combines the Python backend package `fovux-mcp` 1.6.1, the npm wrapper `fovux-mcp` 1.6.1, and the VS Code companion `Fovux Studio` 1.5.1 to streamline the computer vision engineering lifecycle.
+Fovux is a local-first vision workbench for YOLO datasets, training, evaluation, export, and edge inference. It combines the Python backend package `fovux-mcp` 1.6.2, the npm wrapper `fovux-mcp` 1.6.2, and the VS Code companion `Fovux Studio` 1.5.1 to streamline the computer vision engineering lifecycle.
 
 ## Why developers use it
 
@@ -103,7 +103,7 @@ Use the VS Code Command Palette (`Cmd/Ctrl+Shift+P`) and type `Fovux:` to discov
 
 ## Core tools
 
-Fovux MCP 1.6.1 exposes 47 local tools across dataset inspection, validation, active learning, training, evaluation, export, quantization, inference, benchmarking, run management, policy/audit, and support-bundle workflows.
+Fovux MCP 1.6.2 exposes 47 local tools across dataset inspection, validation, active learning, training, evaluation, export, quantization, inference, benchmarking, run management, policy/audit, and support-bundle workflows.
 
 The generated complete tool list lives in [`fovux-mcp/README.md`](fovux-mcp/README.md) and the MkDocs site; CI now fails if a registered tool is missing from docs, the schema snapshot, policy metadata, Studio mappings, or the MkDocs navigation.
 

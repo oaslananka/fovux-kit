@@ -103,7 +103,7 @@ uv run fovux-mcp serve --http --tcp --metrics
 
 ## The tool set
 
-Fovux MCP 1.6.1 currently exposes 47 local tools.
+Fovux MCP 1.6.2 currently exposes 47 local tools.
 
 <!-- fovux-tools:start -->
 
