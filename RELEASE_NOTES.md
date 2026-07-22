@@ -1,20 +1,20 @@
 # Fovux 1.6.1 Release Notes
 
-Fovux 1.6.1 is the current release candidate for the local-first edge-AI computer vision
-workbench. Package publication remains pending until the release workflow verifies every configured
+Fovux 1.6.1 is the current reviewed release baseline for the local-first edge-AI computer vision
+workbench. Package publication has been verified by the release workflow across every configured
 registry and extension marketplace.
 
 ## Package Versions and Release Evidence
 
 <!-- release-baseline:start -->
-| Component | Candidate version | Channel status | Evidence |
+| Component | Published version | Channel status | Evidence |
 | --- | --- | --- | --- |
-| Python package `fovux-mcp` | `1.6.1` | Pending publication | Generated after registry verification |
-| npm wrapper `fovux-mcp` | `1.6.1` | Pending publication | Generated after registry verification |
-| VS Code extension `oaslananka.fovuxstudiokit` | `1.5.1` | Pending publication | Generated after marketplace verification |
+| Python package `fovux-mcp` | `1.6.1` | Published on PyPI | `fovux_mcp-1.6.1-py3-none-any.whl`, `fovux_mcp-1.6.1.tar.gz`, `fovux-mcp-sbom.spdx.json`, `fovux-mcp.sha256`, `registry-verification-python.json` |
+| npm wrapper `fovux-mcp` | `1.6.1` | Published on npm | `npm registry metadata`, `wrapper CLI smoke result`, `fovux-mcp-npm-v1.6.1 source release`, `registry-verification-npm.json` |
+| VS Code extension `oaslananka.fovuxstudiokit` | `1.5.1` | Published on VS Marketplace and Open VSX | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256`, `registry-verification-studio.json` |
 <!-- release-baseline:end -->
 
-The final GitHub Release evidence will include:
+The verified GitHub Release evidence includes:
 
 - VSIX packaging status and publish results for VS Marketplace and Open VSX;
 - SPDX SBOM files, checksums, and provenance attestations;
