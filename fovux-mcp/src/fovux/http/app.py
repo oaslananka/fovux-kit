@@ -8,14 +8,11 @@ endpoint. Binds to 127.0.0.1 by default.
 from __future__ import annotations
 
 import asyncio
-import sys
-import threading
 import time
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
@@ -37,6 +34,7 @@ from fovux.core.auth import (
 )
 from fovux.core.errors import FovuxError
 from fovux.core.logging import get_logger
+from fovux.http.thread_stream import install_thread_local_streams
 from fovux.http.tool_proxy import (
     HttpScopeError,
     HttpToolPolicyError,
@@ -44,40 +42,7 @@ from fovux.http.tool_proxy import (
     policy_for_tool,
 )
 
-_thread_local = threading.local()
-
-
-class ThreadLocalStream:
-    """Stream wrapper that redirects output based on thread-local context."""
-
-    def __init__(self, original_stream: Any) -> None:  # noqa: ANN401
-        """Initialize the thread local stream wrapper."""
-        self.original_stream = original_stream
-
-    def write(self, data: str) -> int:
-        """Write data to the active thread local stream or default stream."""
-        stream = getattr(_thread_local, "stream", None)
-        if stream is not None:
-            return stream.write(data)  # type: ignore[no-any-return]
-        return self.original_stream.write(data)  # type: ignore[no-any-return]
-
-    def flush(self) -> None:
-        """Flush the active thread local stream or default stream."""
-        stream = getattr(_thread_local, "stream", None)
-        if stream is not None:
-            stream.flush()
-        else:
-            self.original_stream.flush()
-
-    def __getattr__(self, name: str) -> Any:  # noqa: ANN401
-        """Delegate missing attributes to the original stream."""
-        return getattr(self.original_stream, name)
-
-
-if not isinstance(sys.stdout, ThreadLocalStream):
-    sys.stdout = ThreadLocalStream(sys.stdout)
-if not isinstance(sys.stderr, ThreadLocalStream):
-    sys.stderr = ThreadLocalStream(sys.stderr)
+install_thread_local_streams()
 
 
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
