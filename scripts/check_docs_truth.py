@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -60,6 +61,32 @@ def _is_release_please_branch() -> bool:
     return "release-please--branches--main" in branch_names
 
 
+def _current_commit_subject() -> str:
+    """Return the checked-out commit subject without depending on GitHub API access."""
+    result = subprocess.run(
+        ["git", "log", "-1", "--format=%s"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def _is_release_candidate_context(*, commit_subject: str | None = None) -> bool:
+    """Allow candidate docs only for Release Please PRs or exact release commits."""
+    if _is_release_please_branch():
+        return True
+
+    event_name = os.environ.get("GITHUB_EVENT_NAME", "")
+    ref_name = os.environ.get("GITHUB_REF_NAME", "")
+    if event_name != "push" or ref_name != "main":
+        return False
+
+    subject = commit_subject if commit_subject is not None else _current_commit_subject()
+    return re.fullmatch(r"chore\(release\): release \(#[0-9]+\)", subject) is not None
+
+
 def _expect(condition: bool, message: str, failures: list[str]) -> None:
     if not condition:
         failures.append(message)
@@ -75,11 +102,11 @@ def _lm_tool_sources(
     roadmap: str,
     release_notes: str,
     *,
-    release_please_branch: bool,
+    release_candidate_context: bool,
 ) -> str:
     """Return the documents that must carry the LM tool-count fact."""
     sources = architecture + roadmap
-    if not release_please_branch:
+    if not release_candidate_context:
         sources += release_notes
     return sources
 
@@ -99,7 +126,7 @@ def main() -> int:
     roadmap = _read(ROOT / "ROADMAP.md")
     release_notes = _read(ROOT / "RELEASE_NOTES.md")
     root_changelog = _read(ROOT / "CHANGELOG.md")
-    release_please_branch = _is_release_please_branch()
+    release_candidate_context = _is_release_candidate_context()
     package_changelogs = {
         "fovux-mcp": _read(MCP_ROOT / "CHANGELOG.md"),
         "fovux-mcp-npm": _read(ROOT / "fovux-mcp-npm" / "CHANGELOG.md"),
@@ -107,7 +134,7 @@ def main() -> int:
     }
     release_docs = _read(ROOT / "docs" / "release.md") + _read(ROOT / "docs" / "release-process.md")
 
-    if not release_please_branch:
+    if not release_candidate_context:
         _expect(
             f"Python backend package `fovux-mcp` {mcp_version}" in root_readme,
             _with_regen(
@@ -194,7 +221,7 @@ def main() -> int:
             architecture,
             roadmap,
             release_notes,
-            release_please_branch=release_please_branch,
+            release_candidate_context=release_candidate_context,
         ),
         _with_regen(
             "LM tool count is stale in docs/architecture.md, ROADMAP.md, or RELEASE_NOTES.md",
@@ -210,7 +237,7 @@ def main() -> int:
         ),
         failures,
     )
-    if not release_please_branch:
+    if not release_candidate_context:
         _expect(
             f"Fovux {mcp_version} is the current reviewed release baseline" in release_notes,
             _with_regen(
