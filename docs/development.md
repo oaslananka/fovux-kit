@@ -61,18 +61,20 @@ task format      # auto-format
 task lint        # lint Python, Studio, npm wrapper, and workflows
 task typecheck   # static typing
 task test        # backend and Studio tests
-task security    # Bandit, pip-audit, pnpm audit, npm audit, gitleaks, security posture
+task security    # Bandit, pip-audit, pnpm audit, npm audit, pinned Gitleaks
 task deps:renovate:validate  # static policy and Renovate schema validation
 task studio:lm-tools:generate  # regenerate Studio LM definitions/package metadata
 task studio:lm-tools:check     # fail on snapshot/override/generated drift
 task studio:e2e:check        # static packaged-VSIX E2E contract check
 task studio:e2e              # download VS Code and run trusted/untrusted VSIX E2E
-task security:semgrep        # repository Semgrep fixtures and production scan
+task security:semgrep        # pinned repository Semgrep fixtures and production scan
+task security:trivy          # pinned-policy Trivy filesystem vulnerability scan
 task security:osv            # required credential-free lockfile vulnerability scan
 task security:sonar -- --branch feature/name  # optional Sonar analysis
 task docs        # version/tool/docs truth checks, MkDocs strict build, docs code-block lint
 task build       # Python package, Studio bundle, npm wrapper dry-run pack
-task ci          # full local parity with the main CI workflow
+task ci          # primary deterministic quality lane at locked runtimes
+task verify:required  # all deterministic credential-free required local gates
 task ci:act      # optional GitHub Actions simulation through Docker/act
 ```
 
@@ -120,14 +122,14 @@ uv export --no-dev --no-editable --no-emit-project --no-hashes --output-file req
 uv run pip-audit --requirement requirements-audit.txt
 cd ../fovux-studio && corepack pnpm@10.34.1 --ignore-workspace audit --prod
 cd ../fovux-mcp-npm && npm audit --omit=dev
-cd .. && gitleaks detect --no-banner --redact
-python scripts/generate_security_posture.py
+cd .. && python scripts/run_gitleaks.py --required
 ```
 
 ### Developer security scanners
 
 ```bash
 task security:semgrep
+task security:trivy
 task security:osv
 python scripts/run_osv.py --required
 SONAR_TOKEN=... task security:sonar -- --branch feature/security
@@ -182,7 +184,7 @@ The pre-push hook runs `task pre-push` after `task hooks` is installed. Before a
 change, run:
 
 ```bash
-task ci
+task verify:required
 ```
 
 ## Troubleshooting
@@ -192,10 +194,11 @@ task ci
 - `pnpm: command not found`: run `corepack enable && corepack prepare pnpm@10.34.1 --activate`.
 - `uv: command not found`: install `uv` from the official Astral documentation and rerun
   `task install`.
-- `actionlint` or `gitleaks` missing: rerun the bootstrap script or install the pinned Go commands
-  listed above.
-- `task ci` fails but CI passes, or vice versa: compare local runtime versions with
-  [runtime-compatibility.md](runtime-compatibility.md), then rerun `task install`.
+- `actionlint`, `gitleaks`, `osv-scanner`, or `trivy` missing: rerun the bootstrap script. Trivy
+  must report version `0.70.0` so the local filesystem policy matches GitHub Actions.
+- `task verify:required` fails but hosted CI passes, or vice versa: compare local runtime versions with
+  [runtime-compatibility.md](runtime-compatibility.md), rerun `task install`, and inspect
+  `required-local-gates.json` for the explicit hosted-only boundaries.
 
 ## Optional local GitHub Actions simulation
 

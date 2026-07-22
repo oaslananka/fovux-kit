@@ -75,13 +75,18 @@ tasks:
       - cmd: cd fovux-studio && {{.PNPM}} run coverage:ci
 
   security:semgrep:
-    desc: Validate and run repository-owned Semgrep rules
+    desc: Validate and run pinned repository-owned Semgrep rules
     cmds:
-      - semgrep validate .semgrep/rules
-      - semgrep test .semgrep/rules
+      - uvx semgrep==1.170.0 validate .semgrep/rules
+      - uvx semgrep==1.170.0 test .semgrep/rules
       - >-
-        semgrep scan --config .semgrep/rules --metrics=off --error
+        uvx semgrep==1.170.0 scan --config .semgrep/rules --metrics=off --error
         fovux-mcp/src fovux-studio/src fovux-mcp-npm/bin
+
+  security:trivy:
+    desc: Run the pinned-policy credential-free Trivy filesystem scan
+    cmds:
+      - python scripts/run_trivy.py --required
 
   security:osv:
     desc: Run the credential-free OSV lockfile vulnerability scan
@@ -97,6 +102,7 @@ tasks:
     desc: Run deterministic credential-free developer security scans
     cmds:
       - task: security:semgrep
+      - task: security:trivy
       - task: security:osv
 
   security:
@@ -107,11 +113,10 @@ tasks:
       - cmd: cd fovux-mcp && uv run pip-audit --requirement requirements-audit.txt
       - cmd: cd fovux-studio && {{.PNPM}} audit --prod
       - cmd: cd fovux-mcp-npm && {{.NPM}} audit --omit=dev
-      - cmd: gitleaks detect --no-banner --redact
-      - cmd: python scripts/generate_security_posture.py
+      - cmd: python scripts/run_gitleaks.py --required
 
   security:posture:
-    desc: Check and generate security posture report
+    desc: Run the credential-aware strict repository posture check
     cmds:
       - python scripts/generate_security_posture.py --strict
 
@@ -161,6 +166,7 @@ tasks:
       - cmd: python scripts/check_first_run_onboarding.py
       - cmd: python scripts/check_train_preflight_gate.py
       - cmd: python scripts/check_task_docs.py
+      - cmd: python scripts/check_required_local_gates.py
       - cmd: python scripts/check_test_strategy.py
       - cmd: python scripts/check_dataset_intelligence.py
       - cmd: python scripts/check_review_queue.py
@@ -195,7 +201,7 @@ tasks:
       - cmd: uvx zizmor==1.27.0 --pedantic --min-severity=high .github/workflows
 
   ci:
-    desc: Run the exact CI pipeline locally - full parity
+    desc: Run the deterministic primary quality lane locally
     cmds:
       - task: install
       - task: lint
@@ -205,6 +211,13 @@ tasks:
       - task: docs
       - task: build
       - task: release:dry-run
+
+  verify:required:
+    desc: Run every deterministic credential-free required local gate
+    cmds:
+      - task: ci
+      - task: deps:renovate:validate
+      - task: security:developer
 
   release:dry-run:
     desc: Validate release automation without creating tags or releases

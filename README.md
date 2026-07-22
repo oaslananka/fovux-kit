@@ -145,7 +145,7 @@ For a fresh development checkout on Linux/macOS:
 
 ```bash
 scripts/bootstrap-dev.sh --install-deps --hooks
-task ci
+task verify:required
 ```
 
 ## Roadmap

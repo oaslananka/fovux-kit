@@ -20,8 +20,11 @@ The release-readiness hardening train is designed to keep source, local checks, 
 - GitHub Actions in this repository run automatic checks on pushes and pull requests.
 - Registry publishing is driven by release-please outputs and protected GitHub environments.
 
-Before a release, run the repo-level quality gate:
+Before a release, run every deterministic credential-free required local gate:
 
 ```bash
-task ci
+task verify:required
 ```
+
+Hosted-only CodeQL, Dependency Review, Scorecard, compatibility matrices, and strict repository
+posture checks remain authoritative in GitHub Actions.

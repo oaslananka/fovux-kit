@@ -20,11 +20,14 @@ fovux-studio/test/suite/
 
 ## Running Tests
 
-### Full local CI parity
+### Required credential-free pre-merge gates
 
 ```bash
-task ci
+task verify:required
 ```
+
+`task ci` runs the primary deterministic quality lane once. The aggregate command adds Renovate,
+Semgrep, Trivy, and OSV checks without repeating the hosted OS/runtime compatibility matrices.
 
 ### Fast pre-push baseline
 

@@ -40,14 +40,28 @@ def test_osv_wrapper_scans_all_repository_lockfiles(
 ) -> None:
     module = _load_run_osv()
     observed: list[dict[str, object]] = []
+    version_checks: list[dict[str, object]] = []
 
     def fake_run_scanner(**kwargs: object) -> int:
         observed.append(kwargs)
         return 0
 
     monkeypatch.setattr(module, "run_scanner", fake_run_scanner)
+    monkeypatch.setattr(
+        module, "verify_scanner_version", lambda **kwargs: version_checks.append(kwargs)
+    )
 
     assert module.main(["--required"]) == 0
+    assert version_checks == [
+        {
+            "name": "OSV-Scanner",
+            "executable": "osv-scanner",
+            "version_args": ("--version",),
+            "expected_version": "2.3.8",
+            "version_pattern": r"^osv-scanner version:\s+([^\s]+)",
+            "required": True,
+        }
+    ]
     assert len(observed) == 1
     command = observed[0]["command"]
     assert isinstance(command, tuple)
@@ -61,7 +75,7 @@ def test_osv_wrapper_scans_all_repository_lockfiles(
 
 def test_scanner_allowlist_replaces_snyk_with_osv() -> None:
     assert scanner_runner._ALLOWED_EXECUTABLES == frozenset(  # noqa: SLF001
-        {"osv-scanner", "sonar-scanner"}
+        {"gitleaks", "osv-scanner", "sonar-scanner", "trivy"}
     )
 
 
