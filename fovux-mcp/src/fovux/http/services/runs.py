@@ -259,10 +259,9 @@ async def _metric_event_stream(
     watcher = awatch(run_dir, stop_event=shutdown_event, debounce=150)
     last_heartbeat = time.monotonic()
     while not shutdown_event.is_set():
-        if await disconnect_check():
-            get_logger(__name__).info("metrics_stream_disconnected", run_id=run_id)
-            break
-        changes, timed_out = await _next_metric_changes(watcher)
+        changes, timed_out = await _next_metric_changes(
+            watcher, disconnect_check=disconnect_check, run_id=run_id
+        )
         if timed_out:
             yield ": keep-alive\n\n"
             last_heartbeat = time.monotonic()
@@ -289,7 +288,13 @@ async def _metric_event_stream(
 
 async def _next_metric_changes(
     watcher: AsyncIterator[set[tuple[Change, str]]],
+    *,
+    disconnect_check: DisconnectCheck,
+    run_id: str,
 ) -> tuple[set[tuple[Change, str]] | None, bool]:
+    if await disconnect_check():
+        get_logger(__name__).info("metrics_stream_disconnected", run_id=run_id)
+        return None, False
     try:
         return await asyncio.wait_for(watcher.__anext__(), timeout=15.0), False
     except TimeoutError:

@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
+import anyio
+
 from fovux.core.auth import Scope
 from fovux.core.logging import get_logger
 from fovux.core.runs import OperationRecord, RunRegistry
@@ -321,16 +323,16 @@ class OperationService:
         operation_id: str,
         log_file: Path,
     ) -> AsyncIterator[str]:
-        with log_file.open(encoding="utf-8", errors="replace") as handle:
+        async with await anyio.open_file(log_file, encoding="utf-8", errors="replace") as handle:
             while True:
-                line = handle.readline()
+                line = await handle.readline()
                 if line:
                     yield line
                     continue
                 if self._operation_is_terminal(registry, operation_id):
                     break
                 await asyncio.sleep(0.5)
-            remaining = handle.read()
+            remaining = await handle.read()
             if remaining:
                 yield remaining
 

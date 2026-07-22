@@ -37,12 +37,7 @@ from fovux.core.logging import get_logger
 from fovux.http.routes import build_http_router
 from fovux.http.services.container import HttpServices, build_default_services
 from fovux.http.thread_stream import install_thread_local_streams
-from fovux.http.tool_proxy import (
-    HttpScopeError,
-    HttpToolPolicyError,
-    check_scope,
-    policy_for_tool,
-)
+from fovux.http.tool_proxy import check_scope, policy_for_tool
 
 install_thread_local_streams()
 
@@ -53,6 +48,7 @@ _ALLOWED_ORIGIN_SCHEMES = {"https", "vscode-webview"}
 DEFAULT_TOOL_RATE_LIMIT = 100
 TOOL_RATE_LIMITS = {"train_start": 5}
 MAX_TOOL_BODY_BYTES = 1024 * 1024
+_TOOL_PATH_PREFIX = "/tools/"
 _NON_LOCAL_BIND_ALLOWED: bool = False
 
 
@@ -188,7 +184,7 @@ def _tool_policy_rejection(tool_name: str, scopes: set[Scope]) -> JSONResponse |
     try:
         policy = policy_for_tool(tool_name)
         check_scope(policy, scopes)
-    except (HttpToolPolicyError, HttpScopeError, FovuxError) as exc:
+    except FovuxError as exc:
         return _forbidden_error_response(exc)
     return None
 
@@ -199,7 +195,7 @@ def _tool_request_rejection(
     client_ip: str,
     scopes: set[Scope],
 ) -> JSONResponse | None:
-    if request.method.upper() != "POST" or not request.url.path.startswith("/tools/"):
+    if request.method.upper() != "POST" or not request.url.path.startswith(_TOOL_PATH_PREFIX):
         return None
     content_length = _parse_content_length(request.headers.get("content-length"))
     if content_length is not None and content_length > MAX_TOOL_BODY_BYTES:
@@ -207,7 +203,7 @@ def _tool_request_rejection(
             status_code=413,
             content={"detail": "Tool request body is too large."},
         )
-    path_rest = request.url.path.removeprefix("/tools/")
+    path_rest = request.url.path.removeprefix(_TOOL_PATH_PREFIX)
     tool_name = path_rest.split("/", maxsplit=1)[0]
     is_challenge = path_rest.endswith("/challenge")
     if not is_challenge:
