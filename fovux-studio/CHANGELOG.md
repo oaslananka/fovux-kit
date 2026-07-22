@@ -18,6 +18,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Renamed the Marketplace display name to `Fovux Studio Kit` so the first public VSIX publish uses
   a unique display name while keeping the `oaslananka.fovuxstudiokit` extension identifier stable.
 
+## [1.5.1](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.5.0...fovux-studio-v1.5.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* **ci:** reconcile Sonar and Codecov coverage signals ([#180](https://github.com/oaslananka/fovux-kit/issues/180)) ([eb56de7](https://github.com/oaslananka/fovux-kit/commit/eb56de71a3b23969440e81351ef0e67d38dd5994)), refs [#173](https://github.com/oaslananka/fovux-kit/issues/173)
+
 ## [1.5.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.4.0...fovux-studio-v1.5.0) (2026-07-21)
 
 
