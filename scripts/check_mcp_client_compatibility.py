@@ -31,6 +31,10 @@ def main() -> int:
         "Manual GUI checklist",
         "all 47 MCP tools",
         "model_list",
+        "fovux.stdio",
+        "25-second startup budget",
+        "FOVUX_STARTUP_DIAGNOSTICS",
+        "check_stdio_startup.py",
     ]
     required.append("unknown " + "tool")
     for phrase in required:
@@ -48,6 +52,8 @@ def main() -> int:
         "tools/call",
         "notifications/cancelled",
         "fovux/unknown_method",
+        "fovux.stdio",
+        "_STDIO_INITIALIZE_BUDGET_SECONDS",
     ]:
         if phrase not in contract:
             failures.append(f"Raw JSON-RPC contract coverage missing: {phrase}")

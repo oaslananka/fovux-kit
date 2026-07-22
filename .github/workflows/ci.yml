@@ -330,6 +330,12 @@ jobs:
           PYTHONPATH=src uv run --no-sync --no-build pytest -q --no-header \
             -m "slow or integration or chaos or benchmark" \
             --basetemp="$RUNNER_TEMP/fovux-slow-pytest"
+      - name: Repeat raw stdio initialization within startup budget
+        working-directory: fovux-mcp
+        run: |
+          set -euo pipefail
+          PYTHONPATH=src uv run --no-sync --no-build python ../scripts/check_stdio_startup.py \
+            --rounds 3 --budget-seconds 25
 
   renovate-config:
     name: Renovate policy

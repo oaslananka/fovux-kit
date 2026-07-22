@@ -10,10 +10,18 @@ Fovux supports MCP through stdio. The Fovux Studio local API is a separate REST/
 | FastMCP client | Linux CI/local | in-process | `uv sync --extra dev` | `uv run pytest -m contract` | Verified | Host substitute only. |
 | Fovux Studio | Windows/macOS/Linux | Studio API + LM tools | `.vsix` or dev host | `npm test` | Verified | Studio API is separate from MCP HTTP. |
 
+## Startup reliability
+
+The production command dispatches arg-free `fovux-mcp` sessions through `fovux.stdio`, avoiding the
+interactive Typer/Rich CLI import path. Raw initialization has a 25-second startup budget. Set
+`FOVUX_STARTUP_DIAGNOSTICS=1` to emit bounded JSON stage timings to stderr; MCP stdout remains
+reserved for JSON-RPC. Scheduled CI runs `scripts/check_stdio_startup.py` for three consecutive
+initializations to detect cold-start regressions.
+
 ## Manual GUI checklist
 
 1. Install the current `fovux-mcp` package.
-2. Configure the host command as `fovux-mcp` with args `serve`.
+2. Configure the host command as `fovux-mcp` with no arguments.
 3. Confirm initialization succeeds.
 4. Confirm all 47 MCP tools are visible.
 5. Call `model_list` with `{}` and verify a structured response.

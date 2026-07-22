@@ -80,9 +80,9 @@ dev = [
 
 [project.scripts]
 # Primary alias - used by VS Code extension and MCP clients.
-fovux-mcp = "fovux.cli:app"
+fovux-mcp = "fovux.stdio:main"
 # Convenience alias - shorter form for direct CLI use.
-fovux = "fovux.cli:app"
+fovux = "fovux.stdio:main"
 
 [project.urls]
 Homepage = "https://github.com/oaslananka/fovux-kit"
@@ -196,6 +196,8 @@ pytest_add_cli_args_test_selection = [
     "tests/unit/test_tool_registry.py::test_list_tool_names_is_available_tools_alias",
     "tests/unit/test_tool_registry.py::test_resolve_tool_unknown_name_raises_key_error",
     "tests/unit/test_tool_registry.py::test_register_all_imports_all_tool_modules",
+    "tests/unit/test_tool_registry.py::test_register_manifest_tools_uses_lazy_schema_records",
+    "tests/unit/test_tool_registry.py::test_lazy_tool_callable_resolves_only_when_invoked",
     "tests/unit/test_http_challenge.py::TestChallengeUnit",
 ]
 pytest_add_cli_args = ["--no-header", "-q"]

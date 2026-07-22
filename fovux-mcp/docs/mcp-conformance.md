@@ -6,7 +6,7 @@ do not treat the Studio REST/SSE bridge as Streamable HTTP.
 
 ## Source Verification
 
-Checked on 2026-06-24:
+Checked on 2026-07-22:
 
 - MCP specification `2025-11-25`: transports, lifecycle, tools, and authorization pages at
   `modelcontextprotocol.io`.
@@ -46,7 +46,7 @@ Use stdio for MCP clients:
     "mcpServers": {
         "fovux": {
             "command": "fovux-mcp",
-            "args": ["serve"]
+            "args": []
         }
     }
 }
@@ -66,7 +66,7 @@ OAuth resource-server metadata.
 ## Raw JSON-RPC Stdio Coverage
 
 `tests/contract/test_mcp_protocol.py` includes a wrapper-independent golden stdio flow that sends
-newline-delimited JSON-RPC messages directly to `python -m fovux.cli`. It verifies:
+newline-delimited JSON-RPC messages directly to `python -m fovux.stdio`. It verifies:
 
 - `initialize` protocol/version/server capability negotiation;
 - `notifications/initialized`;
@@ -75,6 +75,18 @@ newline-delimited JSON-RPC messages directly to `python -m fovux.cli`. It verifi
 - tool-level error results for unknown tools;
 - JSON-RPC error objects for invalid methods;
 - `notifications/cancelled` does not destabilize the session.
+
+## Startup Reliability Contract
+
+The public `fovux-mcp` and `fovux` console scripts dispatch through `fovux.stdio`. With no arguments,
+the entry point avoids Typer/Rich and HTTP-only imports, loads the packaged release-time tool schema
+manifest, and lazily resolves each implementation on first call. CLI arguments still dispatch to the
+historical Typer command surface.
+
+Raw `initialize` has a 25-second budget and a 30-second diagnostic read limit. Timeout failures report
+bounded stderr, process state, return code, phase, and elapsed time. Set
+`FOVUX_STARTUP_DIAGNOSTICS=1` to emit JSON startup checkpoints to stderr. Scheduled CI repeats three
+cold starts through `scripts/check_stdio_startup.py`; normal CI runs the complete raw JSON-RPC contract.
 
 ## Streamable HTTP Implementation Requirements
 
