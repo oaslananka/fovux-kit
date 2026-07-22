@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from fovux.core.errors import FovuxError
 from fovux.core.logging import get_logger
+from fovux.http import tool_proxy as _tool_proxy
 from fovux.http.challenge import create_challenge, prune_expired_challenges, verify_challenge
 from fovux.http.services.errors import ServiceError
 from fovux.http.services.tool_runtime import (
@@ -29,12 +30,17 @@ from fovux.http.tool_proxy import (
 from fovux.schemas.errors import ErrorDetail
 
 ToolInvoker = Callable[[str, Mapping[str, object]], dict[str, Any]]
+_BASE_INVOKE_TOOL = _tool_proxy.invoke_tool
 
 
 def default_tool_invoker(name: str, payload: Mapping[str, object]) -> dict[str, Any]:
     """Resolve the invoker lazily so test and plugin overrides remain observable."""
     from fovux.http import tool_proxy
 
+    if tool_proxy.invoke_tool is _BASE_INVOKE_TOOL:
+        from fovux import server as _server
+
+        del _server
     return tool_proxy.invoke_tool(name, payload)
 
 

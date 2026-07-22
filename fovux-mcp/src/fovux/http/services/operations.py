@@ -17,7 +17,7 @@ from fovux.core.runs import OperationRecord, RunRegistry
 from fovux.http.challenge import prune_expired_challenges, verify_challenge
 from fovux.http.services.errors import ServiceError
 from fovux.http.services.tool_runtime import ToolRuntimeState
-from fovux.http.services.tools import ServiceOutcome
+from fovux.http.services.tools import ServiceOutcome, default_tool_invoker
 from fovux.http.thread_stream import redirect_thread_output
 from fovux.http.tool_proxy import check_scope, payload_hash, policy_for_tool
 
@@ -28,9 +28,7 @@ ToolInvoker = Callable[[str, Mapping[str, object]], dict[str, Any]]
 
 def default_operation_invoker(name: str, payload: Mapping[str, object]) -> dict[str, Any]:
     """Resolve the tool invoker lazily for runtime overrides and tests."""
-    from fovux.http import tool_proxy
-
-    return tool_proxy.invoke_tool(name, payload)
+    return default_tool_invoker(name, payload)
 
 
 TrainStopper = Callable[[str], object]
