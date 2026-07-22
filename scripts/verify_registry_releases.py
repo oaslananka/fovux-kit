@@ -19,6 +19,9 @@ from pathlib import Path
 from typing import Any
 
 
+EVIDENCE_STATUSES = frozenset({"passed", "failed", "skipped", "retry"})
+
+
 @dataclass
 class EvidenceRecorder:
     """Collect machine-readable release verification evidence."""
@@ -36,6 +39,8 @@ class EvidenceRecorder:
         details: dict[str, object] | None = None,
     ) -> None:
         """Append one verification step result."""
+        if status not in EVIDENCE_STATUSES:
+            raise ValueError(f"Unsupported evidence status: {status}")
         self.steps.append(
             {
                 "channel": channel,
@@ -46,16 +51,43 @@ class EvidenceRecorder:
             }
         )
 
+    def mark_attempt_for_retry(
+        self, *, start_index: int, attempt: int, max_attempts: int, check: str
+    ) -> None:
+        """Reclassify current-attempt failures as non-terminal retries."""
+        reclassified = False
+        for step in self.steps[start_index:]:
+            if step["status"] != "failed":
+                continue
+            step["status"] = "retry"
+            raw_details = step["details"]
+            details: dict[str, object] = (
+                dict(raw_details) if isinstance(raw_details, dict) else {}
+            )
+            details.update({"attempt": attempt, "max_attempts": max_attempts})
+            step["details"] = details
+            reclassified = True
+
+        if not reclassified:
+            self.record(
+                channel="system",
+                check=check,
+                status="retry",
+                details={"attempt": attempt, "max_attempts": max_attempts},
+            )
+
     def write(self) -> None:
         """Write the evidence file."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
-            "schema_version": 1,
+            "schema_version": 2,
             "expected_versions": self.expected_versions,
             "steps": self.steps,
             "summary": {
                 "passed": sum(step["status"] == "passed" for step in self.steps),
                 "failed": sum(step["status"] == "failed" for step in self.steps),
+                "skipped": sum(step["status"] == "skipped" for step in self.steps),
+                "retries": sum(step["status"] == "retry" for step in self.steps),
             },
         }
         self.path.write_text(
@@ -275,6 +307,13 @@ def verify_pypi(version: str, smoke_test: bool, evidence: EvidenceRecorder) -> N
                 details={"package": "fovux-mcp", "version": version, "error": str(exc)},
             )
             raise
+    else:
+        evidence.record(
+            channel="python",
+            check="pypi_cli_smoke",
+            status="skipped",
+            details={"reason": "--skip-smoke"},
+        )
 
 
 def verify_npm(version: str, smoke_test: bool, evidence: EvidenceRecorder) -> None:
@@ -285,7 +324,8 @@ def verify_npm(version: str, smoke_test: bool, evidence: EvidenceRecorder) -> No
     try:
         meta = fetch_json(url)
         repo = meta.get("repository", {})
-        repo_url = repo.get("url") if isinstance(repo, dict) else str(repo)
+        repo_url_value = repo.get("url") if isinstance(repo, dict) else repo
+        repo_url = str(repo_url_value or "")
         if "oaslananka/fovux-kit" not in repo_url:
             print(
                 f"Warning: Repository URL {repo_url!r} does not match expected repository."
@@ -358,6 +398,13 @@ def verify_npm(version: str, smoke_test: bool, evidence: EvidenceRecorder) -> No
                 details={"package": "fovux-mcp", "version": version, "error": str(exc)},
             )
             raise
+    else:
+        evidence.record(
+            channel="npm",
+            check="npm_cli_smoke",
+            status="skipped",
+            details={"reason": "--skip-smoke"},
+        )
 
 
 def verify_vscode_marketplace(version: str, evidence: EvidenceRecorder) -> None:
@@ -472,19 +519,30 @@ def verify_open_vsx(version: str, evidence: EvidenceRecorder) -> None:
 def run_with_retry(
     func: Callable[..., None],
     *args: Any,  # noqa: ANN401
+    evidence: EvidenceRecorder,
     retries: int = 15,
     delay: int = 15,
     **kwargs: Any,  # noqa: ANN401
 ) -> None:
-    """Run verification function with a retry mechanism for registry sync delays."""
+    """Run verification while distinguishing retries from terminal failures."""
+    if retries < 1:
+        raise ValueError("retries must be at least 1")
+
     for attempt in range(1, retries + 1):
+        start_index = len(evidence.steps)
         try:
-            func(*args, **kwargs)
+            func(*args, evidence, **kwargs)
             return
-        except Exception as e:
-            print(f"Verification attempt {attempt}/{retries} failed: {e}")
+        except Exception as exc:
+            print(f"Verification attempt {attempt}/{retries} failed: {exc}")
             if attempt == retries:
                 raise
+            evidence.mark_attempt_for_retry(
+                start_index=start_index,
+                attempt=attempt,
+                max_attempts=retries,
+                check=f"{func.__name__}_attempt",
+            )
             time.sleep(delay)
 
 
@@ -552,7 +610,7 @@ def main() -> None:
                 verify_pypi,
                 mcp_expected,
                 not args.skip_smoke,
-                evidence,
+                evidence=evidence,
                 retries=args.retries,
                 delay=args.delay,
             )
@@ -562,7 +620,7 @@ def main() -> None:
                 verify_npm,
                 npm_expected,
                 not args.skip_smoke,
-                evidence,
+                evidence=evidence,
                 retries=args.retries,
                 delay=args.delay,
             )
@@ -571,14 +629,14 @@ def main() -> None:
             run_with_retry(
                 verify_vscode_marketplace,
                 studio_expected,
-                evidence,
+                evidence=evidence,
                 retries=args.retries,
                 delay=args.delay,
             )
             run_with_retry(
                 verify_open_vsx,
                 studio_expected,
-                evidence,
+                evidence=evidence,
                 retries=args.retries,
                 delay=args.delay,
             )
