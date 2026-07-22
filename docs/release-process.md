@@ -47,3 +47,9 @@ Commit the generated `release-baseline.json`, README, ROADMAP, and release-note 
 normal pull request. Historical release-note files for earlier versions must remain unchanged.
 
 After registry verification succeeds, the release workflow opens or updates a protected-branch post-release baseline pull request. That PR promotes candidate wording and pending channel statuses to the reviewed published truth; do not edit the published baseline directly on main.
+
+The release commit on `main` is the only controlled interval where candidate metadata is valid outside
+the Release Please branch. Documentation truth checks recognize that state only for a `push` to
+`main` whose exact commit subject matches `chore(release): release (#<PR>)`. Ordinary `main` commits,
+manual workflow dispatches, and unrelated branches continue to require the reviewed published
+baseline and fail closed when candidate wording remains.
