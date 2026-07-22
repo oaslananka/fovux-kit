@@ -3,12 +3,26 @@
 from __future__ import annotations
 
 import importlib
+import json
 from collections.abc import Callable
-from typing import Any, cast
+from importlib.resources import files
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from fovux.core.logging import get_logger
+from fovux.startup import startup_checkpoint
+
+if TYPE_CHECKING:
+    from fastmcp.tools import FunctionTool
 
 ToolCallable = Callable[..., dict[str, Any]]
+
+
+class ToolServer(Protocol):
+    """Minimal FastMCP registration surface used by the runtime manifest."""
+
+    def add_tool(self, tool: FunctionTool) -> object:
+        """Register one tool object."""
+
 
 _TOOL_SPECS: dict[str, str] = {
     "active_learning_select": "fovux.tools.active_learning_select:active_learning_select",
@@ -65,6 +79,81 @@ _TOOL_SPECS: dict[str, str] = {
     "train_status": "fovux.tools.train_status:train_status",
     "train_stop": "fovux.tools.train_stop:train_stop",
 }
+
+
+def _load_runtime_manifest() -> dict[str, Any]:
+    """Load and validate the packaged schema manifest without importing implementations."""
+    manifest_path = files("fovux").joinpath("tool_manifest.json")
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise RuntimeError("Invalid Fovux runtime tool manifest.")
+    tools = payload.get("tools")
+    if not isinstance(tools, list) or len(tools) != len(_TOOL_SPECS):
+        raise RuntimeError("Fovux runtime tool manifest does not match the registry.")
+    names: list[str] = []
+    for raw_record in tools:
+        if not isinstance(raw_record, dict):
+            raise RuntimeError("Fovux runtime tool manifest contains a non-object record.")
+        name = raw_record.get("name")
+        target = raw_record.get("callable")
+        input_schema = raw_record.get("inputSchema")
+        output_schema = raw_record.get("outputSchema")
+        if not isinstance(name, str) or target != _TOOL_SPECS.get(name):
+            raise RuntimeError(f"Runtime tool manifest target drifted for {name!r}.")
+        if not isinstance(input_schema, dict) or input_schema.get("type") != "object":
+            raise RuntimeError(f"Runtime tool manifest input schema drifted for {name}.")
+        if output_schema is not None and (
+            not isinstance(output_schema, dict) or output_schema.get("type") != "object"
+        ):
+            raise RuntimeError(f"Runtime tool manifest output schema drifted for {name}.")
+        names.append(name)
+    if names != sorted(_TOOL_SPECS):
+        raise RuntimeError("Fovux runtime tool manifest order or names drifted.")
+    startup_checkpoint("tool_manifest_loaded", total_tools=len(names))
+    return cast(dict[str, Any], payload)
+
+
+def _lazy_tool_callable(name: str) -> Callable[..., Any]:
+    """Return a proxy that imports and validates one implementation on first invocation."""
+
+    async def invoke(**kwargs: object) -> object:
+        from fastmcp.tools import FunctionTool
+
+        implementation = FunctionTool.from_function(resolve_tool(name))
+        return await implementation.run(cast(dict[str, Any], kwargs))
+
+    invoke.__name__ = name
+    invoke.__qualname__ = name
+    return invoke
+
+
+def register_manifest_tools(server: ToolServer) -> None:
+    """Register schema-complete lazy tool proxies from the packaged manifest."""
+    from fastmcp.tools import FunctionTool
+    from mcp.types import ToolAnnotations
+
+    manifest = _load_runtime_manifest()
+    for record in cast(list[dict[str, Any]], manifest["tools"]):
+        name = cast(str, record["name"])
+        raw_annotations = record.get("annotations")
+        annotations = (
+            ToolAnnotations.model_validate(raw_annotations)
+            if isinstance(raw_annotations, dict)
+            else None
+        )
+        server.add_tool(
+            FunctionTool(
+                name=name,
+                title=cast(str | None, record.get("title")),
+                description=cast(str, record["description"]),
+                parameters=cast(dict[str, Any], record["inputSchema"]),
+                output_schema=cast(dict[str, Any] | None, record.get("outputSchema")),
+                annotations=annotations,
+                fn=_lazy_tool_callable(name),
+            )
+        )
+    startup_checkpoint("lazy_tool_registration_complete", total_tools=len(_TOOL_SPECS))
+    get_logger(__name__).info("tool_registry_loaded", total_tools=len(_TOOL_SPECS), lazy=True)
 
 
 def register_all() -> None:
