@@ -124,6 +124,9 @@ class OperationService:
             semaphore = tools.semaphores[command.tool]
         except KeyError as exc:
             raise ServiceError(403, f"Tool '{command.tool}' is not available over HTTP.") from exc
+        self._record_and_notify(
+            registry, runtime, operation_id, "status_change", {"status": "pending"}
+        )
         task = asyncio.create_task(
             self.run_in_background(
                 runtime,
@@ -134,7 +137,6 @@ class OperationService:
             )
         )
         runtime.active_tasks[operation_id] = task
-        registry.create_operation_event(operation_id, "status_change", {"status": "pending"})
         return ServiceOutcome(201, _operation_summary(record))
 
     def get(self, operation_id: str) -> dict[str, Any]:
@@ -172,8 +174,9 @@ class OperationService:
                     error=str(exc),
                 )
         registry.update_operation_status(operation_id, "cancelled")
-        registry.create_operation_event(operation_id, "status_change", {"status": "cancelled"})
-        self._notify(runtime, operation_id, "status_change", {"status": "cancelled"})
+        self._record_and_notify(
+            registry, runtime, operation_id, "status_change", {"status": "cancelled"}
+        )
         updated = registry.get_operation(operation_id)
         if updated is None:
             raise ServiceError(404, f"Operation {operation_id} not found.")
@@ -227,8 +230,9 @@ class OperationService:
         """Execute one operation, persist transitions, and notify listeners."""
         registry = self._registry_provider()
         registry.update_operation_status(operation_id, "running")
-        registry.create_operation_event(operation_id, "status_change", {"status": "running"})
-        self._notify(runtime, operation_id, "status_change", {"status": "running"})
+        self._record_and_notify(
+            registry, runtime, operation_id, "status_change", {"status": "running"}
+        )
         log_file = self._operation_log_file(operation_id)
         await semaphore.acquire()
 
@@ -254,12 +258,18 @@ class OperationService:
                 operation_id, "succeeded", result=result, run_id=run_id
             )
             data = {"status": "succeeded", "result": result, "run_id": run_id}
-            registry.create_operation_event(operation_id, "status_change", data)
-            self._notify(runtime, operation_id, "status_change", data)
+            self._record_and_notify(registry, runtime, operation_id, "status_change", data)
         except asyncio.CancelledError:
-            registry.update_operation_status(operation_id, "cancelled")
-            registry.create_operation_event(operation_id, "status_change", {"status": "cancelled"})
-            self._notify(runtime, operation_id, "status_change", {"status": "cancelled"})
+            current = registry.get_operation(operation_id)
+            if current is None or current.status != "cancelled":
+                registry.update_operation_status(operation_id, "cancelled")
+                self._record_and_notify(
+                    registry,
+                    runtime,
+                    operation_id,
+                    "status_change",
+                    {"status": "cancelled"},
+                )
             raise
         except Exception as exc:
             data = {
@@ -273,8 +283,7 @@ class OperationService:
                 error_type=type(exc).__name__,
                 error=str(exc),
             )
-            registry.create_operation_event(operation_id, "status_change", data)
-            self._notify(runtime, operation_id, "status_change", data)
+            self._record_and_notify(registry, runtime, operation_id, "status_change", data)
         finally:
             semaphore.release()
             runtime.active_tasks.pop(operation_id, None)
@@ -370,15 +379,17 @@ class OperationService:
             ),
         )
 
-    def _notify(
+    def _record_and_notify(
         self,
+        registry: RunRegistry,
         runtime: OperationRuntimeState,
         operation_id: str,
         event_type: str,
         data: dict[str, Any],
     ) -> None:
+        """Persist one canonical event and deliver that exact event to live subscribers."""
         payload = {"operation_id": operation_id, "event_type": event_type, "data": data}
-        event = self._registry_provider().create_operation_event(operation_id, event_type, payload)
+        event = registry.create_operation_event(operation_id, event_type, payload)
         for queue in list(runtime.sse_listeners):
             try:
                 queue.put_nowait((cast(int, event.id), event_type, payload))
