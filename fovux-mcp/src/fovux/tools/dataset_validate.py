@@ -1,19 +1,20 @@
-"""dataset_validate — deep integrity check for a dataset."""
+"""dataset_validate — deep integrity check for a normalized dataset inventory."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Literal
 
-from fovux.core.dataset_utils import (
-    detect_format,
-    iter_yolo_labels,
-    parse_yolo_label,
-    read_yolo_data_yaml,
+from fovux.core.dataset_inventory import (
+    AnnotationRecord,
+    DatasetFinding,
+    DatasetInventory,
+    build_dataset_inventory,
 )
+from fovux.core.dataset_utils import detect_format
 from fovux.core.errors import FovuxDatasetFormatError, FovuxDatasetNotFoundError
 from fovux.core.tooling import tool_event
-from fovux.core.validation import ensure_within_root, resolve_local_path, validate_file_size
+from fovux.core.validation import resolve_local_path
 from fovux.schemas.dataset import (
     DatasetValidateInput,
     DatasetValidateOutput,
@@ -58,143 +59,140 @@ def _run_validate(inp: DatasetValidateInput) -> DatasetValidateOutput:
         raise FovuxDatasetNotFoundError(str(path))
 
     fmt = inp.format if inp.format != "auto" else detect_format(path)
-    if fmt == "yolo":
-        return _validate_yolo(path, inp)
-    raise FovuxDatasetFormatError(
-        (f"dataset_validate currently supports YOLO datasets only; received '{fmt}'."),
-        hint="Convert the dataset to YOLO before running deep validation.",
+    if fmt not in {"yolo", "coco"}:
+        raise FovuxDatasetFormatError(
+            f"dataset_validate currently supports YOLO and COCO datasets; received '{fmt}'.",
+            hint="Convert the dataset to YOLO or COCO before running deep validation.",
+        )
+    inventory = build_dataset_inventory(
+        path,
+        fmt,
+        analyze_images=inp.check_image_readable,
+        compute_fingerprints=False,
     )
+    return _validate_inventory(inventory, inp)
 
 
-def _validate_yolo(path: Path, inp: DatasetValidateInput) -> DatasetValidateOutput:
+def _validate_inventory(
+    inventory: DatasetInventory,
+    inp: DatasetValidateInput,
+) -> DatasetValidateOutput:
     errors: list[ValidationIssue] = []
     warnings: list[ValidationIssue] = []
-
-    try:
-        meta = read_yolo_data_yaml(path)
-        nc: int = int(meta.get("nc", 0))
-        names = meta.get("names", [])
-        if isinstance(names, dict):
-            names_len = len(names)
-        elif isinstance(names, list):
-            names_len = len(names)
-        else:
-            names_len = 0
-        if nc > 0 and names_len > 0 and nc != names_len:
-            errors.append(
-                ValidationIssue(
-                    file="data.yaml",
-                    severity="error",
-                    message=(
-                        f"Class count nc ({nc}) does not match length of names list ({names_len})"
-                    ),
-                )
-            )
-    except Exception:
-        nc = 0
-        warnings.append(
-            ValidationIssue(file="data.yaml", severity="warning", message="Cannot parse data.yaml")
-        )
-
-    # Scan for orphan images (images with no corresponding label files)
-    images_root = path / "images"
-    labels_root = path / "labels"
-    image_exts = {".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif"}
-    if images_root.is_dir():
-        for img_file in sorted(images_root.rglob("*")):
-            if img_file.suffix.lower() in image_exts and img_file.is_file():
-                try:
-                    rel = img_file.relative_to(images_root)
-                except ValueError:
-                    rel = Path(img_file.name)
-                lbl_file = labels_root / rel.with_suffix(".txt")
-                if not lbl_file.exists():
-                    warnings.append(
-                        ValidationIssue(
-                            file=str(img_file),
-                            severity="warning",
-                            message="Image has no corresponding label file",
-                        )
-                    )
-
-    bad_image_paths: list[str] = []
     out_of_bounds_files: list[str] = []
 
-    for img_path, label_path in iter_yolo_labels(path):
-        if inp.check_image_readable and img_path.exists():
-            try:
-                from PIL import Image
+    for finding in inventory.findings:
+        issue = _issue_from_finding(finding)
+        if finding.severity == "error":
+            errors.append(issue)
+        else:
+            warnings.append(issue)
 
-                safe_img_path = ensure_within_root(img_path, path)
-                validate_file_size(safe_img_path)
-                with Image.open(safe_img_path) as im:
-                    im.verify()
-            except Exception as e:
-                errors.append(
-                    ValidationIssue(
-                        file=str(img_path),
-                        severity="error",
-                        message=f"Image unreadable: {e}",
-                    )
-                )
-                bad_image_paths.append(str(img_path))
-
-        safe_label_path = ensure_within_root(label_path, path)
-        validate_file_size(safe_label_path)
-        anns = parse_yolo_label(label_path)
-        for line_no, (cls, cx, cy, w, h) in enumerate(anns, start=1):
-            if inp.check_bbox_bounds:
-                if not (
-                    0.0 <= cx <= 1.0 and 0.0 <= cy <= 1.0 and 0.0 < w <= 1.0 and 0.0 < h <= 1.0
-                ):
-                    sev: Literal["error", "warning"] = "error" if inp.strict else "warning"
-                    errors.append(
-                        ValidationIssue(
-                            file=str(label_path),
-                            line=line_no,
-                            severity=sev,
-                            message=(
-                                "Bbox out of [0,1] range: "
-                                f"cx={cx:.4f} cy={cy:.4f} w={w:.4f} h={h:.4f}"
-                            ),
-                        )
-                    )
-                    out_of_bounds_files.append(str(label_path))
-
-            if inp.check_class_id_range and nc > 0:
-                if cls < 0 or cls >= nc:
-                    errors.append(
-                        ValidationIssue(
-                            file=str(label_path),
-                            line=line_no,
-                            severity="error",
-                            message=f"Class ID {cls} out of range [0, {nc - 1}]",
-                        )
-                    )
-
-    valid = len(errors) == 0
-    n_err = len(errors)
-    n_warn = len(warnings)
-    summary = f"{'PASS' if valid else 'FAIL'}: {n_err} error(s), {n_warn} warning(s)"
-
-    remediation: str | None = None
-    if out_of_bounds_files:
-        remediation = (
-            "# Clip bbox values to [0,1] for affected label files:\n"
-            "import glob, pathlib\n"
-            "for f in " + repr(list(set(out_of_bounds_files))[:5]) + ":\n"
-            "    lines = pathlib.Path(f).read_text().splitlines()\n"
-            "    fixed = []\n"
-            "    for l in lines:\n"
-            "        p = l.split(); c=p[0]; vals=[max(0,min(1,float(v))) for v in p[1:]]\n"
-            "        fixed.append(c + ' ' + ' '.join(f'{v:.6f}' for v in vals))\n"
-            "    pathlib.Path(f).write_text('\\n'.join(fixed))\n"
+    for image_path in inventory.missing_annotation_images:
+        warnings.append(
+            ValidationIssue(
+                file=str(image_path),
+                severity="warning",
+                message="Image has no corresponding label file",
+            )
         )
 
+    if inp.check_image_readable:
+        for image in inventory.images:
+            if image.analyzed and image.readable is False:
+                detail = image.analysis_error or "unknown image decoding error"
+                errors.append(
+                    ValidationIssue(
+                        file=str(image.path),
+                        severity="error",
+                        message=f"Image unreadable: {detail}",
+                    )
+                )
+
+    for annotation in inventory.annotations:
+        if inp.check_bbox_bounds and annotation.bbox is not None:
+            if not annotation.bbox.is_within_bounds:
+                severity: Literal["error", "warning"] = "error" if inp.strict else "warning"
+                errors.append(
+                    ValidationIssue(
+                        file=str(annotation.source_path),
+                        line=annotation.line,
+                        severity=severity,
+                        message=_bbox_bounds_message(annotation),
+                    )
+                )
+                out_of_bounds_files.append(str(annotation.source_path))
+
+        if inp.check_class_id_range and not _class_id_is_valid(inventory, annotation.class_id):
+            errors.append(
+                ValidationIssue(
+                    file=str(annotation.source_path),
+                    line=annotation.line,
+                    severity="error",
+                    message=_class_range_message(inventory, annotation.class_id),
+                )
+            )
+
+    valid = len(errors) == 0
+    summary = f"{'PASS' if valid else 'FAIL'}: {len(errors)} error(s), {len(warnings)} warning(s)"
     return DatasetValidateOutput(
         valid=valid,
         errors=errors,
         warnings=warnings,
         summary=summary,
-        remediation_script=remediation,
+        remediation_script=_build_bbox_remediation(out_of_bounds_files, inventory.format),
+    )
+
+
+def _issue_from_finding(finding: DatasetFinding) -> ValidationIssue:
+    return ValidationIssue(
+        file=str(finding.file),
+        line=finding.line,
+        severity=finding.severity,
+        message=finding.message,
+    )
+
+
+def _bbox_bounds_message(annotation: AnnotationRecord) -> str:
+    if annotation.bbox is None:
+        return "Bbox cannot be normalized because image dimensions are missing"
+    box = annotation.bbox
+    return (
+        "Bbox out of [0,1] range: "
+        f"x_min={box.x_min:.4f} y_min={box.y_min:.4f} "
+        f"x_max={box.x_max:.4f} y_max={box.y_max:.4f}"
+    )
+
+
+def _class_id_is_valid(inventory: DatasetInventory, class_id: int) -> bool:
+    if inventory.format == "yolo" and inventory.declared_class_count:
+        return 0 <= class_id < inventory.declared_class_count
+    if inventory.class_names:
+        return class_id in inventory.class_names
+    return True
+
+
+def _class_range_message(inventory: DatasetInventory, class_id: int) -> str:
+    if inventory.format == "yolo" and inventory.declared_class_count:
+        return f"Class ID {class_id} out of range [0, {inventory.declared_class_count - 1}]"
+    return f"Class ID {class_id} is not declared in COCO categories"
+
+
+def _build_bbox_remediation(
+    out_of_bounds_files: list[str],
+    dataset_format: str,
+) -> str | None:
+    if dataset_format != "yolo" or not out_of_bounds_files:
+        return None
+    unique_files = list(dict.fromkeys(out_of_bounds_files))[:5]
+    return (
+        "# Clip bbox values to [0,1] for affected label files:\n"
+        "import pathlib\n"
+        "for f in " + repr(unique_files) + ":\n"
+        "    lines = pathlib.Path(f).read_text().splitlines()\n"
+        "    fixed = []\n"
+        "    for l in lines:\n"
+        "        p = l.split(); c=p[0]; vals=[max(0,min(1,float(v))) for v in p[1:]]\n"
+        "        fixed.append(c + ' ' + ' '.join(f'{v:.6f}' for v in vals))\n"
+        "    pathlib.Path(f).write_text('\\n'.join(fixed))\n"
     )

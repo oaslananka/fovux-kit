@@ -53,3 +53,34 @@ def test_validate_corrupt_label(tmp_path: Path):
     # Should flag the out-of-bounds bbox
     all_issues = out.errors + out.warnings
     assert any("out of" in i.message.lower() or "range" in i.message.lower() for i in all_issues)
+
+
+def test_validate_mini_coco_passes() -> None:
+    """The normalized COCO adapter should support deep validation too."""
+    out = _run_validate(DatasetValidateInput(dataset_path=FIXTURES / "mini_coco", format="coco"))
+
+    assert out.valid is True
+    assert out.errors == []
+
+
+def test_validate_coco_reports_bounds_class_and_missing_image_issues(tmp_path: Path) -> None:
+    """COCO validation should use the same normalized issue semantics as YOLO."""
+    import json
+
+    annotations = tmp_path / "annotations"
+    annotations.mkdir()
+    payload = {
+        "images": [{"id": 1, "file_name": "missing.jpg", "width": 100, "height": 50}],
+        "categories": [{"id": 1, "name": "object"}],
+        "annotations": [{"id": 2, "image_id": 1, "category_id": 2, "bbox": [-5, 0, 120, 50]}],
+    }
+    (annotations / "instances_train.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    out = _run_validate(DatasetValidateInput(dataset_path=tmp_path, format="coco"))
+
+    assert out.valid is False
+    all_issues = out.errors + out.warnings
+    assert any("class id 2" in issue.message.lower() for issue in all_issues)
+    assert any("bbox out of [0,1] range" in issue.message.lower() for issue in all_issues)
+    assert any("image unreadable" in issue.message.lower() for issue in all_issues)
+    assert out.remediation_script is None
