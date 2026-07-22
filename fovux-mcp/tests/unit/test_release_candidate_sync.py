@@ -73,9 +73,53 @@ Old.
         "| VS Code extension `oaslananka.fovuxstudiokit` | `1.5.0` | Pending publication |"
         in rendered
     )
-    assert "* Generate LM tools." in rendered
-    assert "* Synchronize versions." in rendered
+    assert "- Generate LM tools." in rendered
+    assert "- Synchronize versions." in rendered
     assert "Old." not in rendered
+
+
+def test_partial_candidate_keeps_unchanged_studio_published() -> None:
+    module = _load_sync_module()
+    changelogs = {
+        "mcp": "# Changelog\n\n## [1.6.2]\n\n### Fixes\n\n* Compatibility fix.\n",
+        "npm": "# Changelog\n\n## [1.6.2]\n\n### Chores\n\n* Wrapper sync.\n",
+        "studio": "# Changelog\n\n## [1.5.1]\n\n### Fixes\n\n* Previous fix.\n",
+    }
+    published_packages = {
+        "python": {
+            "version": "1.6.1",
+            "status": "Published on PyPI",
+            "evidence": ["python evidence"],
+        },
+        "npm": {
+            "version": "1.6.1",
+            "status": "Published on npm",
+            "evidence": ["npm evidence"],
+        },
+        "studio": {
+            "version": "1.5.1",
+            "status": "Published on VS Marketplace and Open VSX",
+            "evidence": ["studio evidence"],
+        },
+    }
+
+    rendered = module.render_candidate_release_notes(
+        mcp_version="1.6.2",
+        npm_version="1.6.2",
+        studio_version="1.5.1",
+        changelogs=changelogs,
+        published_packages=published_packages,
+    )
+
+    assert "| Python package `fovux-mcp` | `1.6.2` | Pending publication |" in rendered
+    assert "| npm wrapper `fovux-mcp` | `1.6.2` | Pending publication |" in rendered
+    assert (
+        "| VS Code extension `oaslananka.fovuxstudiokit` | `1.5.1` | "
+        "Published on VS Marketplace and Open VSX | `studio evidence` |"
+    ) in rendered
+    assert "### Fovux Studio 1.5.1" not in rendered
+    assert "Previous fix." not in rendered
+    assert "marketplace publication" not in rendered
 
 
 def test_published_baseline_is_not_treated_as_a_candidate(tmp_path: Path) -> None:

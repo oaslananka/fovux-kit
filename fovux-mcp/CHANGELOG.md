@@ -12,6 +12,13 @@ GitHub milestones, not in package changelog sections.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.6.2](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.6.1...fovux-mcp-v1.6.2) (2026-07-22)
+
+
+### Bug Fixes
+
+* **compat:** restore Starlette httpx2 test backend ([#187](https://github.com/oaslananka/fovux-kit/issues/187)) ([54cee72](https://github.com/oaslananka/fovux-kit/commit/54cee72911fee300136747d101a16c9b729fcf96)), closes [#91](https://github.com/oaslananka/fovux-kit/issues/91)
+
 ## [1.6.1](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.6.0...fovux-mcp-v1.6.1) (2026-07-22)
 
 
