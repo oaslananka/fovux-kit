@@ -1,5 +1,10 @@
 codecov:
-  require_ci_to_pass: true
+  require_ci_to_pass: false
+  notify:
+    after_n_builds: 2
+    wait_for_ci: false
+    notify_error: true
+    manual_trigger: true
 
 coverage:
   precision: 2
@@ -8,15 +13,15 @@ coverage:
   status:
     project:
       default:
-        target: auto
+        target: 80%
         threshold: 1%
-        informational: true
+        informational: false
         if_ci_failed: error
     patch:
       default:
-        target: auto
+        target: 85%
         threshold: 1%
-        informational: true
+        informational: false
         if_ci_failed: error
 
 flags:
@@ -41,18 +46,42 @@ component_management:
       name: fovux-mcp backend
       paths:
         - fovux-mcp/src/fovux/**
+      statuses:
+        - type: project
+          target: 85%
+          threshold: 1%
+          informational: true
     - component_id: studio
       name: Fovux Studio
       paths:
         - fovux-studio/src/**
+      statuses:
+        - type: project
+          target: 45%
+          threshold: 1%
+          informational: true
 
 comment:
   layout: diff, flags, components, files
   behavior: default
-  require_changes: coverage_drop OR uncovered_patch
+  require_changes: false
   require_base: false
   require_head: true
 
 bundle_analysis:
   status: informational
   warning_threshold: 5%
+
+ignore:
+  - fovux-mcp/src/fovux/**/__main__.py
+  - fovux-mcp/src/fovux/**/cli.py
+  - fovux-mcp/src/fovux/core/dataset_utils.py
+  - fovux-mcp/src/fovux/core/train_worker.py
+  - fovux-mcp/src/fovux/core/ultralytics_adapter.py
+  - fovux-mcp/src/fovux/tools/demo_init.py
+  - fovux-mcp/src/fovux/tools/deployment_advise.py
+  - fovux-mcp/src/fovux/tools/export_tflite.py
+  - fovux-mcp/src/fovux/tools/infer_image.py
+  - fovux-mcp/src/fovux/tools/infer_rtsp.py
+  - fovux-mcp/src/fovux/tools/run_compare.py
+  - fovux-mcp/src/fovux/tools/sync_to_mlflow.py

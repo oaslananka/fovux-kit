@@ -133,6 +133,17 @@ def main() -> int:
         "Nightly / Scheduled Checks",
         "Mutation Testing Gate",
         "Performance Baselines",
+        "Coverage Signals and Merge Authority",
+        "ci-required",
+        "Codecov flag/component `backend`",
+        "Codecov flag/component `studio`",
+        "80% target",
+        "85% target",
+        "1% tolerance",
+        "45% Studio line-coverage floor",
+        "truthful ratchet baseline",
+        "Automatic Analysis was disabled",
+        "scripts/check_coverage_reports.py",
     ]:
         _expect(
             phrase in coverage_doc,
