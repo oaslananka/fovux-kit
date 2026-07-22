@@ -17,7 +17,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Bug Fixes
 
-* **ci:** reconcile Sonar and Codecov coverage signals ([#180](https://github.com/oaslananka/fovux-kit/issues/180)) ([eb56de7](https://github.com/oaslananka/fovux-kit/commit/eb56de71a3b23969440e81351ef0e67d38dd5994)), closes [#173](https://github.com/oaslananka/fovux-kit/issues/173)
+* **ci:** reconcile Sonar and Codecov coverage signals ([#180](https://github.com/oaslananka/fovux-kit/issues/180)) ([eb56de7](https://github.com/oaslananka/fovux-kit/commit/eb56de71a3b23969440e81351ef0e67d38dd5994)), refs [#173](https://github.com/oaslananka/fovux-kit/issues/173)
 * **mcp:** stabilize raw stdio startup ([#178](https://github.com/oaslananka/fovux-kit/issues/178)) ([f4887ae](https://github.com/oaslananka/fovux-kit/commit/f4887ae2d2ba44e3686ac75aca0c3d6db2ffab76)), closes [#172](https://github.com/oaslananka/fovux-kit/issues/172)
 
 ## [1.6.0](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.5.0...fovux-mcp-v1.6.0) (2026-07-21)
