@@ -49,6 +49,15 @@ MCP client compatibility results live in [`mcp-client-compatibility.md`](mcp-cli
 That page tracks client, OS, transport, install method, smoke command, status, known limitations,
 raw JSON-RPC coverage, and the manual GUI checklist.
 
+## MCP stdio startup budget
+
+The supported client command is `fovux-mcp` with no arguments. It dispatches through the lightweight
+`fovux.stdio` entry point, registers release-time schemas from the packaged manifest, and imports an
+implementation module only when that tool is called. Raw `initialize` must complete within 25 seconds
+on supported Linux CI workers. `FOVUX_STARTUP_DIAGNOSTICS=1` writes stage timing records to stderr,
+and the scheduled compatibility lane repeats initialization three times with
+`scripts/check_stdio_startup.py`.
+
 ## Source Checks
 
 This policy was refreshed against:

@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+import sys
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 
-from fovux.core.tool_registry import available_tools, list_tool_names, register_all, resolve_tool
+from fovux.core.tool_registry import (
+    _lazy_tool_callable,
+    available_tools,
+    list_tool_names,
+    register_all,
+    register_manifest_tools,
+    resolve_tool,
+)
 
 
 def test_available_tools_lists_known_entries() -> None:
@@ -53,3 +62,44 @@ def test_register_all_imports_all_tool_modules() -> None:
     assert imported
     assert "fovux.tools.dataset_inspect" in imported
     assert "fovux.tools.train_stop" in imported
+
+
+class _CollectingServer:
+    def __init__(self) -> None:
+        self.tools: list[Any] = []
+
+    def add_tool(self, tool: object) -> object:
+        self.tools.append(tool)
+        return tool
+
+
+def test_register_manifest_tools_uses_lazy_schema_records() -> None:
+    """Manifest registration should expose all tools without importing implementations."""
+    server = _CollectingServer()
+    before = {name for name in sys.modules if name.startswith("fovux.tools.")}
+
+    register_manifest_tools(server)
+
+    after = {name for name in sys.modules if name.startswith("fovux.tools.")}
+    assert after == before
+    assert len(server.tools) == 47
+    assert sorted(tool.name for tool in server.tools) == list_tool_names()
+
+
+@pytest.mark.asyncio
+async def test_lazy_tool_callable_resolves_only_when_invoked() -> None:
+    """The runtime proxy should defer implementation resolution until the first call."""
+    calls: list[dict[str, Any]] = []
+
+    def implementation(limit: int = 50) -> dict[str, Any]:
+        calls.append({"limit": limit})
+        return {"ok": True}
+
+    with patch("fovux.core.tool_registry.resolve_tool", return_value=implementation) as resolver:
+        proxy = _lazy_tool_callable("model_list")
+        assert resolver.call_count == 0
+        result = await proxy(limit=1)
+
+    resolver.assert_called_once_with("model_list")
+    assert result.structured_content == {"ok": True}
+    assert calls == [{"limit": 1}]

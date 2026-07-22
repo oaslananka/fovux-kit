@@ -6,7 +6,9 @@ import asyncio
 import json
 import os
 import re
+import signal
 import sys
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -24,40 +26,65 @@ from fovux.server import mcp
 _PROTOCOL_VERSION = "2025-11-25"
 _TOOL_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-# Tool registration can exceed 10 seconds on cold or resource-constrained runners.
-_READ_TIMEOUT_SECONDS = 30
+# Startup is optimized for a 25-second initialization budget; the read timeout leaves
+# a small diagnostics window without masking regressions by increasing the budget.
+_STDIO_INITIALIZE_BUDGET_SECONDS = 25.0
+_READ_TIMEOUT_SECONDS = 30.0
 
 
 @asynccontextmanager
 async def _stdio_process(tmp_fovux_home: Path) -> AsyncIterator[asyncio.subprocess.Process]:
-    """Start the CLI as a raw MCP stdio subprocess."""
+    """Start the production stdio entry point as a raw MCP subprocess."""
     env = os.environ.copy()
     env["FOVUX_HOME"] = str(tmp_fovux_home)
     env["FASTMCP_CHECK_FOR_UPDATES"] = "off"
+    env["FOVUX_STARTUP_DIAGNOSTICS"] = "1"
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "fovux.cli",
+        "fovux.stdio",
         cwd=str(_PACKAGE_ROOT),
         env=env,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
+        start_new_session=sys.platform != "win32",
     )
     try:
         yield process
     finally:
-        if process.stdin is not None and not process.stdin.is_closing():
-            process.stdin.close()
+        await _stop_process(process)
+
+
+async def _stop_process(process: asyncio.subprocess.Process) -> None:
+    """Stop the whole stdio process group so timeout paths do not leak workers."""
+    if process.stdin is not None and not process.stdin.is_closing():
+        process.stdin.close()
+    try:
+        await asyncio.wait_for(process.wait(), timeout=3)
+        return
+    except TimeoutError:
+        pass
+    if sys.platform != "win32":
         try:
-            await asyncio.wait_for(process.wait(), timeout=3)
-        except TimeoutError:
-            process.terminate()
-            try:
-                await asyncio.wait_for(process.wait(), timeout=3)
-            except TimeoutError:
-                process.kill()
-                await process.wait()
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    else:
+        process.terminate()
+    try:
+        await asyncio.wait_for(process.wait(), timeout=3)
+        return
+    except TimeoutError:
+        pass
+    if sys.platform != "win32":
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    else:
+        process.kill()
+    await process.wait()
 
 
 def _jsonrpc_request(request_id: int, method: str, params: dict[str, object]) -> dict[str, object]:
@@ -75,24 +102,64 @@ async def _send_jsonrpc(
     await process.stdin.drain()
 
 
-async def _read_jsonrpc(process: asyncio.subprocess.Process) -> dict[str, Any]:
-    """Read one newline-delimited JSON-RPC response."""
-    assert process.stdout is not None
-    line = await asyncio.wait_for(process.stdout.readline(), timeout=_READ_TIMEOUT_SECONDS)
-    assert line, "MCP stdio server exited before returning a JSON-RPC response"
-    decoded = line.decode("utf-8")
-    return json.loads(decoded)
-
-
 async def _stderr_tail(process: asyncio.subprocess.Process) -> str:
-    """Return a best-effort stderr tail for debugging failed raw stdio tests."""
+    """Return a bounded best-effort stderr tail for failed raw stdio tests."""
     if process.stderr is None:
         return ""
+    chunks: list[bytes] = []
+    for _ in range(4):
+        try:
+            chunk = await asyncio.wait_for(process.stderr.read(1024), timeout=0.05)
+        except TimeoutError:
+            break
+        if not chunk:
+            break
+        chunks.append(chunk)
+    return b"".join(chunks).decode("utf-8", errors="replace")[-4000:]
+
+
+def _linux_process_snapshot(process: asyncio.subprocess.Process) -> str:
+    """Return bounded Linux process state without introducing a psutil dependency."""
+    if sys.platform != "linux":
+        return "unavailable"
+    details: list[str] = []
+    for name in ("status", "wchan"):
+        path = Path(f"/proc/{process.pid}/{name}")
+        try:
+            value = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        details.append(f"{name}={value[:1500].strip()}")
+    return " | ".join(details) or "process-exited"
+
+
+async def _read_jsonrpc(
+    process: asyncio.subprocess.Process,
+    *,
+    phase: str,
+    started_at: float | None = None,
+) -> dict[str, Any]:
+    """Read one response and raise an actionable bounded diagnostic on failure."""
+    assert process.stdout is not None
+    read_started_at = started_at if started_at is not None else time.monotonic()
     try:
-        data = await asyncio.wait_for(process.stderr.read(4096), timeout=0.1)
-    except TimeoutError:
-        return ""
-    return data.decode("utf-8", errors="replace")[-2000:]
+        line = await asyncio.wait_for(process.stdout.readline(), timeout=_READ_TIMEOUT_SECONDS)
+    except TimeoutError as exc:
+        elapsed = time.monotonic() - read_started_at
+        stderr = await _stderr_tail(process)
+        snapshot = _linux_process_snapshot(process)
+        raise AssertionError(
+            f"MCP stdio {phase} timed out after {elapsed:.3f}s; "
+            f"pid={process.pid}; returncode={process.returncode}; "
+            f"process={snapshot}; stderr_tail={stderr!r}"
+        ) from exc
+    if not line:
+        stderr = await _stderr_tail(process)
+        raise AssertionError(
+            f"MCP stdio server exited during {phase}; returncode={process.returncode}; "
+            f"stderr_tail={stderr!r}"
+        )
+    return json.loads(line.decode("utf-8"))
 
 
 @pytest.mark.asyncio
@@ -126,8 +193,14 @@ async def test_raw_stdio_jsonrpc_initialize_list_call_error_and_cancel(
                 "clientInfo": {"name": "fovux-contract", "version": "0.0.0"},
             },
         )
+        init_started_at = time.monotonic()
         await _send_jsonrpc(process, initialize)
-        init_response = await _read_jsonrpc(process)
+        init_response = await _read_jsonrpc(process, phase="initialize", started_at=init_started_at)
+        init_elapsed = time.monotonic() - init_started_at
+        assert init_elapsed < _STDIO_INITIALIZE_BUDGET_SECONDS, (
+            f"stdio initialize exceeded {_STDIO_INITIALIZE_BUDGET_SECONDS:.0f}s budget: "
+            f"{init_elapsed:.3f}s; stderr={await _stderr_tail(process)!r}"
+        )
         assert init_response.get("jsonrpc") == "2.0", await _stderr_tail(process)
         assert init_response.get("id") == 1
         init_result = init_response["result"]
@@ -145,7 +218,7 @@ async def test_raw_stdio_jsonrpc_initialize_list_call_error_and_cancel(
         )
 
         await _send_jsonrpc(process, _jsonrpc_request(2, "tools/list", {}))
-        list_response = await _read_jsonrpc(process)
+        list_response = await _read_jsonrpc(process, phase="tools/list")
         assert list_response.get("id") == 2
         list_result = list_response["result"]
         assert list_result.get("nextCursor") in (None, "")
@@ -164,7 +237,7 @@ async def test_raw_stdio_jsonrpc_initialize_list_call_error_and_cancel(
             process,
             _jsonrpc_request(3, "tools/call", {"name": "model_list", "arguments": {}}),
         )
-        call_response = await _read_jsonrpc(process)
+        call_response = await _read_jsonrpc(process, phase="model_list tools/call")
         assert call_response.get("id") == 3
         call_result = call_response["result"]
         assert call_result.get("isError", False) is False
@@ -180,14 +253,14 @@ async def test_raw_stdio_jsonrpc_initialize_list_call_error_and_cancel(
             process,
             _jsonrpc_request(4, "tools/call", {"name": "ghost_tool", "arguments": {}}),
         )
-        tool_error_response = await _read_jsonrpc(process)
+        tool_error_response = await _read_jsonrpc(process, phase="unknown tools/call")
         assert tool_error_response.get("id") == 4
         tool_error_result = tool_error_response["result"]
         assert tool_error_result["isError"] is True
         assert "Unknown tool" in tool_error_result["content"][0]["text"]
 
         await _send_jsonrpc(process, _jsonrpc_request(5, "fovux/unknown_method", {}))
-        method_error_response = await _read_jsonrpc(process)
+        method_error_response = await _read_jsonrpc(process, phase="unknown method")
         assert method_error_response.get("id") == 5
         assert "error" in method_error_response
         assert method_error_response["error"]["code"] < 0
@@ -201,7 +274,7 @@ async def test_raw_stdio_jsonrpc_initialize_list_call_error_and_cancel(
             },
         )
         await _send_jsonrpc(process, _jsonrpc_request(6, "tools/list", {}))
-        after_cancel_response = await _read_jsonrpc(process)
+        after_cancel_response = await _read_jsonrpc(process, phase="post-cancel tools/list")
         assert after_cancel_response.get("id") == 6
         assert len(after_cancel_response["result"]["tools"]) == len(list_tool_names())
 

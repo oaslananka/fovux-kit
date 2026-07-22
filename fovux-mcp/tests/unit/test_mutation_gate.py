@@ -43,6 +43,8 @@ def test_mutmut_config_uses_focused_v3_contract() -> None:
         "tests/unit/test_tool_registry.py::test_list_tool_names_is_available_tools_alias",
         "tests/unit/test_tool_registry.py::test_resolve_tool_unknown_name_raises_key_error",
         "tests/unit/test_tool_registry.py::test_register_all_imports_all_tool_modules",
+        "tests/unit/test_tool_registry.py::test_register_manifest_tools_uses_lazy_schema_records",
+        "tests/unit/test_tool_registry.py::test_lazy_tool_callable_resolves_only_when_invoked",
         "tests/unit/test_http_challenge.py::TestChallengeUnit",
     ]
 
