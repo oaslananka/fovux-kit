@@ -1,24 +1,26 @@
 # Fovux 1.6.2 Release Notes
 
 Fovux 1.6.2 is the current release candidate for the local-first edge-AI computer vision
-workbench. Package publication remains pending until the release workflow verifies every configured
-registry and extension marketplace.
+workbench. Publication remains pending only for the changed packages identified below; unchanged
+components retain their previously verified release status.
 
 ## Package Versions and Release Evidence
 
+<!-- prettier-ignore-start -->
 <!-- release-baseline:start -->
-| Component | Candidate version | Channel status | Evidence |
+| Component | Version | Channel status | Evidence |
 | --- | --- | --- | --- |
 | Python package `fovux-mcp` | `1.6.2` | Pending publication | Generated after registry verification |
 | npm wrapper `fovux-mcp` | `1.6.2` | Pending publication | Generated after registry verification |
-| VS Code extension `oaslananka.fovuxstudiokit` | `1.5.1` | Pending publication | Generated after marketplace verification |
+| VS Code extension `oaslananka.fovuxstudiokit` | `1.5.1` | Published on VS Marketplace and Open VSX | `fovuxstudiokit.vsix`, `fovux-studio-sbom.spdx.json`, `fovux-studio.sha256`, `registry-verification-studio.json` |
 <!-- release-baseline:end -->
+<!-- prettier-ignore-end -->
 
-The final GitHub Release evidence will include:
+The final GitHub Release evidence for changed packages will include:
 
-- VSIX packaging status and publish results for VS Marketplace and Open VSX;
-- SPDX SBOM files, checksums, and provenance attestations;
-- registry verification evidence JSON and a smoke-test result for every published channel.
+- PyPI and npm registry verification, package smoke-test results, SBOMs, checksums, and provenance;
+- the existing Studio VSIX packaging, VS Marketplace, and Open VSX evidence remains verified and is not republished;
+- registry verification evidence JSON for every package published in this release.
 
 ## Included Changes
 
@@ -26,19 +28,13 @@ The final GitHub Release evidence will include:
 
 #### Bug Fixes
 
-* **compat:** restore Starlette httpx2 test backend ([#187](https://github.com/oaslananka/fovux-kit/issues/187)) ([54cee72](https://github.com/oaslananka/fovux-kit/commit/54cee72911fee300136747d101a16c9b729fcf96)), closes [#91](https://github.com/oaslananka/fovux-kit/issues/91)
+- **compat:** restore Starlette httpx2 test backend ([#187](https://github.com/oaslananka/fovux-kit/issues/187)) ([54cee72](https://github.com/oaslananka/fovux-kit/commit/54cee72911fee300136747d101a16c9b729fcf96)), closes [#91](https://github.com/oaslananka/fovux-kit/issues/91)
 
 ### npm wrapper `fovux-mcp` 1.6.2
 
 #### Miscellaneous Chores
 
-* **fovux-mcp-npm:** Synchronize fovux-mcp versions
-
-### Fovux Studio 1.5.1
-
-#### Bug Fixes
-
-* **ci:** reconcile Sonar and Codecov coverage signals ([#180](https://github.com/oaslananka/fovux-kit/issues/180)) ([eb56de7](https://github.com/oaslananka/fovux-kit/commit/eb56de71a3b23969440e81351ef0e67d38dd5994)), refs [#173](https://github.com/oaslananka/fovux-kit/issues/173)
+- **fovux-mcp-npm:** Synchronize fovux-mcp versions
 
 ## Upgrade Path
 
@@ -53,4 +49,4 @@ npm install -g fovux-mcp@latest
 - `python scripts/check_docs_truth.py`
 - `python scripts/check_release_truth.py`
 - `node scripts/validate_release_automation.mjs`
-- registry, VS Marketplace, and Open VSX verification in the release workflow
+- registry and marketplace verification for packages published by the release workflow

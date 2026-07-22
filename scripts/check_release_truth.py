@@ -74,10 +74,28 @@ def _current_package_versions(root: Path) -> tuple[str, str, str]:
     )
 
 
+def _candidate_row(
+    *, package: dict[str, Any], label: str, version: str, changed: bool
+) -> str:
+    if changed:
+        return f"| {label} | `{version}` | Pending publication |"
+    status = str(package.get("status", "")).strip()
+    evidence_value = package.get("evidence", [])
+    if not status or not isinstance(evidence_value, list):
+        raise ValueError(f"Published package metadata is incomplete for {label}")
+    evidence = ", ".join(
+        f"`{item}`" for item in evidence_value if isinstance(item, str) and item
+    )
+    if not evidence:
+        raise ValueError(f"Published package evidence is missing for {label}")
+    return f"| {label} | `{version}` | {status} | {evidence} |"
+
+
 def _validate_candidate_note(
     root: Path,
     path: Path,
     *,
+    manifest: dict[str, Any],
     mcp_version: str,
     npm_version: str,
     studio_version: str,
@@ -87,19 +105,60 @@ def _validate_candidate_note(
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         return [f"Cannot read {path.relative_to(root)}: {exc}"]
+
     required = (
         f"# Fovux {mcp_version} Release Notes",
         f"Fovux {mcp_version} is the current release candidate",
-        f"| Python package `fovux-mcp` | `{mcp_version}` | Pending publication |",
-        f"| npm wrapper `fovux-mcp` | `{npm_version}` | Pending publication |",
-        (
-            "| VS Code extension `oaslananka.fovuxstudiokit` | "
-            f"`{studio_version}` | Pending publication |"
-        ),
     )
     for phrase in required:
         if phrase not in text:
             failures.append(f"{path.relative_to(root)} is missing candidate release fact: {phrase}")
+
+    packages = {str(package.get("id")): package for package in _packages(manifest)}
+    components = (
+        ("python", "Python package `fovux-mcp`", mcp_version, f"### Python package `fovux-mcp` {mcp_version}"),
+        ("npm", "npm wrapper `fovux-mcp`", npm_version, f"### npm wrapper `fovux-mcp` {npm_version}"),
+        (
+            "studio",
+            "VS Code extension `oaslananka.fovuxstudiokit`",
+            studio_version,
+            f"### Fovux Studio {studio_version}",
+        ),
+    )
+    for package_id, label, version, section_heading in components:
+        package = packages.get(package_id)
+        if package is None:
+            failures.append(f"release-baseline.json is missing package {package_id}")
+            continue
+        changed = str(package.get("version", "")) != version
+        try:
+            expected_row = _candidate_row(
+                package=package,
+                label=label,
+                version=version,
+                changed=changed,
+            )
+        except ValueError as exc:
+            failures.append(str(exc))
+            continue
+        if expected_row not in text:
+            failures.append(
+                f"{path.relative_to(root)} is missing candidate release fact: {expected_row}"
+            )
+        pending_row = f"| {label} | `{version}` | Pending publication |"
+        if not changed and pending_row in text:
+            failures.append(
+                f"{path.relative_to(root)} marks unchanged package {package_id} as pending"
+            )
+        if changed and section_heading not in text:
+            failures.append(
+                f"{path.relative_to(root)} is missing changed-package section: {section_heading}"
+            )
+        if not changed and section_heading in text:
+            failures.append(
+                f"{path.relative_to(root)} repeats unchanged-package changes: {section_heading}"
+            )
+
     if "current reviewed release baseline" in text:
         failures.append(
             f"{path.relative_to(root)} claims an unpublished candidate is already reviewed"
@@ -110,6 +169,7 @@ def _validate_candidate_note(
 def _release_documents(
     root: Path,
     *,
+    manifest: dict[str, Any],
     published_release: str,
     mcp_version: str,
     npm_version: str,
@@ -133,6 +193,7 @@ def _release_documents(
                 _validate_candidate_note(
                     root,
                     candidate_path,
+                    manifest=manifest,
                     mcp_version=mcp_version,
                     npm_version=npm_version,
                     studio_version=studio_version,
@@ -192,6 +253,7 @@ def validate_release_truth(root: Path) -> list[str]:
 
     documents, candidate_failures = _release_documents(
         root,
+        manifest=manifest,
         published_release=published_release,
         mcp_version=mcp_version,
         npm_version=npm_version,

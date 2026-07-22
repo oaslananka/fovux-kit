@@ -101,20 +101,24 @@ def _updated_publication_wording(text: str, *, label: str) -> str:
     updated = _updated_once(
         text,
         (
-            r"Package publication (?:remains pending until the release workflow verifies|"
+            r"(?:Package publication (?:remains pending until the release workflow verifies|"
             r"has been verified by the release workflow across) every configured\s+"
-            r"registry and extension marketplace\."
+            r"registry and extension marketplace|"
+            r"Publication (?:remains pending only for the changed packages identified below; "
+            r"unchanged\s+components retain their previously verified release status|"
+            r"has been verified by the release workflow for every changed package; unchanged\s+"
+            r"components retain their previously verified release status))\."
         ),
         (
-            "Package publication has been verified by the release workflow across every "
-            "configured\nregistry and extension marketplace."
+            "Publication has been verified by the release workflow for every changed package; "
+            "unchanged\ncomponents retain their previously verified release status."
         ),
         label=label,
     )
     return _updated_once(
         updated,
         (
-            r"(?:The final GitHub Release evidence will include|"
+            r"(?:The final GitHub Release evidence(?: for changed packages)? will include|"
             r"The verified GitHub Release evidence includes):"
         ),
         "The verified GitHub Release evidence includes:",

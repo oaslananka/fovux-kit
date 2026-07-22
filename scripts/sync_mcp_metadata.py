@@ -144,7 +144,42 @@ def _extract_changelog_section(text: str, version: str, *, label: str) -> str:
     section = text[heading.end() : end].strip()
     if not section:
         raise ValueError(f"{label} changelog release {version} is empty")
-    return re.sub(r"^(#{3,5}) ", r"#\1 ", section, flags=re.MULTILINE)
+    section = re.sub(r"^(#{3,5}) ", r"#\1 ", section, flags=re.MULTILINE)
+    return re.sub(r"^\* ", "- ", section, flags=re.MULTILINE)
+
+
+def _read_published_packages(root: Path) -> dict[str, Mapping[str, object]]:
+    """Return the reviewed package records used to distinguish partial releases."""
+    path = root / "release-baseline.json"
+    if not path.exists():
+        return {}
+    baseline = json.loads(path.read_text(encoding="utf-8"))
+    packages = baseline.get("packages", [])
+    if not isinstance(packages, list):
+        raise SystemExit("release-baseline.json packages must be an array")
+    published: dict[str, Mapping[str, object]] = {}
+    for package in packages:
+        if not isinstance(package, dict):
+            raise SystemExit("release-baseline.json package entries must be objects")
+        package_id = package.get("id")
+        if isinstance(package_id, str):
+            published[package_id] = package
+    return published
+
+
+def _published_release_row(
+    *, label: str, version: str, package: Mapping[str, object]
+) -> str:
+    status = str(package.get("status", "")).strip()
+    evidence_value = package.get("evidence", [])
+    if not status or not isinstance(evidence_value, list):
+        raise ValueError(f"Published package metadata is incomplete for {label}")
+    evidence = ", ".join(
+        f"`{item}`" for item in evidence_value if isinstance(item, str) and item
+    )
+    if not evidence:
+        raise ValueError(f"Published package evidence is missing for {label}")
+    return f"| {label} | `{version}` | {status} | {evidence} |"
 
 
 def render_candidate_release_notes(
@@ -153,63 +188,111 @@ def render_candidate_release_notes(
     npm_version: str,
     studio_version: str,
     changelogs: Mapping[str, str],
+    published_packages: Mapping[str, Mapping[str, object]] | None = None,
 ) -> str:
-    """Render deterministic notes for versions that are not published yet."""
-    mcp_changes = _extract_changelog_section(changelogs["mcp"], mcp_version, label="fovux-mcp")
-    npm_changes = _extract_changelog_section(changelogs["npm"], npm_version, label="fovux-mcp-npm")
-    studio_changes = _extract_changelog_section(
-        changelogs["studio"], studio_version, label="fovux-studio"
-    )
+    """Render deterministic notes while preserving truth for unchanged packages."""
+    published_packages = published_packages or {}
+    versions = {
+        "python": mcp_version,
+        "npm": npm_version,
+        "studio": studio_version,
+    }
+    changed = {
+        package_id: str(published_packages.get(package_id, {}).get("version", "")) != version
+        for package_id, version in versions.items()
+    }
+
+    labels = {
+        "python": "Python package `fovux-mcp`",
+        "npm": "npm wrapper `fovux-mcp`",
+        "studio": "VS Code extension `oaslananka.fovuxstudiokit`",
+    }
+    evidence_hints = {
+        "python": "Generated after registry verification",
+        "npm": "Generated after registry verification",
+        "studio": "Generated after marketplace verification",
+    }
+    rows: list[str] = []
+    for package_id in ("python", "npm", "studio"):
+        version = versions[package_id]
+        if changed[package_id]:
+            rows.append(
+                f"| {labels[package_id]} | `{version}` | Pending publication | "
+                f"{evidence_hints[package_id]} |"
+            )
+        else:
+            rows.append(
+                _published_release_row(
+                    label=labels[package_id],
+                    version=version,
+                    package=published_packages[package_id],
+                )
+            )
+
     candidate_table = "\n".join(
         (
+            "<!-- prettier-ignore-start -->",
             "<!-- release-baseline:start -->",
-            "| Component | Candidate version | Channel status | Evidence |",
+            "| Component | Version | Channel status | Evidence |",
             "| --- | --- | --- | --- |",
-            (
-                f"| Python package `fovux-mcp` | `{mcp_version}` | "
-                "Pending publication | Generated after registry verification |"
-            ),
-            (
-                f"| npm wrapper `fovux-mcp` | `{npm_version}` | "
-                "Pending publication | Generated after registry verification |"
-            ),
-            (
-                "| VS Code extension `oaslananka.fovuxstudiokit` | "
-                f"`{studio_version}` | Pending publication | "
-                "Generated after marketplace verification |"
-            ),
+            *rows,
             "<!-- release-baseline:end -->",
+            "<!-- prettier-ignore-end -->",
         )
     )
+
+    sections: list[str] = []
+    if changed["python"]:
+        mcp_changes = _extract_changelog_section(
+            changelogs["mcp"], mcp_version, label="fovux-mcp"
+        )
+        sections.append(f"### Python package `fovux-mcp` {mcp_version}\n\n{mcp_changes}")
+    if changed["npm"]:
+        npm_changes = _extract_changelog_section(
+            changelogs["npm"], npm_version, label="fovux-mcp-npm"
+        )
+        sections.append(f"### npm wrapper `fovux-mcp` {npm_version}\n\n{npm_changes}")
+    if changed["studio"]:
+        studio_changes = _extract_changelog_section(
+            changelogs["studio"], studio_version, label="fovux-studio"
+        )
+        sections.append(f"### Fovux Studio {studio_version}\n\n{studio_changes}")
+    included_changes = "\n\n".join(sections)
+
+    evidence_lines: list[str] = []
+    if changed["python"] or changed["npm"]:
+        evidence_lines.append(
+            "- PyPI and npm registry verification, package smoke-test results, SBOMs, checksums, and provenance;"
+        )
+    if changed["studio"]:
+        evidence_lines.append(
+            "- VSIX packaging plus VS Marketplace and Open VSX publication verification;"
+        )
+    else:
+        evidence_lines.append(
+            "- the existing Studio VSIX packaging, VS Marketplace, and Open VSX evidence remains "
+            "verified and is not republished;"
+        )
+    evidence_lines.append("- registry verification evidence JSON for every package published in this release.")
+    evidence = "\n".join(evidence_lines)
+
     return f"""# Fovux {mcp_version} Release Notes
 
 Fovux {mcp_version} is the current release candidate for the local-first edge-AI computer vision
-workbench. Package publication remains pending until the release workflow verifies every configured
-registry and extension marketplace.
+workbench. Publication remains pending only for the changed packages identified below; unchanged
+components retain their previously verified release status.
 
 ## Package Versions and Release Evidence
 
 {candidate_table}
 
-The final GitHub Release evidence will include:
+The final GitHub Release evidence for changed packages will include:
 
-- VSIX packaging status and publish results for VS Marketplace and Open VSX;
-- SPDX SBOM files, checksums, and provenance attestations;
-- registry verification evidence JSON and a smoke-test result for every published channel.
+{evidence}
 
 ## Included Changes
 
-### Python package `fovux-mcp` {mcp_version}
-
-{mcp_changes}
-
-### npm wrapper `fovux-mcp` {npm_version}
-
-{npm_changes}
-
-### Fovux Studio {studio_version}
-
-{studio_changes}
+{included_changes}
 
 ## Upgrade Path
 
@@ -224,7 +307,7 @@ npm install -g fovux-mcp@latest
 - `python scripts/check_docs_truth.py`
 - `python scripts/check_release_truth.py`
 - `node scripts/validate_release_automation.mjs`
-- registry, VS Marketplace, and Open VSX verification in the release workflow
+- registry and marketplace verification for packages published by the release workflow
 """
 
 
@@ -261,6 +344,7 @@ def _sync_docs(root: Path, mcp_version: str, npm_version: str, studio_version: s
         npm_version=npm_version,
         studio_version=studio_version,
         changelogs=changelogs,
+        published_packages=_read_published_packages(root),
     )
     targets = (
         root / "RELEASE_NOTES.md",
