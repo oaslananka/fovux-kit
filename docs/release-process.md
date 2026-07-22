@@ -24,7 +24,13 @@ Version numbers are never supplied manually during the normal release path. The
 verified first-public `1.0.0` release is complete, so release-please calculates
 subsequent versions from Conventional Commits. The Python `fovux-mcp` package
 and npm wrapper are linked; `fovux-studio` remains an independent release track.
-Release tags remain component-specific for the monorepo packages.
+Release tags remain component-specific for the monorepo packages. Test-only changes under
+`fovux-mcp/tests` are excluded from package commit parsing, so verification improvements do not
+publish an unchanged runtime package. A functional change that includes both source and tests still
+triggers the normal package release from its source paths. Synthetic release-PR workflow dispatches
+run the deterministic test and coverage gates but intentionally skip Sonar branch analysis because
+they do not carry pull-request event metadata. Sonar remains required for same-repository pull
+requests, merge groups, and pushes to `main`.
 
 ## Post-release baseline synchronization
 
