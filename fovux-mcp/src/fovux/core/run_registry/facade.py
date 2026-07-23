@@ -62,7 +62,8 @@ class RunRegistry:
         """Dispose the SQLite engine and release pooled connections."""
         self._database.close()
 
-    def reserve_run_slot(  # NOSONAR -- public compatibility signature
+    # Compatibility boundary: callers rely on the complete historical signature.
+    def reserve_run_slot(  # noqa: S107
         self,
         run_id: str,
         run_path: Path,
