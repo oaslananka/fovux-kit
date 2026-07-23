@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -71,8 +72,6 @@ def test_create_session_token_defaults_to_all_scopes(tmp_path: Path) -> None:
     """Creating a session token without explicit scopes grants all scopes."""
     raw = create_session_token(home=tmp_path)
     fp = token_fingerprint(raw)
-    import json
-
     sessions = dict(json.loads(auth_session_path(tmp_path).read_text(encoding="utf-8")))
     meta = sessions[fp]
     assert set(meta["scopes"]) == {s.value for s in ALL_SCOPES}
@@ -173,6 +172,44 @@ def test_check_token_perms_reports_stat_failure(tmp_path: Path) -> None:
 
     assert ok is False
     assert detail == "cannot stat auth.token: stat blocked"
+
+
+def test_read_auth_token_returns_persisted_token(tmp_path: Path) -> None:
+    """The public reader should delegate to safe token creation and reuse."""
+    from fovux.core.auth import read_auth_token
+
+    expected, _ = ensure_auth_token(home=tmp_path)
+
+    assert read_auth_token(home=tmp_path) == expected
+
+
+def test_session_store_rejects_non_mapping_payload(tmp_path: Path) -> None:
+    """A valid JSON payload with the wrong root type should be treated as empty."""
+    auth_session_path(tmp_path).write_text('["unexpected"]', encoding="utf-8")
+
+    assert list_session_fingerprints(home=tmp_path) == []
+
+
+def test_resolve_session_scopes_rejects_non_list_scope_metadata(tmp_path: Path) -> None:
+    """Malformed scope metadata should fall back to the safe compatibility scope set."""
+    raw = create_session_token(scopes={Scope.READ}, home=tmp_path)
+    fingerprint = token_fingerprint(raw)
+    sessions = json.loads(auth_session_path(tmp_path).read_text(encoding="utf-8"))
+    sessions[fingerprint]["scopes"] = "read"
+    auth_session_path(tmp_path).write_text(json.dumps(sessions), encoding="utf-8")
+
+    assert resolve_session_scopes(raw, home=tmp_path) == ALL_SCOPES
+
+
+def test_resolve_session_scopes_skips_invalid_entries(tmp_path: Path) -> None:
+    """Non-string and unknown scope entries should not poison valid scopes."""
+    raw = create_session_token(scopes={Scope.READ}, home=tmp_path)
+    fingerprint = token_fingerprint(raw)
+    sessions = json.loads(auth_session_path(tmp_path).read_text(encoding="utf-8"))
+    sessions[fingerprint]["scopes"] = [42, "unknown-scope", Scope.READ.value]
+    auth_session_path(tmp_path).write_text(json.dumps(sessions), encoding="utf-8")
+
+    assert resolve_session_scopes(raw, home=tmp_path) == {Scope.READ}
 
 
 def test_scope_from_category_returns_correct_scopes() -> None:
