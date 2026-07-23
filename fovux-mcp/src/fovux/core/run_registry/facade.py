@@ -63,8 +63,8 @@ class RunRegistry:
         self._database.close()
 
     # Compatibility boundary: callers rely on the complete historical signature.
-    def reserve_run_slot(  # noqa: S107
-        self,
+    def reserve_run_slot(
+        self,  # NOSONAR(S107)
         run_id: str,
         run_path: Path,
         model: str,
