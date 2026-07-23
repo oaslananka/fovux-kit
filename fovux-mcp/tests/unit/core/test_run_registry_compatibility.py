@@ -57,3 +57,11 @@ def test_internal_repository_uses_typed_run_request() -> None:
 
     assert list(reserve.parameters) == ["self", "request", "max_concurrent_runs"]
     assert list(create.parameters) == ["self", "request"]
+
+
+def test_facade_preserves_missing_review_queue_update_noop(tmp_path: Path) -> None:
+    registry = compatibility.RunRegistry(tmp_path / "runs.db")
+    try:
+        assert registry.update_review_queue_status("missing", "reviewed") is False
+    finally:
+        registry.close()

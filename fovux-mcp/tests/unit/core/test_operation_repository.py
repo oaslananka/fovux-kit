@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from fovux.core.run_registry.database import RegistryDatabase
+from fovux.core.run_registry.facade import RunRegistry
 from fovux.core.run_registry.operation_repository import OperationRepository
 
 
@@ -64,3 +65,22 @@ def test_operation_repository_preserves_idempotency_lookup(tmp_path: Path) -> No
         assert found.id == created.id
     finally:
         database.close()
+
+
+def test_facade_updates_operation_run_link_and_progress(tmp_path: Path) -> None:
+    registry = RunRegistry(tmp_path / "runs.db")
+    try:
+        registry.create_operation("op_progress", "model_list", {})
+        registry.update_operation_status(
+            "op_progress",
+            "running",
+            run_id="run-linked",
+        )
+        registry.update_operation_progress("op_progress", 37)
+
+        record = registry.get_operation("op_progress")
+        assert record is not None
+        assert record.run_id == "run-linked"
+        assert record.progress == 37
+    finally:
+        registry.close()

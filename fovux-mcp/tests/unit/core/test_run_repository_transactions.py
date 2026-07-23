@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from fovux.core.run_registry.catalog_repository import CatalogRepository
 from fovux.core.run_registry.database import RegistryDatabase
 from fovux.core.run_registry.events import EventStore
 from fovux.core.run_registry.metadata import RunMetadataProvider
-from fovux.core.run_registry.models import AuditEventRecord
+from fovux.core.run_registry.models import AuditEventRecord, RunRecord
 from fovux.core.run_registry.run_repository import RunCreateRequest, RunRepository
 
 
@@ -129,5 +130,34 @@ def test_pre_v1_runs_table_is_migrated_without_losing_rows(tmp_path: Path) -> No
         assert record.model == "legacy.pt"
         assert record.dataset_fingerprint is None
         assert record.parent_run_id is None
+    finally:
+        database.close()
+
+
+def test_update_extra_handles_missing_and_legacy_non_mapping_values(tmp_path: Path) -> None:
+    database = RegistryDatabase(tmp_path / "runs.db")
+    repository, _ = _repository(database)
+    try:
+        assert repository.update_extra("missing", {"new": True}) is False
+        repository.create_run(
+            RunCreateRequest(
+                run_id="legacy-extra",
+                run_path=tmp_path / "legacy-extra",
+                model="yolo.pt",
+                dataset_path=tmp_path / "dataset",
+                task="detect",
+                epochs=1,
+            )
+        )
+        with database.session_factory() as session:
+            record = session.get(RunRecord, "legacy-extra")
+            assert record is not None
+            record.extra_json = "[]"
+            session.commit()
+
+        assert repository.update_extra("legacy-extra", {"new": True}) is True
+        updated = repository.get_run("legacy-extra")
+        assert updated is not None
+        assert json.loads(str(updated.extra_json)) == {"new": True}
     finally:
         database.close()
