@@ -5,10 +5,9 @@ high-risk changes must pass the `elevated-review-required` commit status before 
 from trusted default-branch code through `pull_request_target`, checks out only the pull request's
 base SHA, and evaluates GitHub metadata; it never checks out or executes pull-request head code.
 
-The current ruleset activation phase is `bootstrap`. During this phase the workflow and policy are
-installed on `main`, but `elevated-review-required` is not yet a required ruleset context. A separate
-activation pull request changes the phase to `active`, updates the tracked/live ruleset together, and
-proves that the check is emitted before it becomes mandatory.
+The ruleset activation phase is `active`. The workflow is installed on `main`, and
+`elevated-review-required` is required by both the tracked and live branch ruleset. Repository drift
+checks fail if the policy phase, tracked context, live context, or public documentation diverges.
 
 ## Elevated classification
 

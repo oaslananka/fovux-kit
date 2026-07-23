@@ -9,9 +9,15 @@
     }
   },
   "rules": [
-    { "type": "deletion" },
-    { "type": "non_fast_forward" },
-    { "type": "required_linear_history" },
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_linear_history"
+    },
     {
       "type": "pull_request",
       "parameters": {
@@ -30,10 +36,21 @@
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
-          { "context": "ci-required" },
-          { "context": "security-required" },
-          { "context": "dependency-review" },
-          { "context": "codeql-required" }
+          {
+            "context": "ci-required"
+          },
+          {
+            "context": "security-required"
+          },
+          {
+            "context": "dependency-review"
+          },
+          {
+            "context": "codeql-required"
+          },
+          {
+            "context": "elevated-review-required"
+          }
         ]
       }
     }

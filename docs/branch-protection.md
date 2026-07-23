@@ -9,7 +9,8 @@ Required merge checks:
 - `ci-required`;
 - `security-required`;
 - `dependency-review`;
-- `codeql-required`.
+- `codeql-required`;
+- `elevated-review-required`.
 
 The ruleset also blocks deletion and non-fast-forward updates, requires linear history, requires a
 pull request, and requires every review thread to be resolved. The approval count remains `0` for
@@ -35,17 +36,14 @@ a ruleset drift failure into a false success.
 ## Elevated review evidence
 
 The base-trusted `Elevated Review Evidence` workflow publishes the `elevated-review-required` commit
-status for high-risk labels and immutable sensitive paths. Its repository policy currently has
-`ruleset_activation: bootstrap`: the workflow is installed first, while the tracked/live ruleset
-continues requiring the four established checks. A second activation pull request changes the policy
-to `active` and adds `elevated-review-required` to tracked and live rulesets together.
+status for high-risk labels and immutable sensitive paths. The repository policy is now
+`ruleset_activation: active`, and the context is required by both the tracked and live `main`
+ruleset.
 
-This staged activation prevents two unsafe states: tracked/live ruleset drift during the bootstrap
-pull request, and a required status that cannot be produced because its trusted workflow is not yet
-present on `main`. The approval count remains zero, but elevated changes require current-head evidence
-in the pull request body, independent required checks, resolved threads, and—on the
-external-contributor path—a current-head authorized approval. Editing the body after checks and
-reviews finish reruns the base-only `pull_request_target` metadata gate.
+The approval count remains zero for the solo-maintainer model, but elevated changes require
+current-head evidence in the pull request body, independent required checks, resolved threads,
+and—on the external-contributor path—a current-head authorized approval. Editing the body after
+checks and reviews finish reruns the base-only `pull_request_target` metadata gate.
 
 The workflow's privileged trigger is constrained to base SHA checkout, no pull-request code
 execution, no `workflow_run` or comment trigger, no persisted credentials, and a single
