@@ -26,6 +26,8 @@ fovux/
 | go-task/task                     | 3.50.0                                                        | `go install github.com/go-task/task/v3/cmd/task@v3.50.0`        |
 | actionlint                       | 1.7.12                                                        | `go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12` |
 | gitleaks                         | 8.30.1                                                        | `go install github.com/zricethezav/gitleaks/v8@v8.30.1`         |
+| OSV-Scanner                      | 2.3.8                                                         | installed by `scripts/bootstrap-dev.sh`                         |
+| Trivy                            | 0.70.0                                                        | installed by `scripts/bootstrap-dev.sh`                         |
 
 ## Local setup
 
@@ -33,9 +35,9 @@ fovux/
 git clone https://github.com/oaslananka/fovux-kit
 cd fovux-kit
 
-# Fast path: verify/install the local toolchain, install dependencies, hooks, and run CI parity.
+# Fast path: install the toolchain/dependencies/hooks and run required local gates.
 scripts/bootstrap-dev.sh --install-deps --hooks
-task ci
+task verify:required
 ```
 
 That sequence is the expected path to a working checkout on Linux/macOS. On Windows, follow the
@@ -116,13 +118,14 @@ ci: pin actions/checkout to SHA
 chore(mcp): remove dead log_level no-op in config.py
 ```
 
-The pre-push hook runs the full quality gate. Do not skip it with `--no-verify`.
+The pre-push hook runs fast type, test, workflow, and OSV checks. Do not skip it with
+`--no-verify`; run `task verify:required` before requesting merge.
 
 ## Submitting a pull request
 
 1. Fork the repo and create a branch from `main`.
 2. Make your changes with appropriate tests.
-3. Ensure `python scripts/quality_gate.py repo-check` passes locally; run `task docs` for documentation-only changes and `task ci` before larger PRs.
+3. Ensure `python scripts/quality_gate.py repo-check` passes locally; run `task docs` for documentation-only changes and `task verify:required` before larger PRs.
 4. Open a pull request against `main` in `oaslananka/fovux-kit` (the canonical repo).
 5. Fill in the pull request template.
 

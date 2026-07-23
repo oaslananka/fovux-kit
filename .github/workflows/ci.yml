@@ -82,12 +82,23 @@ jobs:
           cache: false
 
       - name: Install quality tools
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
         run: |
           set -euo pipefail
           go install github.com/go-task/task/v3/cmd/task@v3.50.0
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-          go install github.com/zricethezav/gitleaks/v8@v8.30.1
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            --output "${RUNNER_TEMP}/${archive}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum --check -
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" gitleaks
+          chmod 0755 "${RUNNER_TEMP}/gitleaks"
+          "${RUNNER_TEMP}/gitleaks" version
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          echo "${RUNNER_TEMP}" >> "$GITHUB_PATH"
           corepack enable
           corepack prepare pnpm@10.34.1 --activate
           pnpm --version

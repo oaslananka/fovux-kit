@@ -1,0 +1,72 @@
+{
+  "aggregate_task": "verify:required",
+  "workflows": {
+    ".github/workflows/ci.yml": {
+      "aggregate_job": "ci-required",
+      "jobs": {
+        "quality": {
+          "mode": "local",
+          "task": "ci"
+        },
+        "compatibility-required": {
+          "mode": "hosted-only",
+          "reason": "The three-OS by three-Python compatibility matrix is intentionally not repeated by the local aggregate."
+        },
+        "node-required": {
+          "mode": "hosted-only",
+          "reason": "The Node 22 and Node 24 compatibility matrix remains a hosted runtime boundary; task ci validates the locked primary Node toolchain once."
+        },
+        "renovate-config": {
+          "mode": "local",
+          "task": "deps:renovate:validate"
+        }
+      }
+    },
+    ".github/workflows/security.yml": {
+      "aggregate_job": "security-required",
+      "jobs": {
+        "gitleaks": {
+          "mode": "local",
+          "task": "security"
+        },
+        "semgrep": {
+          "mode": "local",
+          "task": "security:semgrep"
+        },
+        "trivy-fs": {
+          "mode": "local",
+          "task": "security:trivy"
+        },
+        "pip-audit": {
+          "mode": "local",
+          "task": "security"
+        },
+        "pnpm-audit": {
+          "mode": "local",
+          "task": "security"
+        },
+        "npm-wrapper-audit": {
+          "mode": "local",
+          "task": "security"
+        },
+        "osv-pr-scan": {
+          "mode": "local",
+          "task": "security:osv"
+        },
+        "osv-full-scan": {
+          "mode": "local",
+          "task": "security:osv"
+        },
+        "posture": {
+          "mode": "hosted-only",
+          "reason": "The strict posture job reads GitHub ruleset, code-scanning, and Dependabot state through repository-scoped APIs."
+        }
+      }
+    }
+  },
+  "hosted_required_contexts": {
+    "codeql-required": "GitHub-hosted CodeQL analysis and SARIF processing have no credential-free local equivalent.",
+    "dependency-review": "GitHub Dependency Review requires pull-request dependency metadata from GitHub.",
+    "scorecard-required": "OpenSSF Scorecard relies on hosted repository and workflow metadata."
+  }
+}

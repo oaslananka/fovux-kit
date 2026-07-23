@@ -121,6 +121,7 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
+          version: v0.70.0
           scanners: vuln
           format: sarif
           output: trivy-results.sarif
