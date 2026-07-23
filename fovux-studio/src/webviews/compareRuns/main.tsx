@@ -270,7 +270,7 @@ function CompareRunsApp(): JSX.Element {
     <main style={pageStyle}>
       <header style={headerStyle}>
         <div>
-          <p style={eyebrowStyle}>Run Comparison & Experiment Advisor</p>
+          <p style={eyebrowStyle}>Run Comparison &amp; Experiment Advisor</p>
           <h1 style={titleStyle}>Decide which run deserves the next export</h1>
         </div>
         <button type="button" style={buttonStyle} onClick={() => void compare()}>

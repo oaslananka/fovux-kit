@@ -193,7 +193,8 @@ function DashboardApp(): JSX.Element {
     ? error
       ? "Metric stream degraded: reconnecting via polling fallback."
       : "Metric polling fallback active; dashboard will keep refreshing run state."
-    : "Backend " + "disconnected: using cached/offline dashboard state until the local server reconnects.";
+    : "Backend " +
+      "disconnected: using cached/offline dashboard state until the local server reconnects.";
 
   const latestRows = selectedRunIds
     .map((runId) => seriesByRun[runId]?.at(-1))
@@ -409,7 +410,7 @@ function DashboardApp(): JSX.Element {
               {/* Step 5 */}
               <div style={wizardStepItemStyle}>
                 <div>
-                  <strong>5. Export & Evaluate</strong>
+                  <strong>5. Export &amp; Evaluate</strong>
                   <p style={mutedParagraphStyle}>
                     Optimize checkpoints for ONNX or TFLite target deploy.
                   </p>

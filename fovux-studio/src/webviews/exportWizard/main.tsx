@@ -656,7 +656,7 @@ function ExportWizardApp(): JSX.Element {
               {/* Risk Warnings */}
               {advisorResult.risk_warnings.length > 0 ? (
                 <div style={warningsContainerStyle}>
-                  <strong>Warnings & Risks Detected</strong>
+                  <strong>Warnings &amp; Risks Detected</strong>
                   {advisorResult.risk_warnings.map((w, idx) => (
                     <div key={idx} style={{ marginTop: "6px", fontSize: "13px" }}>
                       ⚠️ {w}
