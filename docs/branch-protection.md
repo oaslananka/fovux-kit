@@ -31,3 +31,23 @@ python3 scripts/generate_security_posture.py --strict
 The posture check continues ruleset validation when the workflow token cannot read the privileged
 Dependabot alerts endpoint. Restricted alert access is reported as unavailable; it no longer turns
 a ruleset drift failure into a false success.
+
+## Elevated review evidence
+
+The base-trusted `Elevated Review Evidence` workflow publishes the `elevated-review-required` commit
+status for high-risk labels and immutable sensitive paths. Its repository policy currently has
+`ruleset_activation: bootstrap`: the workflow is installed first, while the tracked/live ruleset
+continues requiring the four established checks. A second activation pull request changes the policy
+to `active` and adds `elevated-review-required` to tracked and live rulesets together.
+
+This staged activation prevents two unsafe states: tracked/live ruleset drift during the bootstrap
+pull request, and a required status that cannot be produced because its trusted workflow is not yet
+present on `main`. The approval count remains zero, but elevated changes require current-head evidence
+in the pull request body, independent required checks, resolved threads, and—on the
+external-contributor path—a current-head authorized approval. Editing the body after checks and
+reviews finish reruns the base-only `pull_request_target` metadata gate.
+
+The workflow's privileged trigger is constrained to base SHA checkout, no pull-request code
+execution, no `workflow_run` or comment trigger, no persisted credentials, and a single
+`statuses: write` capability. Its exact Zizmor suppression rationale is checked by repository drift
+validation. See [Elevated Pull Request Review Policy](elevated-review-policy.md).

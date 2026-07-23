@@ -167,6 +167,7 @@ tasks:
       - cmd: python scripts/check_train_preflight_gate.py
       - cmd: python scripts/check_task_docs.py
       - cmd: python scripts/check_required_local_gates.py
+      - cmd: python scripts/check_review_evidence.py --validate-repository
       - cmd: python scripts/check_test_strategy.py
       - cmd: python scripts/check_dataset_intelligence.py
       - cmd: python scripts/check_review_queue.py

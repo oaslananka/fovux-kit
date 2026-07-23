@@ -30,3 +30,19 @@
 ## Review Thread Resolution
 
 All review comments must be resolved before merge.
+
+## Elevated Review Evidence
+
+When `risk:high`, `size/XL`, `requires-review`, or a sensitive path applies, wait for the required
+checks, bot/agent reports, and reviews to finish. Then **edit this block in the pull request body**
+with current-head evidence. Editing the body reruns the read-only review gate. Any push changes the
+head SHA and requires this block to be refreshed.
+
+<!-- elevated-review-evidence -->
+
+Head SHA:
+Reviewer:
+Risk assessment:
+Validation evidence: ci-required, security-required, dependency-review, codeql-required, Review Threads
+Bot/agent findings:
+Residual risk:

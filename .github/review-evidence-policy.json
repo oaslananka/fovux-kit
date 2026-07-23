@@ -1,0 +1,63 @@
+{
+  "status_context": "elevated-review-required",
+  "evidence_marker": "<!-- elevated-review-evidence -->",
+  "elevated_labels": ["risk:high", "size/XL", "requires-review"],
+  "required_checks": [
+    "ci-required",
+    "security-required",
+    "dependency-review",
+    "codeql-required",
+    "Review Threads"
+  ],
+  "authorized_associations": ["OWNER", "MEMBER", "COLLABORATOR"],
+  "sensitive_paths": [
+    {
+      "category": "authentication-authorization",
+      "patterns": [
+        "fovux-mcp/src/fovux/core/auth.py",
+        "fovux-mcp/src/fovux/core/path_policy.py",
+        "**/auth/**",
+        "**/authorization/**"
+      ]
+    },
+    {
+      "category": "subprocess-execution",
+      "patterns": [
+        "fovux-mcp/src/fovux/core/processes.py",
+        "**/subprocess/**",
+        "**/process_runner/**"
+      ]
+    },
+    {
+      "category": "workflow-permissions",
+      "patterns": [
+        ".github/workflows/**",
+        ".github/rulesets/**",
+        ".github/CODEOWNERS",
+        ".github/review-evidence-policy.json"
+      ]
+    },
+    {
+      "category": "release-publishing",
+      "patterns": [
+        "scripts/publish*",
+        "scripts/*release*",
+        "scripts/update_release_baseline.py",
+        "scripts/verify_registry_releases.py",
+        ".github/workflows/publish-production.yml",
+        ".github/workflows/release-please.yml"
+      ]
+    },
+    {
+      "category": "registry-schema-migration",
+      "patterns": [
+        "fovux-mcp/src/fovux/core/tool_registry.py",
+        "fovux-mcp/src/fovux/core/runs.py",
+        "fovux-mcp/src/fovux/schemas/**",
+        "**/migrations/**",
+        "**/alembic/**"
+      ]
+    }
+  ],
+  "ruleset_activation": "bootstrap"
+}
