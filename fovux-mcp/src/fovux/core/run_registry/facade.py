@@ -27,7 +27,7 @@ from fovux.core.run_registry.models import (
     RunRecord,
 )
 from fovux.core.run_registry.operation_repository import OperationRepository
-from fovux.core.run_registry.run_repository import RunRepository
+from fovux.core.run_registry.run_repository import RunCreateRequest, RunRepository
 
 
 class RunRegistry:
@@ -62,7 +62,7 @@ class RunRegistry:
         """Dispose the SQLite engine and release pooled connections."""
         self._database.close()
 
-    def reserve_run_slot(
+    def reserve_run_slot(  # NOSONAR -- public compatibility signature
         self,
         run_id: str,
         run_path: Path,
@@ -80,22 +80,22 @@ class RunRegistry:
         parent_run_id: str | None = None,
     ) -> RunRecord:
         """Reserve a run slot atomically."""
-        return self._runs.reserve_run_slot(
-            run_id,
-            run_path,
-            model,
-            dataset_path,
-            task,
-            epochs,
-            max_concurrent_runs,
-            tags,
-            extra,
-            dataset_fingerprint,
-            config_hash,
-            code_version,
-            env_summary,
-            parent_run_id,
+        request = RunCreateRequest(
+            run_id=run_id,
+            run_path=run_path,
+            model=model,
+            dataset_path=dataset_path,
+            task=task,
+            epochs=epochs,
+            tags=tags,
+            extra=extra,
+            dataset_fingerprint=dataset_fingerprint,
+            config_hash=config_hash,
+            code_version=code_version,
+            env_summary=env_summary,
+            parent_run_id=parent_run_id,
         )
+        return self._runs.reserve_run_slot(request, max_concurrent_runs)
 
     def create_run(
         self,
@@ -114,21 +114,22 @@ class RunRegistry:
         parent_run_id: str | None = None,
     ) -> RunRecord:
         """Insert a new run record."""
-        return self._runs.create_run(
-            run_id,
-            run_path,
-            model,
-            dataset_path,
-            task,
-            epochs,
-            tags,
-            extra,
-            dataset_fingerprint,
-            config_hash,
-            code_version,
-            env_summary,
-            parent_run_id,
+        request = RunCreateRequest(
+            run_id=run_id,
+            run_path=run_path,
+            model=model,
+            dataset_path=dataset_path,
+            task=task,
+            epochs=epochs,
+            tags=tags,
+            extra=extra,
+            dataset_fingerprint=dataset_fingerprint,
+            config_hash=config_hash,
+            code_version=code_version,
+            env_summary=env_summary,
+            parent_run_id=parent_run_id,
         )
+        return self._runs.create_run(request)
 
     def get_run(self, run_id: str) -> RunRecord | None:
         """Fetch a run by ID."""

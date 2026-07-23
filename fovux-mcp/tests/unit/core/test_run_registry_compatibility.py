@@ -46,3 +46,14 @@ def test_facade_preserves_private_engine_and_session_aliases(tmp_path: Path) -> 
         assert registry._Session is registry._database.session_factory
     finally:
         registry.close()
+
+
+def test_internal_repository_uses_typed_run_request() -> None:
+    """Internal persistence APIs should not repeat the public facade signature."""
+    from fovux.core.run_registry.run_repository import RunRepository
+
+    reserve = inspect.signature(RunRepository.reserve_run_slot)
+    create = inspect.signature(RunRepository.create_run)
+
+    assert list(reserve.parameters) == ["self", "request", "max_concurrent_runs"]
+    assert list(create.parameters) == ["self", "request"]

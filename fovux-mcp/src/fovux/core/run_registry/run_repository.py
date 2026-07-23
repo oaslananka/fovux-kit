@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,25 @@ from fovux.core.run_registry.events import EventStore
 from fovux.core.run_registry.lifecycle import RunLifecyclePolicy, RunStatus
 from fovux.core.run_registry.metadata import RunMetadata, RunMetadataProvider
 from fovux.core.run_registry.models import RunRecord, _utcnow_naive
+
+
+@dataclass(frozen=True, slots=True)
+class RunCreateRequest:
+    """Typed input shared by run creation and atomic slot reservation."""
+
+    run_id: str
+    run_path: Path
+    model: str
+    dataset_path: Path
+    task: str
+    epochs: int
+    tags: list[str] | None = None
+    extra: dict[str, Any] | None = None
+    dataset_fingerprint: str | None = None
+    config_hash: str | None = None
+    code_version: str | None = None
+    env_summary: str | None = None
+    parent_run_id: str | None = None
 
 
 class RunRepository:
@@ -32,137 +52,81 @@ class RunRepository:
         self._event_store = event_store
         self._catalog_repository = catalog_repository
 
-    def _metadata(
-        self,
-        *,
-        model: str,
-        dataset_path: Path,
-        task: str,
-        epochs: int,
-        extra: dict[str, Any] | None,
-        dataset_fingerprint: str | None,
-        config_hash: str | None,
-        code_version: str | None,
-        env_summary: str | None,
-    ) -> RunMetadata:
+    def _metadata(self, request: RunCreateRequest) -> RunMetadata:
         automatic = self._metadata_provider.build(
-            model=model,
-            dataset_path=dataset_path,
-            task=task,
-            epochs=epochs,
-            extra=extra,
+            model=request.model,
+            dataset_path=request.dataset_path,
+            task=request.task,
+            epochs=request.epochs,
+            extra=request.extra,
         )
         return RunMetadata(
-            dataset_fingerprint=dataset_fingerprint or automatic.dataset_fingerprint,
-            config_hash=config_hash or automatic.config_hash,
-            code_version=code_version or automatic.code_version,
-            env_summary=env_summary or automatic.env_summary,
+            dataset_fingerprint=(request.dataset_fingerprint or automatic.dataset_fingerprint),
+            config_hash=request.config_hash or automatic.config_hash,
+            code_version=request.code_version or automatic.code_version,
+            env_summary=request.env_summary or automatic.env_summary,
         )
 
     @staticmethod
     def _new_record(
-        *,
-        run_id: str,
-        run_path: Path,
-        model: str,
-        dataset_path: Path,
-        task: str,
-        epochs: int,
-        tags: list[str] | None,
-        extra: dict[str, Any] | None,
+        request: RunCreateRequest,
         metadata: RunMetadata,
-        parent_run_id: str | None,
     ) -> RunRecord:
         return RunRecord(
-            id=run_id,
-            run_path=str(run_path),
-            model=model,
-            dataset_path=str(dataset_path),
-            task=task,
-            epochs=epochs,
+            id=request.run_id,
+            run_path=str(request.run_path),
+            model=request.model,
+            dataset_path=str(request.dataset_path),
+            task=request.task,
+            epochs=request.epochs,
             status="pending",
             created_at=_utcnow_naive(),
-            tags_json=json.dumps(tags or []),
-            extra_json=json.dumps(extra or {}),
+            tags_json=json.dumps(request.tags or []),
+            extra_json=json.dumps(request.extra or {}),
             dataset_fingerprint=metadata.dataset_fingerprint,
             config_hash=metadata.config_hash,
             code_version=metadata.code_version,
             env_summary=metadata.env_summary,
-            parent_run_id=parent_run_id,
+            parent_run_id=request.parent_run_id,
         )
 
     def _persist_new_run(
         self,
         session: Session,
         *,
+        request: RunCreateRequest,
         record: RunRecord,
-        model: str,
-        dataset_path: Path,
-        task: str,
-        dataset_fingerprint: str,
+        metadata: RunMetadata,
     ) -> None:
         session.add(record)
         self._catalog_repository.register_lineage(
             session,
-            run_id=str(record.id),
-            model=model,
-            dataset_path=dataset_path,
-            task=task,
-            dataset_fingerprint=dataset_fingerprint,
+            run_id=request.run_id,
+            model=request.model,
+            dataset_path=request.dataset_path,
+            task=request.task,
+            dataset_fingerprint=metadata.dataset_fingerprint,
         )
         self._event_store.append_run_event(
             session,
-            run_id=str(record.id),
+            run_id=request.run_id,
             event_type="status_transition",
             from_status=None,
             to_status="pending",
             message="Run reserved and initialized in pending state",
         )
 
-    def reserve_run_slot(
+    def _create(
         self,
-        run_id: str,
-        run_path: Path,
-        model: str,
-        dataset_path: Path,
-        task: str,
-        epochs: int,
-        max_concurrent_runs: int,
-        tags: list[str] | None = None,
-        extra: dict[str, Any] | None = None,
-        dataset_fingerprint: str | None = None,
-        config_hash: str | None = None,
-        code_version: str | None = None,
-        env_summary: str | None = None,
-        parent_run_id: str | None = None,
+        request: RunCreateRequest,
+        *,
+        max_concurrent_runs: int | None,
     ) -> RunRecord:
-        """Reserve a run slot atomically, enforcing the configured active limit."""
-        resolved = self._metadata(
-            model=model,
-            dataset_path=dataset_path,
-            task=task,
-            epochs=epochs,
-            extra=extra,
-            dataset_fingerprint=dataset_fingerprint,
-            config_hash=config_hash,
-            code_version=code_version,
-            env_summary=env_summary,
-        )
-        record = self._new_record(
-            run_id=run_id,
-            run_path=run_path,
-            model=model,
-            dataset_path=dataset_path,
-            task=task,
-            epochs=epochs,
-            tags=tags,
-            extra=extra,
-            metadata=resolved,
-            parent_run_id=parent_run_id,
-        )
+        metadata = self._metadata(request)
+        record = self._new_record(request, metadata)
         with self._session_factory() as session:
             with session.begin():
-                if max_concurrent_runs > 0:
+                if max_concurrent_runs is not None and max_concurrent_runs > 0:
                     active_count = (
                         session.query(RunRecord)
                         .filter(RunRecord.status.in_(["running", "pending"]))
@@ -172,73 +136,30 @@ class RunRepository:
                         from fovux.core.errors import FovuxTrainingAlreadyRunningError
 
                         raise FovuxTrainingAlreadyRunningError(
-                            f"Cannot start run '{run_id}': {active_count} "
+                            f"Cannot start run '{request.run_id}': {active_count} "
                             f"concurrent training run(s) already active and "
                             f"max_concurrent_runs={max_concurrent_runs}."
                         )
                 self._persist_new_run(
                     session,
+                    request=request,
                     record=record,
-                    model=model,
-                    dataset_path=dataset_path,
-                    task=task,
-                    dataset_fingerprint=resolved.dataset_fingerprint,
+                    metadata=metadata,
                 )
             session.refresh(record)
             return record
 
-    def create_run(
+    def reserve_run_slot(
         self,
-        run_id: str,
-        run_path: Path,
-        model: str,
-        dataset_path: Path,
-        task: str,
-        epochs: int,
-        tags: list[str] | None = None,
-        extra: dict[str, Any] | None = None,
-        dataset_fingerprint: str | None = None,
-        config_hash: str | None = None,
-        code_version: str | None = None,
-        env_summary: str | None = None,
-        parent_run_id: str | None = None,
+        request: RunCreateRequest,
+        max_concurrent_runs: int,
     ) -> RunRecord:
+        """Reserve a run slot atomically, enforcing the configured active limit."""
+        return self._create(request, max_concurrent_runs=max_concurrent_runs)
+
+    def create_run(self, request: RunCreateRequest) -> RunRecord:
         """Insert a run, lineage rows, and initial event in one transaction."""
-        resolved = self._metadata(
-            model=model,
-            dataset_path=dataset_path,
-            task=task,
-            epochs=epochs,
-            extra=extra,
-            dataset_fingerprint=dataset_fingerprint,
-            config_hash=config_hash,
-            code_version=code_version,
-            env_summary=env_summary,
-        )
-        record = self._new_record(
-            run_id=run_id,
-            run_path=run_path,
-            model=model,
-            dataset_path=dataset_path,
-            task=task,
-            epochs=epochs,
-            tags=tags,
-            extra=extra,
-            metadata=resolved,
-            parent_run_id=parent_run_id,
-        )
-        with self._session_factory() as session:
-            with session.begin():
-                self._persist_new_run(
-                    session,
-                    record=record,
-                    model=model,
-                    dataset_path=dataset_path,
-                    task=task,
-                    dataset_fingerprint=resolved.dataset_fingerprint,
-                )
-            session.refresh(record)
-            return record
+        return self._create(request, max_concurrent_runs=None)
 
     def get_run(self, run_id: str) -> RunRecord | None:
         """Fetch a run by ID."""

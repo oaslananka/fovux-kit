@@ -13,7 +13,7 @@ from fovux.core.run_registry.database import RegistryDatabase
 from fovux.core.run_registry.events import EventStore
 from fovux.core.run_registry.metadata import RunMetadataProvider
 from fovux.core.run_registry.models import AuditEventRecord
-from fovux.core.run_registry.run_repository import RunRepository
+from fovux.core.run_registry.run_repository import RunCreateRequest, RunRepository
 
 
 class FailingAuditEventStore(EventStore):
@@ -57,12 +57,14 @@ def test_status_and_transition_events_roll_back_together(tmp_path: Path) -> None
     repository, events = _repository(database)
     try:
         repository.create_run(
-            run_id="run_tx",
-            run_path=tmp_path / "run_tx",
-            model="yolo.pt",
-            dataset_path=tmp_path / "dataset",
-            task="detect",
-            epochs=1,
+            RunCreateRequest(
+                run_id="run_tx",
+                run_path=tmp_path / "run_tx",
+                model="yolo.pt",
+                dataset_path=tmp_path / "dataset",
+                task="detect",
+                epochs=1,
+            )
         )
         repository.update_status("run_tx", "running")
         failing_repository, _ = _repository(
