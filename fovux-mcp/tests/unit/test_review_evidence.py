@@ -503,6 +503,13 @@ def _copy_contract_tree(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def test_repository_policy_is_active_after_ruleset_activation() -> None:
+    module = _load_module()
+    policy = module.load_policy(POLICY_PATH)
+
+    assert policy["ruleset_activation"] == "active"
+
+
 def test_repository_review_evidence_contract_is_synchronized() -> None:
     module = _load_module()
 
@@ -540,10 +547,17 @@ def test_repository_validation_rejects_dangerous_trigger_or_untrusted_checkout(
 def test_active_policy_requires_ruleset_context(tmp_path: Path) -> None:
     module = _load_module()
     root = _copy_contract_tree(tmp_path)
-    policy_path = root / ".github" / "review-evidence-policy.json"
-    policy = json.loads(policy_path.read_text(encoding="utf-8"))
-    policy["ruleset_activation"] = "active"
-    policy_path.write_text(json.dumps(policy))
+    ruleset_path = root / ".github" / "rulesets" / "main.json"
+    ruleset = json.loads(ruleset_path.read_text(encoding="utf-8"))
+    status_rule = next(
+        rule for rule in ruleset["rules"] if rule["type"] == "required_status_checks"
+    )
+    status_rule["parameters"]["required_status_checks"] = [
+        check
+        for check in status_rule["parameters"]["required_status_checks"]
+        if check["context"] != "elevated-review-required"
+    ]
+    ruleset_path.write_text(json.dumps(ruleset))
 
     failures = module.validate_repository(root)
 
@@ -554,15 +568,10 @@ def test_active_policy_requires_ruleset_context(tmp_path: Path) -> None:
 def test_bootstrap_policy_rejects_premature_ruleset_context(tmp_path: Path) -> None:
     module = _load_module()
     root = _copy_contract_tree(tmp_path)
-    ruleset_path = root / ".github" / "rulesets" / "main.json"
-    ruleset = json.loads(ruleset_path.read_text(encoding="utf-8"))
-    status_rule = next(
-        rule for rule in ruleset["rules"] if rule["type"] == "required_status_checks"
-    )
-    status_rule["parameters"]["required_status_checks"].append(
-        {"context": "elevated-review-required"}
-    )
-    ruleset_path.write_text(json.dumps(ruleset))
+    policy_path = root / ".github" / "review-evidence-policy.json"
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    policy["ruleset_activation"] = "bootstrap"
+    policy_path.write_text(json.dumps(policy))
 
     failures = module.validate_repository(root)
 
