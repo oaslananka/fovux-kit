@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -146,6 +147,32 @@ def test_check_token_perms_passes_after_ensure(tmp_path: Path) -> None:
     else:
         assert ok is True
         assert "safe" in detail
+
+
+def test_check_token_perms_rejects_permissive_mode(tmp_path: Path) -> None:
+    """Group/world-readable token stores must fail the permission check."""
+    ensure_auth_token(home=tmp_path)
+    auth_token_path(tmp_path).chmod(0o644)
+
+    ok, detail = check_token_perms(home=tmp_path)
+
+    assert ok is False
+    assert "permissive mode 0o644" in detail
+
+
+def test_check_token_perms_reports_stat_failure(tmp_path: Path) -> None:
+    """Unexpected stat failures should return a diagnostic rather than escape."""
+    ensure_auth_token(home=tmp_path)
+    token_path = auth_token_path(tmp_path)
+    with (
+        patch("fovux.core.auth._safe_auth_path", return_value=token_path),
+        patch("fovux.core.auth.Path.exists", return_value=True),
+        patch("fovux.core.auth.os.stat", side_effect=OSError("stat blocked")),
+    ):
+        ok, detail = check_token_perms(home=tmp_path)
+
+    assert ok is False
+    assert detail == "cannot stat auth.token: stat blocked"
 
 
 def test_scope_from_category_returns_correct_scopes() -> None:

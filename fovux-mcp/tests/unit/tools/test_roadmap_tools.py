@@ -122,6 +122,25 @@ def test_dataset_augment_horizontal_flip_updates_yolo_label(tmp_path: Path) -> N
     assert label.startswith("0 0.750000 0.500000")
 
 
+def test_dataset_augment_writes_empty_label_when_source_is_missing(tmp_path: Path) -> None:
+    """Unlabelled source images should receive an atomic empty output label."""
+    dataset = _make_yolo_dataset(tmp_path / "dataset")
+    (dataset / "labels" / "train" / "sample.txt").unlink()
+    output_dir = tmp_path / "augmented"
+
+    output = _run_dataset_augment(
+        DatasetAugmentInput(
+            dataset_path=dataset,
+            techniques=["flip_h"],
+            multiplier=1,
+            output_path=output_dir,
+        )
+    )
+
+    assert output.generated_images == 1
+    assert (output_dir / "labels" / "train" / "sample_aug0.txt").read_text() == ""
+
+
 def test_model_compare_visual_writes_side_by_side_image(tmp_path: Path) -> None:
     """Visual comparison should save a concrete PNG artifact."""
     image_path = tmp_path / "frame.jpg"

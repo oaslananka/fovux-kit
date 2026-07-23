@@ -85,6 +85,7 @@ def test_split_is_reproducible_for_same_seed(tmp_path: Path) -> None:
         DatasetSplitInput(
             dataset_path=FIXTURES / "mini_yolo",
             seed=2026,
+            stratify_by_class=False,
             overwrite=True,
             output_path=tmp_path / "first",
         )
@@ -93,6 +94,7 @@ def test_split_is_reproducible_for_same_seed(tmp_path: Path) -> None:
         DatasetSplitInput(
             dataset_path=FIXTURES / "mini_yolo",
             seed=2026,
+            stratify_by_class=False,
             overwrite=True,
             output_path=tmp_path / "second",
         )

@@ -166,7 +166,7 @@ async function getFovuxServerReadiness(): Promise<
   }
 }
 
-function killProcessTree(proc: ChildProcessWithoutNullStreams): void {
+export function killProcessTree(proc: ChildProcessWithoutNullStreams): void {
   if (process.platform === "win32" && proc.pid !== undefined) {
     execFile(WINDOWS_TASKKILL_EXECUTABLE, ["/PID", String(proc.pid), "/T", "/F"], (error) => {
       if (error) {
