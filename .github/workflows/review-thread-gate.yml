@@ -6,7 +6,7 @@ on:
   pull_request_review_comment:
     types: [created, edited, deleted]
   pull_request:
-    types: [synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: review-gate-${{ github.event.pull_request.number }}
