@@ -6,6 +6,8 @@ import re
 import sys
 from pathlib import Path
 
+import pytest
+
 from fovux.core.auth import (
     ALL_SCOPES,
     Scope,
@@ -151,3 +153,46 @@ def test_scope_from_category_returns_correct_scopes() -> None:
     assert Scope.from_category("read_only") == {Scope.READ}
     assert Scope.from_category("destructive") == {Scope.DESTRUCTIVE, Scope.ADMIN}
     assert Scope.from_category("unknown") == {Scope.READ}
+
+
+def test_create_session_token_rejects_symlinked_store_escape(tmp_path: Path) -> None:
+    """Session creation must never follow auth.session outside the trusted home."""
+    from fovux.core.errors import FovuxPathValidationError
+
+    home = tmp_path / "home"
+    home.mkdir()
+    outside = tmp_path / "outside.json"
+    outside.write_text('{"sentinel": true}', encoding="utf-8")
+    (home / "auth.session").symlink_to(outside)
+
+    with pytest.raises(FovuxPathValidationError, match="symlink|escapes"):
+        create_session_token(home=home)
+
+    assert outside.read_text(encoding="utf-8") == '{"sentinel": true}'
+
+
+def test_revoke_session_token_rejects_symlinked_store_escape(tmp_path: Path) -> None:
+    """Session revocation must not rewrite a symlink target outside FOVUX_HOME."""
+    from fovux.core.errors import FovuxPathValidationError
+
+    home = tmp_path / "home"
+    home.mkdir()
+    raw = create_session_token(home=home)
+    session_path = auth_session_path(home)
+    stored = session_path.read_text(encoding="utf-8")
+    session_path.unlink()
+    outside = tmp_path / "outside.json"
+    outside.write_text(stored, encoding="utf-8")
+    session_path.symlink_to(outside)
+
+    with pytest.raises(FovuxPathValidationError, match="symlink|escapes"):
+        revoke_session_token(raw, home=home)
+
+    assert outside.read_text(encoding="utf-8") == stored
+
+
+def test_session_store_uses_restrictive_permissions(tmp_path: Path) -> None:
+    """The scoped-session registry should be private on POSIX hosts."""
+    _ = create_session_token(home=tmp_path)
+    if sys.platform != "win32":
+        assert auth_session_path(tmp_path).stat().st_mode & 0o777 == 0o600

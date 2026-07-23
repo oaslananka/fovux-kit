@@ -518,3 +518,22 @@ def test_run_compare_unknown_run_raises(tmp_path, monkeypatch):
     ensure_fovux_dirs(tmp_path)
     with pytest.raises(FovuxTrainingRunNotFoundError):
         _run_run_compare(RunCompareInput(run_ids=["ghost"]))
+
+
+def test_infer_image_fallback_reencodes_instead_of_copying_input_bytes(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Fallback visualization must decode and re-encode untrusted image bytes."""
+    from fovux.tools.infer_image import _save_visualization
+
+    monkeypatch.setenv("FOVUX_HOME", str(tmp_path))
+    source = tmp_path / "source.png"
+    Image.new("RGB", (8, 8), color=(1, 2, 3)).save(source, format="PNG")
+    target = tmp_path / "rendered.jpg"
+
+    saved = _save_visualization(SimpleNamespace(), source, target)
+
+    assert saved == target
+    assert target.read_bytes() != source.read_bytes()
+    with Image.open(target) as rendered:
+        assert rendered.format == "JPEG"

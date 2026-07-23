@@ -56,7 +56,7 @@ export async function listRuns(config: HttpClientConfig): Promise<RunSummary[]> 
 }
 
 export async function getRun(config: HttpClientConfig, runId: string): Promise<RunDetail> {
-  const response = await fetch(`${config.baseUrl}/runs/${runId}`, {
+  const response = await fetch(`${config.baseUrl}/runs/${encodeURIComponent(runId)}`, {
     headers: authHeaders(config.authToken),
   });
   return handleResponse<RunDetail>(response);
@@ -67,7 +67,7 @@ export async function requestChallenge(
   name: string,
   payload: Record<string, unknown>
 ): Promise<ChallengeResponse> {
-  const response = await fetch(`${config.baseUrl}/tools/${name}/challenge`, {
+  const response = await fetch(`${config.baseUrl}/tools/${encodeURIComponent(name)}/challenge`, {
     method: "POST",
     headers: authHeaders(config.authToken),
     body: JSON.stringify(payload),
@@ -80,7 +80,7 @@ export async function invokeTool<T>(
   name: string,
   payload: Record<string, unknown>
 ): Promise<T> {
-  const response = await fetch(`${config.baseUrl}/tools/${name}`, {
+  const response = await fetch(`${config.baseUrl}/tools/${encodeURIComponent(name)}`, {
     method: "POST",
     headers: authHeaders(config.authToken),
     body: JSON.stringify(payload),

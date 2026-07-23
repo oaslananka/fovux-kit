@@ -303,3 +303,27 @@ def test_train_adjust_rejects_unknown_run(tmp_path: Path, monkeypatch) -> None:
 
     with pytest.raises(FovuxTrainingRunNotFoundError):
         _run_train_adjust(TrainAdjustInput(run_id="ghost", learning_rate=0.01))
+
+
+def test_dataset_augment_rejects_symlinked_label_output(tmp_path: Path) -> None:
+    """Augmentation writes must not follow output subdirectory symlinks."""
+    from fovux.core.errors import FovuxPathValidationError
+
+    dataset = _make_yolo_dataset(tmp_path / "dataset")
+    output_dir = tmp_path / "augmented"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (output_dir / "labels").mkdir(parents=True)
+    (output_dir / "labels" / "train").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(FovuxPathValidationError, match="symlink|escapes"):
+        _run_dataset_augment(
+            DatasetAugmentInput(
+                dataset_path=dataset,
+                techniques=["flip_h"],
+                multiplier=1,
+                output_path=output_dir,
+            )
+        )
+
+    assert list(outside.iterdir()) == []

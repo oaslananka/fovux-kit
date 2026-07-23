@@ -37,9 +37,19 @@ def _write_params(run_dir: Path, **overrides: object) -> dict[str, object]:
     return params
 
 
-def test_write_status_persists_extra_fields(tmp_path: Path) -> None:
+def _managed_run_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str) -> Path:
+    home = tmp_path / "home"
+    monkeypatch.setenv("FOVUX_HOME", str(home))
+    run_dir = home / "runs" / name
+    run_dir.mkdir(parents=True)
+    return run_dir
+
+
+def test_write_status_persists_extra_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Status writes should include the requested state and additional metadata."""
-    status_path = tmp_path / "status.json"
+    status_path = _managed_run_dir(tmp_path, monkeypatch, "status_run") / "status.json"
 
     _write_status(status_path, "running", pid=77)
 
@@ -75,10 +85,9 @@ def test_stop_signal_marks_registry_stopped(tmp_path: Path, monkeypatch) -> None
     assert registry.get_run("signal_run").status == "stopped"  # type: ignore[union-attr]
 
 
-def test_run_marks_training_complete(tmp_path: Path) -> None:
+def test_run_marks_training_complete(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A successful worker run should finish with a complete status file."""
-    run_dir = tmp_path / "run_success"
-    run_dir.mkdir()
+    run_dir = _managed_run_dir(tmp_path, monkeypatch, "run_success")
     _write_params(run_dir)
     fake_model = MagicMock()
 
@@ -91,9 +100,11 @@ def test_run_marks_training_complete(tmp_path: Path) -> None:
     assert fake_model.train.call_args.kwargs["project"] == str(run_dir)
 
 
-def test_run_uses_resume_checkpoint_with_user_dataset(tmp_path: Path) -> None:
+def test_run_uses_resume_checkpoint_with_user_dataset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Resume mode should load the checkpoint and preserve user dataset configuration."""
-    run_dir = tmp_path / "run_resume"
+    run_dir = _managed_run_dir(tmp_path, monkeypatch, "run_resume")
     weights_dir = run_dir / "weights"
     weights_dir.mkdir(parents=True)
     last_checkpoint = weights_dir / "last.pt"
@@ -113,10 +124,11 @@ def test_run_uses_resume_checkpoint_with_user_dataset(tmp_path: Path) -> None:
     assert train_kwargs["data"] == str(run_dir / "dataset")
 
 
-def test_run_marks_failure_and_exits_when_training_crashes(tmp_path: Path) -> None:
+def test_run_marks_failure_and_exits_when_training_crashes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Training exceptions should be surfaced through status.json and a non-zero exit."""
-    run_dir = tmp_path / "run_failure"
-    run_dir.mkdir()
+    run_dir = _managed_run_dir(tmp_path, monkeypatch, "run_failure")
     _write_params(run_dir)
     fake_model = MagicMock()
     fake_model.train.side_effect = RuntimeError("boom")
@@ -149,10 +161,11 @@ def test_main_usage_error_exits_cleanly() -> None:
 
 
 @pytest.mark.filterwarnings(TRAIN_WORKER_RUNPY_WARNING)
-def test_main_runs_worker_when_path_is_provided(tmp_path: Path) -> None:
+def test_main_runs_worker_when_path_is_provided(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Executing the module with a run directory should invoke the worker path."""
-    run_dir = tmp_path / "run_script"
-    run_dir.mkdir()
+    run_dir = _managed_run_dir(tmp_path, monkeypatch, "run_script")
     _write_params(run_dir)
     fake_logger = MagicMock()
     fake_model = MagicMock()
@@ -166,3 +179,35 @@ def test_main_runs_worker_when_path_is_provided(tmp_path: Path) -> None:
         runpy.run_module("fovux.core.train_worker", run_name="__main__")
 
     assert fake_model.train.called
+
+
+def test_run_rejects_directory_outside_managed_runs_root(tmp_path: Path, monkeypatch) -> None:
+    """The worker CLI must not accept an arbitrary filesystem directory."""
+    from fovux.core.errors import FovuxPathValidationError
+
+    monkeypatch.setenv("FOVUX_HOME", str(tmp_path / "home"))
+    run_dir = tmp_path / "outside-run"
+    run_dir.mkdir()
+    _write_params(run_dir)
+
+    with pytest.raises(FovuxPathValidationError, match="runs|allowed root"):
+        run(run_dir)
+
+
+def test_run_rejects_symlink_escape_from_managed_runs_root(tmp_path: Path, monkeypatch) -> None:
+    """A run-id symlink must not redirect worker writes outside FOVUX_HOME/runs."""
+    from fovux.core.errors import FovuxPathValidationError
+
+    home = tmp_path / "home"
+    runs = home / "runs"
+    runs.mkdir(parents=True)
+    outside = tmp_path / "outside-run"
+    outside.mkdir()
+    _write_params(outside)
+    (runs / "linked-run").symlink_to(outside, target_is_directory=True)
+    monkeypatch.setenv("FOVUX_HOME", str(home))
+
+    with pytest.raises(FovuxPathValidationError, match="runs|allowed root"):
+        run(runs / "linked-run")
+
+    assert not (outside / "status.json").exists()

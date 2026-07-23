@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  getRun,
+  invokeTool,
   parseMetricEvent,
+  requestChallenge,
   subscribeToMetrics,
   type HttpClientConfig,
 } from "../../src/webviews/shared/api";
@@ -22,6 +25,26 @@ describe("shared webview api", () => {
     baseUrl: "http://127.0.0.1:7823",
     authToken: "token",
   };
+
+
+  it("encodes dynamic run and tool names as one URL path segment", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getRun(config, "../tools?admin=true");
+    await requestChallenge(config, "export/../admin?x=1", {});
+    await invokeTool(config, "export/../admin?x=1", {});
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "http://127.0.0.1:7823/runs/..%2Ftools%3Fadmin%3Dtrue",
+      "http://127.0.0.1:7823/tools/export%2F..%2Fadmin%3Fx%3D1/challenge",
+      "http://127.0.0.1:7823/tools/export%2F..%2Fadmin%3Fx%3D1",
+    ]);
+    vi.unstubAllGlobals();
+  });
 
   it("parses multiline SSE data fields", () => {
     const payload = parseMetricEvent(

@@ -97,14 +97,14 @@ def _run_split(inp: DatasetSplitInput) -> DatasetSplitOutput:
         test_pairs: list[tuple[Path, Path]] = []
 
         for cls_pairs in class_to_pairs.values():
-            rng.shuffle(cls_pairs)
+            _shuffle_for_reproducible_split(rng, cls_pairs)
             n = len(cls_pairs)
             n_train, n_val, _ = _split_counts(n, inp.ratios)
             train_pairs.extend(cls_pairs[:n_train])
             val_pairs.extend(cls_pairs[n_train : n_train + n_val])
             test_pairs.extend(cls_pairs[n_train + n_val :])
 
-        rng.shuffle(no_ann)
+        _shuffle_for_reproducible_split(rng, no_ann)
         n = len(no_ann)
         n_train, n_val, _ = _split_counts(n, inp.ratios)
         train_pairs.extend(no_ann[:n_train])
@@ -112,7 +112,7 @@ def _run_split(inp: DatasetSplitInput) -> DatasetSplitOutput:
         test_pairs.extend(no_ann[n_train + n_val :])
     else:
         all_pairs = list(pairs)
-        rng.shuffle(all_pairs)
+        _shuffle_for_reproducible_split(rng, all_pairs)
         n = len(all_pairs)
         n_train, n_val, _ = _split_counts(n, inp.ratios)
         train_pairs = all_pairs[:n_train]
@@ -184,6 +184,14 @@ def _write_yolo_split(output_path: Path, split: str, pairs: list[tuple[Path, Pat
             shutil.copy(img_p, output_path / "images" / split / img_p.name)
         if lbl_p.exists():
             shutil.copy(lbl_p, output_path / "labels" / split / lbl_p.name)
+
+
+def _shuffle_for_reproducible_split(
+    rng: random.Random,
+    pairs: list[tuple[Path, Path]],
+) -> None:
+    """Shuffle with a recorded seed for dataset reproducibility, not security."""
+    rng.shuffle(pairs)  # NOSONAR -- deterministic partitioning is intentionally reproducible.
 
 
 def _split_counts(n_items: int, ratios: tuple[float, float, float]) -> tuple[int, int, int]:
