@@ -816,9 +816,10 @@ python scripts/check_test_strategy.py
 python scripts/check_docs_truth.py
 python scripts/check_api_stability_plan.py
 python scripts/check_release_truth.py
-python scripts/check_tool_manifest.py
+python scripts/check_tool_contracts.py
+python scripts/check_studio_lm_tools.py
 python scripts/check_agent_policy.py
-./.tools/actionlint -shellcheck= -pyflakes=
+actionlint -shellcheck= -pyflakes=
 ```
 
 Expected: all scripts and actionlint exit zero. If the repository-standard actionlint path differs, use the pinned version from CI without modifying workflow pins.
