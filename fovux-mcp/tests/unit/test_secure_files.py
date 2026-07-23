@@ -29,8 +29,10 @@ def test_resolve_under_root_rejects_parent_traversal(tmp_path: Path, relative: P
 
 def test_resolve_under_root_rejects_absolute_path(tmp_path: Path) -> None:
     """Callers must supply a relative path rather than replacing the trust root."""
+    absolute_path = (tmp_path / "absolute.json").resolve()
+
     with pytest.raises(FovuxPathValidationError, match="relative path"):
-        resolve_under_root(tmp_path, (tmp_path / "absolute.json").resolve())
+        resolve_under_root(tmp_path, absolute_path)
 
 
 def test_resolve_under_root_rejects_final_symlink(tmp_path: Path) -> None:
@@ -38,9 +40,10 @@ def test_resolve_under_root_rejects_final_symlink(tmp_path: Path) -> None:
     outside = tmp_path.parent / f"{tmp_path.name}-outside.json"
     outside.write_text("sentinel", encoding="utf-8")
     (tmp_path / "linked.json").symlink_to(outside)
+    relative_path = Path("linked.json")
     try:
         with pytest.raises(FovuxPathValidationError, match="symlink"):
-            resolve_under_root(tmp_path, Path("linked.json"))
+            resolve_under_root(tmp_path, relative_path)
     finally:
         outside.unlink(missing_ok=True)
 
@@ -50,9 +53,10 @@ def test_resolve_under_root_rejects_parent_symlink_escape(tmp_path: Path) -> Non
     outside = tmp_path.parent / f"{tmp_path.name}-outside"
     outside.mkdir()
     (tmp_path / "linked").symlink_to(outside, target_is_directory=True)
+    relative_path = Path("linked/file.json")
     try:
         with pytest.raises(FovuxPathValidationError, match="escapes"):
-            resolve_under_root(tmp_path, Path("linked/file.json"))
+            resolve_under_root(tmp_path, relative_path)
     finally:
         outside.rmdir()
 
@@ -70,11 +74,11 @@ def test_atomic_write_text_replaces_file_with_requested_mode(tmp_path: Path) -> 
 
 def test_atomic_write_text_cleans_temporary_file_when_replace_fails(tmp_path: Path) -> None:
     """A failed atomic replace must not leave secret-bearing temp files behind."""
-    with (
-        patch("fovux.core.secure_files.os.replace", side_effect=OSError("blocked")),
-        pytest.raises(OSError, match="blocked"),
-    ):
-        atomic_write_text(tmp_path, Path("state.json"), "secret")
+    relative_path = Path("state.json")
+    replace_error = OSError("blocked")
+    with patch("fovux.core.secure_files.os.replace", side_effect=replace_error):
+        with pytest.raises(OSError, match="blocked"):
+            atomic_write_text(tmp_path, relative_path, "secret")
 
     assert list(tmp_path.glob(".state.json.*.tmp")) == []
     assert not (tmp_path / "state.json").exists()

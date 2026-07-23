@@ -5,7 +5,7 @@ import * as vscode from "vscode";
 import { getAuthToken, getFovuxBaseUrl } from "./extensionClient";
 import { resolveFovuxHome } from "./paths";
 
-export const WINDOWS_TASKKILL_EXECUTABLE = "C:\\Windows\\System32\\taskkill.exe";
+export const WINDOWS_TASKKILL_EXECUTABLE = String.raw`C:\Windows\System32\taskkill.exe`;
 
 let managedProcess: ChildProcessWithoutNullStreams | null = null;
 let startPromise: Promise<void> | null = null;

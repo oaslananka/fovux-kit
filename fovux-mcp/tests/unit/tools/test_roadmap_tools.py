@@ -316,14 +316,14 @@ def test_dataset_augment_rejects_symlinked_label_output(tmp_path: Path) -> None:
     (output_dir / "labels").mkdir(parents=True)
     (output_dir / "labels" / "train").symlink_to(outside, target_is_directory=True)
 
+    input_model = DatasetAugmentInput(
+        dataset_path=dataset,
+        techniques=["flip_h"],
+        multiplier=1,
+        output_path=output_dir,
+    )
+
     with pytest.raises(FovuxPathValidationError, match="symlink|escapes"):
-        _run_dataset_augment(
-            DatasetAugmentInput(
-                dataset_path=dataset,
-                techniques=["flip_h"],
-                multiplier=1,
-                output_path=output_dir,
-            )
-        )
+        _run_dataset_augment(input_model)
 
     assert list(outside.iterdir()) == []

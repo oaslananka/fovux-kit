@@ -13,6 +13,8 @@ from fovux.core.paths import get_fovux_home
 from fovux.core.secure_files import atomic_write_text, resolve_under_root
 
 TOKEN_BYTES = 32
+AUTH_FILE_NAME = "auth.token"
+SESSION_FILE_NAME = "auth.session"
 
 
 class Scope(enum.StrEnum):
@@ -51,25 +53,25 @@ def _safe_auth_path(home: Path | None, filename: str) -> Path:
 
 def auth_token_path(home: Path | None = None) -> Path:
     """Return the path to the Studio local API auth token."""
-    return _auth_root(home) / "auth.token"
+    return _auth_root(home) / AUTH_FILE_NAME
 
 
 def auth_session_path(home: Path | None = None) -> Path:
     """Return the path to the local session scopes file."""
-    return _auth_root(home) / "auth.session"
+    return _auth_root(home) / SESSION_FILE_NAME
 
 
 def ensure_auth_token(home: Path | None = None) -> tuple[str, bool]:
     """Return the existing auth token or generate a new one."""
     root = _auth_root(home)
-    path = _safe_auth_path(home, "auth.token")
+    path = _safe_auth_path(home, AUTH_FILE_NAME)
     if path.exists():
         token = path.read_text(encoding="utf-8").strip()
         if token:
             return token, False
 
     token = secrets.token_hex(TOKEN_BYTES)
-    atomic_write_text(root, Path("auth.token"), token, mode=0o600)
+    atomic_write_text(root, Path(AUTH_FILE_NAME), token, mode=0o600)
     return token, True
 
 
@@ -82,7 +84,7 @@ def read_auth_token(home: Path | None = None) -> str:
 def rotate_auth_token(home: Path | None = None) -> str:
     """Regenerate and persist a new auth token."""
     token = secrets.token_hex(TOKEN_BYTES)
-    atomic_write_text(_auth_root(home), Path("auth.token"), token, mode=0o600)
+    atomic_write_text(_auth_root(home), Path(AUTH_FILE_NAME), token, mode=0o600)
     return token
 
 
@@ -93,23 +95,23 @@ def token_fingerprint(token: str) -> str:
 
 def check_token_perms(home: Path | None = None) -> tuple[bool, str]:
     """Check that the auth token file has restrictive permissions."""
-    path = _safe_auth_path(home, "auth.token")
+    path = _safe_auth_path(home, AUTH_FILE_NAME)
     if not path.exists():
-        return False, "auth.token file does not exist"
+        return False, f"{AUTH_FILE_NAME} file does not exist"
     try:
         mode = os.stat(str(path)).st_mode
         world_readable = bool(mode & 0o004)
         group_readable = bool(mode & 0o040)
         if world_readable or group_readable:
             perms = oct(mode & 0o777)
-            return False, f"auth.token has permissive mode {perms}, expected 0o600"
-        return True, f"auth.token permissions are safe ({oct(mode & 0o777)})"
+            return False, f"{AUTH_FILE_NAME} has permissive mode {perms}, expected 0o600"
+        return True, f"{AUTH_FILE_NAME} permissions are safe ({oct(mode & 0o777)})"
     except OSError as exc:
-        return False, f"cannot stat auth.token: {exc}"
+        return False, f"cannot stat {AUTH_FILE_NAME}: {exc}"
 
 
 def _read_sessions(home: Path | None) -> dict[str, dict[str, object]]:
-    path = _safe_auth_path(home, "auth.session")
+    path = _safe_auth_path(home, SESSION_FILE_NAME)
     if not path.exists():
         return {}
     try:
@@ -128,7 +130,7 @@ def _read_sessions(home: Path | None) -> dict[str, dict[str, object]]:
 def _write_sessions(home: Path | None, sessions: dict[str, dict[str, object]]) -> None:
     atomic_write_text(
         _auth_root(home),
-        Path("auth.session"),
+        Path(SESSION_FILE_NAME),
         json.dumps(sessions, indent=2),
         mode=0o600,
     )

@@ -87,11 +87,10 @@ def test_across_splits_false_normalizes_common_split_aliases(tmp_path: Path):
 )
 def test_rejects_broad_recursive_scan_roots(broad_root: Path) -> None:
     """Broad roots must be rejected before the recursive image walk starts."""
-    with (
-        patch("fovux.tools.dataset_find_duplicates.find_images") as finder,
-        pytest.raises(FovuxPathValidationError, match="dedicated dataset directory"),
-    ):
-        _run_find_duplicates(DatasetFindDuplicatesInput(dataset_path=broad_root))
+    input_model = DatasetFindDuplicatesInput(dataset_path=broad_root)
+    with patch("fovux.tools.dataset_find_duplicates.find_images") as finder:
+        with pytest.raises(FovuxPathValidationError, match="dedicated dataset directory"):
+            _run_find_duplicates(input_model)
 
     finder.assert_not_called()
 
