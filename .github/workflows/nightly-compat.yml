@@ -58,7 +58,7 @@ jobs:
         with:
           name: nightly-compat-report-python-${{ matrix.python-version }}
           path: fovux-mcp/nightly-compat-report.txt
-          retention-days: 14
+          retention-days: 7
 
   optional-ml:
     name: Optional ML (${{ matrix.os }})

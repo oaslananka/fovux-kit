@@ -76,8 +76,8 @@ jobs:
           set -euo pipefail
           xvfb-run -a -s "-screen 0 1440x900x24" pnpm run test:e2e:ci
 
-      - name: Upload Studio E2E evidence
-        if: always()
+      - name: Upload Studio E2E failure evidence
+        if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: studio-e2e-${{ github.run_id }}
@@ -85,4 +85,4 @@ jobs:
             fovux-studio/artifacts/studio-e2e
             fovux-studio/fovuxstudiokit.vsix
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7
