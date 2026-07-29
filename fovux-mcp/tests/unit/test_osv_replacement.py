@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
+import tomllib
 from pathlib import Path
 from types import ModuleType
 
 import pytest
+from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "scripts"
 RUN_OSV = SCRIPTS / "run_osv.py"
 SECURITY_WORKFLOW = ROOT / ".github" / "workflows" / "security.yml"
 OSV_ACTION_SHA = "9a498708959aeaef5ef730655706c5a1df1edbc2"
+STUDIO_PACKAGE = ROOT / "fovux-studio" / "package.json"
+UV_LOCK = ROOT / "fovux-mcp" / "uv.lock"
 LOCKFILES = (
     "fovux-mcp/uv.lock",
     "fovux-studio/pnpm-lock.yaml",
@@ -71,6 +76,22 @@ def test_osv_wrapper_scans_all_repository_lockfiles(
     assert observed[0]["token_names"] == ()
     assert observed[0]["required"] is True
     assert observed[0]["cwd"] == ROOT
+
+
+def test_lockfile_security_floors_cover_current_osv_advisories() -> None:
+    package = json.loads(STUDIO_PACKAGE.read_text(encoding="utf-8"))
+    overrides = package["pnpm"]["overrides"]
+
+    assert Version(overrides["brace-expansion"]) >= Version("5.0.8")
+    assert Version(overrides["postcss"]) >= Version("8.5.18")
+    assert Version(overrides["minimatch"]) >= Version("10.2.5")
+    assert not any(key.startswith("brace-expansion@") for key in overrides)
+
+    lock = tomllib.loads(UV_LOCK.read_text(encoding="utf-8"))
+    pymdown = next(
+        package for package in lock["package"] if package["name"] == "pymdown-extensions"
+    )
+    assert Version(pymdown["version"]) >= Version("11.0.0")
 
 
 def test_scanner_allowlist_replaces_snyk_with_osv() -> None:
