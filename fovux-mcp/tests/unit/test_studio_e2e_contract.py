@@ -84,7 +84,7 @@ def test_production_webview_exposes_real_ready_and_csp_diagnostics() -> None:
     assert "getDashboardDiagnostics" in runtime_api
 
 
-def test_ci_runs_xvfb_and_always_uploads_runtime_evidence() -> None:
+def test_ci_runs_xvfb_and_uploads_bounded_failure_evidence() -> None:
     workflow_path = ROOT / ".github" / "workflows" / "studio-e2e.yml"
     workflow_text = _read(workflow_path)
     workflow = yaml.safe_load(workflow_text)
@@ -95,7 +95,9 @@ def test_ci_runs_xvfb_and_always_uploads_runtime_evidence() -> None:
     assert "xvfb-run -a" in workflow_text
     assert "scrot" in workflow_text
     assert "pnpm run test:e2e:ci" in workflow_text
-    assert "if: always()" in workflow_text
+    assert "if: failure()" in workflow_text
+    assert "retention-days: 7" in workflow_text
+    assert "if: always()" not in workflow_text
     assert "studio-e2e-${{ github.run_id }}" in workflow_text
     assert "fovux-studio/artifacts/studio-e2e" in workflow_text
     assert "fovux-studio/fovuxstudiokit.vsix" in workflow_text

@@ -73,4 +73,4 @@ jobs:
             fovux-mcp/mutation-summary.md
             fovux-mcp/mutants/mutmut-cicd-stats.json
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7

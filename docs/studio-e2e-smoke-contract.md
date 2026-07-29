@@ -91,6 +91,8 @@ Runtime evidence is written under `fovux-studio/artifacts/studio-e2e/`:
 - a failure screenshot captured with `scrot` before the VS Code process exits;
 - the exact `fovuxstudiokit.vsix` tested by CI.
 
-The `Studio packaged VSIX E2E` workflow uploads these files with `if: always()` so a failed activation,
-webview, trust, offline, auth, or Language Model assertion remains diagnosable. Local artifacts and
-downloaded VS Code binaries are ignored by Git.
+The `Studio packaged VSIX E2E` workflow uploads these files only on failure and retains them for seven
+days, so activation, webview, trust, offline, auth, or Language Model failures remain diagnosable without
+archiving every successful run. Successful run logs remain in Actions, while durable VSIX distribution
+belongs in signed GitHub Release and marketplace channels. Local artifacts and downloaded VS Code
+binaries are ignored by Git.
