@@ -112,3 +112,17 @@ def test_compatibility_installs_are_frozen_without_implicit_builds() -> None:
     assert "pnpm rebuild esbuild" in node
     assert wheel_only_sync in slow
     assert "uv run --no-sync --no-build pytest" in slow
+
+
+def test_github_cache_actions_use_node24_runtime() -> None:
+    expected = "actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae"
+    legacy = "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830"
+    workflows = (
+        REPO_ROOT / ".github" / "workflows" / "ci.yml",
+        REPO_ROOT / ".github" / "workflows" / "studio-e2e.yml",
+    )
+
+    combined = "\n".join(path.read_text(encoding="utf-8") for path in workflows)
+
+    assert legacy not in combined
+    assert combined.count(expected) == 3
