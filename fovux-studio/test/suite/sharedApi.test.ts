@@ -27,21 +27,21 @@ describe("shared webview api", () => {
   };
 
 
-  it("encodes dynamic run and tool names as one URL path segment", async () => {
+  it("uses validated identifiers in API paths", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({}),
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await getRun(config, "../tools?admin=true");
-    await requestChallenge(config, "export/../admin?x=1", {});
-    await invokeTool(config, "export/../admin?x=1", {});
+    await getRun(config, "run_123");
+    await requestChallenge(config, "export_onnx", {});
+    await invokeTool(config, "export_onnx", {});
 
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      "http://127.0.0.1:7823/runs/..%2Ftools%3Fadmin%3Dtrue",
-      "http://127.0.0.1:7823/tools/export%2F..%2Fadmin%3Fx%3D1/challenge",
-      "http://127.0.0.1:7823/tools/export%2F..%2Fadmin%3Fx%3D1",
+      "http://127.0.0.1:7823/runs/run_123",
+      "http://127.0.0.1:7823/tools/export_onnx/challenge",
+      "http://127.0.0.1:7823/tools/export_onnx",
     ]);
     vi.unstubAllGlobals();
   });
@@ -152,6 +152,19 @@ describe("shared webview api", () => {
         metrics: { map50: 0.91, "metrics/mAP50(B)": 0.91 },
       },
     ]);
+    vi.unstubAllGlobals();
+  });
+  it("rejects invalid API identifiers before sending a request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getRun(config, "invalid id")).rejects.toThrow(/run id/i);
+    await expect(invokeTool(config, "invalid tool", {})).rejects.toThrow(/tool name/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+
     vi.unstubAllGlobals();
   });
 });
