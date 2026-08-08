@@ -7,6 +7,7 @@ import {
   readInitialState,
   type AnnotationEditorInitialState,
 } from "../shared/types";
+import { AnnotationQueueCard, AnnotationToolbar } from "./components/AnnotationControls";
 import {
   annotationEditorReducer,
   clamp,
@@ -82,87 +83,25 @@ function AnnotationEditorApp(): JSX.Element {
 
   return (
     <main style={pageStyle} tabIndex={0} onKeyDown={(event) => handleKeyDown(event, dispatch)}>
-      <header style={toolbarStyle}>
-        <div>
-          <p style={eyebrowStyle}>
-            {editorState.isQueueMode ? "Active Learning Queue" : "Annotation Editor"}
-          </p>
-          <h1 style={titleStyle}>
-            {editorState.isQueueMode
-              ? "Review and correct labels for active learning"
-              : "Draw YOLO boxes directly on the sample"}
-          </h1>
-        </div>
-        <div style={controlsStyle}>
-          <select
-            aria-label="Class label"
-            style={inputStyle}
-            value={classId}
-            onChange={(event) => setClassId(Number(event.target.value))}
-          >
-            {editorState.classNames.map((name, index) => (
-              <option key={name} value={index}>
-                {name}
-              </option>
-            ))}
-          </select>
-          {editorState.isQueueMode ? (
-            <>
-              <button type="button" style={buttonStyle} onClick={submitQueue}>
-                Submit corrections
-              </button>
-              <button type="button" style={secondaryButtonStyle} onClick={skipQueue}>
-                Skip item
-              </button>
-            </>
-          ) : (
-            <button type="button" style={buttonStyle} onClick={save}>
-              Save labels
-            </button>
-          )}
-          <button
-            type="button"
-            style={secondaryButtonStyle}
-            onClick={() => dispatch({ type: "undo" })}
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            style={secondaryButtonStyle}
-            onClick={() => dispatch({ type: "clear" })}
-          >
-            Clear
-          </button>
-        </div>
-      </header>
+      <AnnotationToolbar
+        isQueueMode={editorState.isQueueMode === true}
+        classNames={editorState.classNames}
+        classId={classId}
+        onClassIdChange={setClassId}
+        onSave={save}
+        onSubmitQueue={submitQueue}
+        onSkipQueue={skipQueue}
+        onUndo={() => dispatch({ type: "undo" })}
+        onClear={() => dispatch({ type: "clear" })}
+      />
 
       {editorState.isQueueMode ? (
-        <section style={queueCardStyle}>
-          <div style={queueFieldStyle}>
-            <span style={queueLabelStyle}>Uncertainty Score:</span>
-            <span style={queueValueStyle}>
-              {editorState.queueScore != null ? editorState.queueScore.toFixed(4) : "N/A"}
-            </span>
-          </div>
-          <div style={queueFieldStyle}>
-            <span style={queueLabelStyle}>Reason:</span>
-            <span style={queueValueStyle}>{editorState.queueReason || "N/A"}</span>
-          </div>
-          <div style={queueFieldStyle}>
-            <span style={queueLabelStyle}>Save to Split:</span>
-            <select
-              aria-label="Dataset split"
-              style={inputStyle}
-              value={datasetSplit}
-              onChange={(event) => setDatasetSplit(event.target.value)}
-            >
-              <option value="train">Train</option>
-              <option value="val">Validation (val)</option>
-              <option value="test">Test</option>
-            </select>
-          </div>
-        </section>
+        <AnnotationQueueCard
+          queueScore={editorState.queueScore}
+          queueReason={editorState.queueReason}
+          datasetSplit={datasetSplit}
+          onDatasetSplitChange={setDatasetSplit}
+        />
       ) : null}
 
       {state.status ? <p style={statusStyle}>{state.status}</p> : null}
@@ -331,34 +270,6 @@ function handlePositionStyle(handle: ResizeHandle): CSSProperties {
   };
 }
 
-const queueCardStyle: CSSProperties = {
-  display: "flex",
-  gap: 16,
-  flexWrap: "wrap",
-  padding: "12px 16px",
-  border: "1px solid var(--vscode-panel-border)",
-  background: "var(--vscode-editorWidget-background)",
-  borderRadius: 4,
-  fontSize: 13,
-  alignItems: "center",
-};
-
-const queueFieldStyle: CSSProperties = {
-  display: "flex",
-  gap: 8,
-  alignItems: "center",
-};
-
-const queueLabelStyle: CSSProperties = {
-  color: "var(--vscode-descriptionForeground)",
-  fontWeight: 600,
-};
-
-const queueValueStyle: CSSProperties = {
-  color: "var(--vscode-textPreformat-foreground, var(--vscode-editor-foreground))",
-  fontFamily: "var(--vscode-editor-font-family, monospace)",
-};
-
 const pageStyle: CSSProperties = {
   minHeight: "100vh",
   boxSizing: "border-box",
@@ -370,34 +281,6 @@ const pageStyle: CSSProperties = {
   color: "var(--vscode-editor-foreground)",
   fontFamily: "var(--vscode-font-family)",
   outline: "none",
-};
-
-const toolbarStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 12,
-  alignItems: "end",
-  flexWrap: "wrap",
-};
-
-const eyebrowStyle: CSSProperties = {
-  margin: "0 0 6px",
-  color: "var(--vscode-charts-orange)",
-  fontSize: 12,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-};
-
-const titleStyle: CSSProperties = {
-  margin: 0,
-  fontSize: 26,
-  lineHeight: 1.15,
-};
-
-const controlsStyle: CSSProperties = {
-  display: "flex",
-  gap: 8,
-  flexWrap: "wrap",
 };
 
 const stageStyle: CSSProperties = {
@@ -447,27 +330,6 @@ const handleStyle: CSSProperties = {
   height: 10,
   border: "1px solid var(--vscode-editor-background)",
   background: "var(--vscode-charts-blue)",
-};
-
-const inputStyle: CSSProperties = {
-  padding: "8px 10px",
-  border: "1px solid var(--vscode-input-border)",
-  background: "var(--vscode-input-background)",
-  color: "var(--vscode-input-foreground)",
-};
-
-const buttonStyle: CSSProperties = {
-  padding: "8px 12px",
-  border: "1px solid var(--vscode-button-border, var(--vscode-panel-border))",
-  background: "var(--vscode-button-background)",
-  color: "var(--vscode-button-foreground)",
-  cursor: "pointer",
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  ...buttonStyle,
-  background: "var(--vscode-editorWidget-background)",
-  color: "var(--vscode-editor-foreground)",
 };
 
 const statusStyle: CSSProperties = {
