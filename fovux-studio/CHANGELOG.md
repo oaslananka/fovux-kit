@@ -18,6 +18,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Renamed the Marketplace display name to `Fovux Studio Kit` so the first public VSIX publish uses
   a unique display name while keeping the `oaslananka.fovuxstudiokit` extension identifier stable.
 
+## [1.5.2](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.5.1...fovux-studio-v1.5.2) (2026-08-08)
+
+
+### Bug Fixes
+
+* **security:** close Sonar vulnerability backlog ([#199](https://github.com/oaslananka/fovux-kit/issues/199)) ([4e77033](https://github.com/oaslananka/fovux-kit/commit/4e77033088313b973d04cfc3b367bb2a6c12b01e))
+* **security:** refresh vulnerable dependency locks ([#202](https://github.com/oaslananka/fovux-kit/issues/202)) ([3deaeff](https://github.com/oaslananka/fovux-kit/commit/3deaeffa8dd2dfe03707dad65555f281553cf7ca))
+* **security:** restore dependency security baseline ([#209](https://github.com/oaslananka/fovux-kit/issues/209)) ([927f0bc](https://github.com/oaslananka/fovux-kit/commit/927f0bc15d188f2ae504672113a162d27c980002))
+* **studio:** restore complete Semgrep parsing ([#196](https://github.com/oaslananka/fovux-kit/issues/196)) ([49c3a63](https://github.com/oaslananka/fovux-kit/commit/49c3a63a1284bda14eb57b081d8ddb6fc8dc3052))
+* **studio:** validate dynamic API identifiers ([#217](https://github.com/oaslananka/fovux-kit/issues/217)) ([880fcfc](https://github.com/oaslananka/fovux-kit/commit/880fcfc3999b91d0567bf7d6fe4bc1da6ec192f2))
+
 ## [1.5.1](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.5.0...fovux-studio-v1.5.1) (2026-07-22)
 
 

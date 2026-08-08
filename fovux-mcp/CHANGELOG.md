@@ -12,6 +12,15 @@ GitHub milestones, not in package changelog sections.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.6.3](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.6.2...fovux-mcp-v1.6.3) (2026-08-08)
+
+
+### Bug Fixes
+
+* **security:** close Sonar vulnerability backlog ([#199](https://github.com/oaslananka/fovux-kit/issues/199)) ([4e77033](https://github.com/oaslananka/fovux-kit/commit/4e77033088313b973d04cfc3b367bb2a6c12b01e))
+* **security:** refresh vulnerable dependency locks ([#202](https://github.com/oaslananka/fovux-kit/issues/202)) ([3deaeff](https://github.com/oaslananka/fovux-kit/commit/3deaeffa8dd2dfe03707dad65555f281553cf7ca))
+* **security:** restore dependency security baseline ([#209](https://github.com/oaslananka/fovux-kit/issues/209)) ([927f0bc](https://github.com/oaslananka/fovux-kit/commit/927f0bc15d188f2ae504672113a162d27c980002))
+
 ## [1.6.2](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.6.1...fovux-mcp-v1.6.2) (2026-07-22)
 
 
