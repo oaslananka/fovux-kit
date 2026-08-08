@@ -12,6 +12,13 @@ describe("startFovuxServer", () => {
     vi.resetModules();
   });
 
+
+  it("uses the fixed Windows system taskkill executable", async () => {
+    const { WINDOWS_TASKKILL_EXECUTABLE } = await import("../../src/fovux/serverManager");
+
+    expect(WINDOWS_TASKKILL_EXECUTABLE).toBe("C:\\Windows\\System32\\taskkill.exe");
+  });
+
   it("throws in an untrusted workspace before probing the server", async () => {
     setWorkspaceTrust(false);
     const fetchMock = vi.fn();

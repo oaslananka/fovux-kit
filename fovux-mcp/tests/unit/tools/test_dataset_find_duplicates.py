@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from PIL import Image
 
-from fovux.core.errors import FovuxDatasetNotFoundError
+from fovux.core.errors import FovuxDatasetNotFoundError, FovuxPathValidationError
 from fovux.schemas.dataset import DatasetFindDuplicatesInput
 from fovux.tools.dataset_find_duplicates import _run_find_duplicates
 
@@ -77,6 +79,20 @@ def test_across_splits_false_normalizes_common_split_aliases(tmp_path: Path):
     )
 
     assert out.total_duplicates == 0
+
+
+@pytest.mark.parametrize(
+    "broad_root",
+    [Path("~"), Path("."), Path(tempfile.gettempdir())],
+)
+def test_rejects_broad_recursive_scan_roots(broad_root: Path) -> None:
+    """Broad roots must be rejected before the recursive image walk starts."""
+    input_model = DatasetFindDuplicatesInput(dataset_path=broad_root)
+    with patch("fovux.tools.dataset_find_duplicates.find_images") as finder:
+        with pytest.raises(FovuxPathValidationError, match="dedicated dataset directory"):
+            _run_find_duplicates(input_model)
+
+    finder.assert_not_called()
 
 
 def test_nonexistent_path_raises():

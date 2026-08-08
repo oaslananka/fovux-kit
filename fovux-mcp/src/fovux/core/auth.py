@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import enum
 import hashlib
+import json
 import os
 import secrets
 from pathlib import Path
 
 from fovux.core.paths import get_fovux_home
+from fovux.core.secure_files import atomic_write_text, resolve_under_root
 
 TOKEN_BYTES = 32
+AUTH_FILE_NAME = "auth.token"
+SESSION_FILE_NAME = "auth.session"
 
 
 class Scope(enum.StrEnum):
@@ -31,22 +35,6 @@ class Scope(enum.StrEnum):
 
 ALL_SCOPES = set(Scope)
 
-
-def is_known_session_token(token: str, home: Path | None = None) -> bool:
-    """Check whether a token fingerprint is registered in the session store."""
-    fingerprint = token_fingerprint(token)
-    session_path = auth_session_path(home)
-    if not session_path.exists():
-        return False
-    try:
-        import json
-
-        sessions = dict(json.loads(session_path.read_text(encoding="utf-8")))
-    except (json.JSONDecodeError, OSError):
-        return False
-    return fingerprint in sessions
-
-
 _CATEGORY_SCOPES: dict[str, set[Scope]] = {
     "read_only": {Scope.READ},
     "mutating": {Scope.DATASET_WRITE, Scope.RUN_START, Scope.EXPORT_WRITE},
@@ -55,30 +43,35 @@ _CATEGORY_SCOPES: dict[str, set[Scope]] = {
 }
 
 
+def _auth_root(home: Path | None) -> Path:
+    return (home or get_fovux_home()).expanduser().resolve(strict=False)
+
+
+def _safe_auth_path(home: Path | None, filename: str) -> Path:
+    return resolve_under_root(_auth_root(home), Path(filename))
+
+
 def auth_token_path(home: Path | None = None) -> Path:
     """Return the path to the Studio local API auth token."""
-    base = home or get_fovux_home()
-    return base / "auth.token"
+    return _auth_root(home) / AUTH_FILE_NAME
 
 
 def auth_session_path(home: Path | None = None) -> Path:
     """Return the path to the local session scopes file."""
-    base = home or get_fovux_home()
-    return base / "auth.session"
+    return _auth_root(home) / SESSION_FILE_NAME
 
 
 def ensure_auth_token(home: Path | None = None) -> tuple[str, bool]:
     """Return the existing auth token or generate a new one."""
-    path = auth_token_path(home)
+    root = _auth_root(home)
+    path = _safe_auth_path(home, AUTH_FILE_NAME)
     if path.exists():
         token = path.read_text(encoding="utf-8").strip()
         if token:
             return token, False
 
     token = secrets.token_hex(TOKEN_BYTES)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(token, encoding="utf-8")
-    _set_restrictive_perms(path)
+    atomic_write_text(root, Path(AUTH_FILE_NAME), token, mode=0o600)
     return token, True
 
 
@@ -90,11 +83,8 @@ def read_auth_token(home: Path | None = None) -> str:
 
 def rotate_auth_token(home: Path | None = None) -> str:
     """Regenerate and persist a new auth token."""
-    path = auth_token_path(home)
     token = secrets.token_hex(TOKEN_BYTES)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(token, encoding="utf-8")
-    _set_restrictive_perms(path)
+    atomic_write_text(_auth_root(home), Path(AUTH_FILE_NAME), token, mode=0o600)
     return token
 
 
@@ -103,31 +93,52 @@ def token_fingerprint(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()[:12]
 
 
-def _set_restrictive_perms(path: Path) -> None:
-    try:
-        os.chmod(path, 0o600)
-    except OSError:
-        pass
-
-
 def check_token_perms(home: Path | None = None) -> tuple[bool, str]:
-    """Check that the auth token file has restrictive permissions.
-
-    Returns (ok, detail) where ok is True when the token file has safe permissions.
-    """
-    path = auth_token_path(home)
+    """Check that the auth token file has restrictive permissions."""
+    path = _safe_auth_path(home, AUTH_FILE_NAME)
     if not path.exists():
-        return False, "auth.token file does not exist"
+        return False, f"{AUTH_FILE_NAME} file does not exist"
     try:
         mode = os.stat(str(path)).st_mode
         world_readable = bool(mode & 0o004)
         group_readable = bool(mode & 0o040)
         if world_readable or group_readable:
             perms = oct(mode & 0o777)
-            return False, f"auth.token has permissive mode {perms}, expected 0o600"
-        return True, f"auth.token permissions are safe ({oct(mode & 0o777)})"
+            return False, f"{AUTH_FILE_NAME} has permissive mode {perms}, expected 0o600"
+        return True, f"{AUTH_FILE_NAME} permissions are safe ({oct(mode & 0o777)})"
     except OSError as exc:
-        return False, f"cannot stat auth.token: {exc}"
+        return False, f"cannot stat {AUTH_FILE_NAME}: {exc}"
+
+
+def _read_sessions(home: Path | None) -> dict[str, dict[str, object]]:
+    path = _safe_auth_path(home, SESSION_FILE_NAME)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return {
+        fingerprint: metadata
+        for fingerprint, metadata in payload.items()
+        if isinstance(fingerprint, str) and isinstance(metadata, dict)
+    }
+
+
+def _write_sessions(home: Path | None, sessions: dict[str, dict[str, object]]) -> None:
+    atomic_write_text(
+        _auth_root(home),
+        Path(SESSION_FILE_NAME),
+        json.dumps(sessions, indent=2),
+        mode=0o600,
+    )
+
+
+def is_known_session_token(token: str, home: Path | None = None) -> bool:
+    """Check whether a token fingerprint is registered in the session store."""
+    return token_fingerprint(token) in _read_sessions(home)
 
 
 def create_session_token(
@@ -138,23 +149,12 @@ def create_session_token(
     effective_scopes = scopes if scopes is not None else ALL_SCOPES
     raw = secrets.token_hex(TOKEN_BYTES)
     fingerprint = token_fingerprint(raw)
-    meta: dict[str, object] = {
+    sessions = _read_sessions(home)
+    sessions[fingerprint] = {
         "fingerprint": fingerprint,
-        "scopes": sorted(s.value for s in effective_scopes),
+        "scopes": sorted(scope.value for scope in effective_scopes),
     }
-    session_path = auth_session_path(home)
-    session_path.parent.mkdir(parents=True, exist_ok=True)
-    import json
-
-    sessions: dict[str, dict[str, object]] = {}
-    if session_path.exists():
-        try:
-            sessions = dict(json.loads(session_path.read_text(encoding="utf-8")))
-        except (json.JSONDecodeError, OSError):
-            sessions = {}
-    sessions[fingerprint] = meta
-    session_path.write_text(json.dumps(sessions, indent=2), encoding="utf-8")
-    _set_restrictive_perms(session_path)
+    _write_sessions(home, sessions)
     return raw
 
 
@@ -163,22 +163,16 @@ def resolve_session_scopes(
     home: Path | None = None,
 ) -> set[Scope]:
     """Resolve the scopes for a given bearer token."""
-    fingerprint = token_fingerprint(token)
-    session_path = auth_session_path(home)
-    if not session_path.exists():
-        return ALL_SCOPES
-    try:
-        import json
-
-        sessions = dict(json.loads(session_path.read_text(encoding="utf-8")))
-    except (json.JSONDecodeError, OSError):
-        return ALL_SCOPES
-    meta = sessions.get(fingerprint)
+    meta = _read_sessions(home).get(token_fingerprint(token))
     if meta is None:
         return ALL_SCOPES
-    scope_names = list(meta.get("scopes", []) if isinstance(meta, dict) else [])
-    resolved = set()
-    for name in scope_names:
+    raw_scopes = meta.get("scopes")
+    if not isinstance(raw_scopes, list):
+        return ALL_SCOPES
+    resolved: set[Scope] = set()
+    for name in raw_scopes:
+        if not isinstance(name, str):
+            continue
         try:
             resolved.add(Scope(name))
         except ValueError:
@@ -189,34 +183,20 @@ def resolve_session_scopes(
 def revoke_session_token(token: str, home: Path | None = None) -> bool:
     """Revoke a session token by removing it from the session store."""
     fingerprint = token_fingerprint(token)
-    session_path = auth_session_path(home)
-    if not session_path.exists():
-        return False
-    try:
-        import json
-
-        sessions = dict(json.loads(session_path.read_text(encoding="utf-8")))
-    except (json.JSONDecodeError, OSError):
-        return False
+    sessions = _read_sessions(home)
     if fingerprint not in sessions:
         return False
     del sessions[fingerprint]
-    session_path.write_text(json.dumps(sessions, indent=2), encoding="utf-8")
+    _write_sessions(home, sessions)
     return True
 
 
 def list_session_fingerprints(home: Path | None = None) -> list[dict[str, object]]:
     """List active session metadata (fingerprints and scopes)."""
-    session_path = auth_session_path(home)
-    if not session_path.exists():
-        return []
-    try:
-        import json
-
-        sessions = dict(json.loads(session_path.read_text(encoding="utf-8")))
-    except (json.JSONDecodeError, OSError):
-        return []
     return [
-        {"fingerprint": fp, "scopes": meta.get("scopes", []) if isinstance(meta, dict) else []}
-        for fp, meta in sessions.items()
+        {
+            "fingerprint": fingerprint,
+            "scopes": meta.get("scopes", []) if isinstance(meta, dict) else [],
+        }
+        for fingerprint, meta in _read_sessions(home).items()
     ]

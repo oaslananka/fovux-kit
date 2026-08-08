@@ -3,11 +3,33 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast
 
+from fovux.core.errors import FovuxPathValidationError
+from fovux.core.paths import get_fovux_home
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"}
+
+
+def validate_recursive_scan_root(path: Path) -> Path:
+    """Reject broad roots before recursively walking a user-provided dataset path."""
+    resolved = path.expanduser().resolve(strict=False)
+    broad_roots = {
+        Path.cwd().resolve(strict=False),
+        Path.home().resolve(strict=False),
+        Path(tempfile.gettempdir()).resolve(strict=False),
+        get_fovux_home().resolve(strict=False),
+    }
+    if resolved == resolved.parent or resolved in broad_roots:
+        raise FovuxPathValidationError(
+            str(path),
+            f"recursive dataset scans require a dedicated dataset directory, not {resolved}",
+            hint="Point dataset_path at the dataset folder itself, such as ./datasets/my-dataset.",
+        )
+    return resolved
 
 
 def find_images(root: Path, max_count: int | None = None) -> list[Path]:

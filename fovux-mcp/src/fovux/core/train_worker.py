@@ -19,14 +19,18 @@ from pathlib import Path
 from typing import Any
 
 from fovux.core.checkpoints import read_metric_rows
+from fovux.core.errors import FovuxPathValidationError
 from fovux.core.logging import configure_logging, get_logger
 from fovux.core.paths import FovuxPaths, get_fovux_home
 from fovux.core.runs import get_registry
+from fovux.core.secure_files import atomic_write_text
 from fovux.core.ultralytics_adapter import YoloModel
+from fovux.core.validation import ensure_within_root, validate_run_id
 
 logger = get_logger(__name__)
 _STOP_REQUESTED = False
 _CURRENT_RUN_DIR: Path | None = None
+STATUS_FILENAME = "status.json"
 
 
 def load_yolo_model(model: str) -> YoloModel:
@@ -40,9 +44,37 @@ def _utcnow() -> str:
     return datetime.now(tz=UTC).isoformat()
 
 
+def _managed_runs_root() -> Path:
+    return FovuxPaths(get_fovux_home()).runs.expanduser().resolve(strict=False)
+
+
+def _resolve_managed_run_dir(run_dir: Path) -> Path:
+    runs_root = _managed_runs_root()
+    resolved = ensure_within_root(run_dir, runs_root)
+    relative = resolved.relative_to(runs_root)
+    if len(relative.parts) != 1:
+        raise FovuxPathValidationError(
+            str(run_dir),
+            f"training workers require one direct run directory below {runs_root}",
+        )
+    validate_run_id(relative.name)
+    return resolved
+
+
 def _write_status(status_path: Path, status: str, **extra: object) -> None:
+    if status_path.name != STATUS_FILENAME:
+        raise FovuxPathValidationError(
+            str(status_path),
+            f"worker status filename must be {STATUS_FILENAME}",
+        )
+    run_dir = _resolve_managed_run_dir(status_path.parent)
     data = {"status": status, "updated_at": _utcnow(), **extra}
-    status_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    atomic_write_text(
+        run_dir,
+        Path(STATUS_FILENAME),
+        json.dumps(data, indent=2),
+        mode=0o600,
+    )
 
 
 def _handle_stop_signal(signum: int, frame: object | None) -> None:
@@ -52,7 +84,7 @@ def _handle_stop_signal(signum: int, frame: object | None) -> None:
     logger.warning("train_worker_stop_requested", signal=signum)
     run_dir = _CURRENT_RUN_DIR or _run_dir_from_env()
     if run_dir is not None:
-        _write_status(run_dir / "status.json", "stopped", pid=os.getpid(), signal=signum)
+        _write_status(run_dir / STATUS_FILENAME, "stopped", pid=os.getpid(), signal=signum)
         _update_registry_status(run_dir, "stopped")
     sys.exit(0)
 
@@ -60,10 +92,11 @@ def _handle_stop_signal(signum: int, frame: object | None) -> None:
 def run(run_dir: Path) -> None:
     """Execute one detached training run and keep its status file up to date."""
     global _CURRENT_RUN_DIR, _STOP_REQUESTED
+    run_dir = _resolve_managed_run_dir(run_dir)
     _STOP_REQUESTED = False
     _CURRENT_RUN_DIR = run_dir
     params_path = run_dir / "params.json"
-    status_path = run_dir / "status.json"
+    status_path = run_dir / STATUS_FILENAME
     metrics_path = run_dir / "metrics.jsonl"
 
     params: dict[str, Any] = json.loads(params_path.read_text())
@@ -131,7 +164,13 @@ def run(run_dir: Path) -> None:
 
 def _run_dir_from_env() -> Path | None:
     raw = os.environ.get("FOVUX_RUN_DIR")
-    return Path(raw) if raw else None
+    if not raw:
+        return None
+    try:
+        return _resolve_managed_run_dir(Path(raw))
+    except (FovuxPathValidationError, ValueError) as exc:
+        logger.warning("train_worker_invalid_run_dir", run_dir=raw, error=str(exc))
+        return None
 
 
 def _update_registry_status(run_dir: Path, status: str) -> None:

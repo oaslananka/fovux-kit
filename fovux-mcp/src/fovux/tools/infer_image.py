@@ -151,7 +151,8 @@ def _save_visualization(result: object, image_path: Path, output_path: Path | No
     target.parent.mkdir(parents=True, exist_ok=True)
     rendered = result.plot() if hasattr(result, "plot") else None
     if rendered is None:
-        target.write_bytes(image_path.read_bytes())
+        with Image.open(image_path) as source_image:
+            source_image.convert("RGB").save(target)
         return target
     Image.fromarray(rendered).save(target)
     return target

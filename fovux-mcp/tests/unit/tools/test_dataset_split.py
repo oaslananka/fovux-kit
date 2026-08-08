@@ -77,3 +77,31 @@ def test_split_stratification_report(tmp_path: Path):
         )
     )
     assert isinstance(out.stratification_report, dict)
+
+
+def test_split_is_reproducible_for_same_seed(tmp_path: Path) -> None:
+    """A dataset split seed is reproducibility input, not a security primitive."""
+    first = _run_split(
+        DatasetSplitInput(
+            dataset_path=FIXTURES / "mini_yolo",
+            seed=2026,
+            stratify_by_class=False,
+            overwrite=True,
+            output_path=tmp_path / "first",
+        )
+    )
+    second = _run_split(
+        DatasetSplitInput(
+            dataset_path=FIXTURES / "mini_yolo",
+            seed=2026,
+            stratify_by_class=False,
+            overwrite=True,
+            output_path=tmp_path / "second",
+        )
+    )
+
+    import json
+
+    first_manifest = json.loads(first.manifest_path.read_text(encoding="utf-8"))
+    second_manifest = json.loads(second.manifest_path.read_text(encoding="utf-8"))
+    assert first_manifest == second_manifest

@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from fovux.core.dataset_utils import find_images
+from fovux.core.dataset_utils import find_images, validate_recursive_scan_root
 from fovux.core.errors import FovuxDatasetEmptyError, FovuxDatasetNotFoundError
 from fovux.core.tooling import tool_event
 from fovux.schemas.dataset import (
@@ -48,7 +48,7 @@ def dataset_find_duplicates(
 
 def _run_find_duplicates(inp: DatasetFindDuplicatesInput) -> DatasetFindDuplicatesOutput:
     t0 = time.perf_counter()
-    path = inp.dataset_path.expanduser().resolve()
+    path = validate_recursive_scan_root(inp.dataset_path)
 
     if not path.exists():
         raise FovuxDatasetNotFoundError(str(path))

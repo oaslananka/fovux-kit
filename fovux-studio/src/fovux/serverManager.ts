@@ -5,6 +5,8 @@ import * as vscode from "vscode";
 import { getAuthToken, getFovuxBaseUrl } from "./extensionClient";
 import { resolveFovuxHome } from "./paths";
 
+export const WINDOWS_TASKKILL_EXECUTABLE = String.raw`C:\Windows\System32\taskkill.exe`;
+
 let managedProcess: ChildProcessWithoutNullStreams | null = null;
 let startPromise: Promise<void> | null = null;
 let outputChannel: vscode.OutputChannel | null = null;
@@ -164,9 +166,9 @@ async function getFovuxServerReadiness(): Promise<
   }
 }
 
-function killProcessTree(proc: ChildProcessWithoutNullStreams): void {
+export function killProcessTree(proc: ChildProcessWithoutNullStreams): void {
   if (process.platform === "win32" && proc.pid !== undefined) {
-    execFile("taskkill", ["/PID", String(proc.pid), "/T", "/F"], (error) => {
+    execFile(WINDOWS_TASKKILL_EXECUTABLE, ["/PID", String(proc.pid), "/T", "/F"], (error) => {
       if (error) {
         proc.kill();
       }

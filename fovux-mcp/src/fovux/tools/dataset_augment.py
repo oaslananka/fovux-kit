@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, cast
@@ -12,7 +13,10 @@ from PIL import Image, ImageDraw
 
 from fovux.core.dataset_config import validate_yolo_data_yaml
 from fovux.core.errors import FovuxDatasetNotFoundError
+from fovux.core.paths import get_fovux_home
+from fovux.core.secure_files import atomic_write_text, resolve_under_root
 from fovux.core.tooling import tool_event
+from fovux.core.validation import ensure_writable_output
 from fovux.schemas.dataset import AugmentationTechnique, DatasetAugmentInput, DatasetAugmentOutput
 from fovux.server import mcp
 
@@ -43,11 +47,22 @@ def _run_dataset_augment(inp: DatasetAugmentInput) -> DatasetAugmentOutput:
         raise FovuxDatasetNotFoundError(str(source))
     validate_yolo_data_yaml(source)
 
-    output = inp.output_path.expanduser().resolve()
+    output = ensure_writable_output(
+        inp.output_path,
+        allowed_roots=[
+            get_fovux_home(),
+            Path.cwd(),
+            Path(tempfile.gettempdir()),
+            source,
+            source.parent,
+        ],
+    )
     output.mkdir(parents=True, exist_ok=True)
     for yaml_name in ("data.yaml", "dataset.yaml"):
-        if (source / yaml_name).exists():
-            shutil.copy2(source / yaml_name, output / yaml_name)
+        source_yaml = source / yaml_name
+        if source_yaml.exists():
+            target_yaml = resolve_under_root(output, Path(yaml_name))
+            shutil.copy2(source_yaml, target_yaml)
             break
 
     image_paths = _find_images(source / "images")
@@ -60,14 +75,20 @@ def _run_dataset_augment(inp: DatasetAugmentInput) -> DatasetAugmentOutput:
         label_path = _label_for_image(source, image_path, split)
         for index in range(max(inp.multiplier, 0)):
             technique = inp.techniques[index % len(inp.techniques)]
-            target_image = (
-                output / "images" / split / f"{image_path.stem}_aug{index}{image_path.suffix}"
+            image_relative = (
+                Path("images") / split / f"{image_path.stem}_aug{index}{image_path.suffix}"
             )
-            target_label = output / "labels" / split / f"{image_path.stem}_aug{index}.txt"
+            label_relative = Path("labels") / split / f"{image_path.stem}_aug{index}.txt"
+            target_image = resolve_under_root(output, image_relative)
             target_image.parent.mkdir(parents=True, exist_ok=True)
-            target_label.parent.mkdir(parents=True, exist_ok=True)
+            target_image = resolve_under_root(output, image_relative)
             _write_augmented_image(image_path, target_image, technique)
-            _write_augmented_label(label_path, target_label, technique)
+            target_label = _write_augmented_label(
+                label_path,
+                output,
+                label_relative,
+                technique,
+            )
             generated += 1
             manifest.append(
                 {
@@ -78,8 +99,9 @@ def _run_dataset_augment(inp: DatasetAugmentInput) -> DatasetAugmentOutput:
                 }
             )
 
-    manifest_path = output / "augmentation_manifest.json"
-    manifest_path.write_text(
+    manifest_path = atomic_write_text(
+        output,
+        Path("augmentation_manifest.json"),
         json.dumps(
             {
                 "source_images": len(image_paths),
@@ -89,7 +111,7 @@ def _run_dataset_augment(inp: DatasetAugmentInput) -> DatasetAugmentOutput:
             },
             indent=2,
         ),
-        encoding="utf-8",
+        mode=0o600,
     )
 
     return DatasetAugmentOutput(
@@ -135,10 +157,14 @@ def _write_augmented_image(source: Path, target: Path, technique: str) -> None:
         out.save(target)
 
 
-def _write_augmented_label(source: Path, target: Path, technique: str) -> None:
+def _write_augmented_label(
+    source: Path,
+    output_root: Path,
+    relative_target: Path,
+    technique: str,
+) -> Path:
     if not source.exists():
-        target.write_text("", encoding="utf-8")
-        return
+        return atomic_write_text(output_root, relative_target, "", mode=0o600)
     lines: list[str] = []
     for raw in source.read_text(encoding="utf-8").splitlines():
         parts = raw.split()
@@ -152,4 +178,9 @@ def _write_augmented_label(source: Path, target: Path, technique: str) -> None:
         elif technique == "flip_v":
             y = 1.0 - y
         lines.append(f"{class_id} {x:.6f} {y:.6f} {float(width):.6f} {float(height):.6f}")
-    target.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    return atomic_write_text(
+        output_root,
+        relative_target,
+        "\n".join(lines) + ("\n" if lines else ""),
+        mode=0o600,
+    )
