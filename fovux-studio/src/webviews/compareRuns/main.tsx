@@ -6,6 +6,7 @@ import type { HttpClientConfig, RunSummary } from "../shared/api";
 import { getRun, invokeTool, listRuns } from "../shared/api";
 import { CompareRunsInitialState, postToExtension, readInitialState } from "../shared/types";
 
+import { CompareRunSelector } from "./components/CompareRunSelector";
 import {
   formatMetric,
   sortComparedRuns,
@@ -257,31 +258,11 @@ function CompareRunsApp(): JSX.Element {
 
       {error ? <p style={errorStyle}>{error}</p> : null}
 
-      <section style={listStyle}>
-        {!runs.length ? (
-          <p style={mutedStyle}>
-            No runs available yet. Complete at least two runs to compare them.
-          </p>
-        ) : null}
-        <div style={checkboxGridStyle}>
-          {runs.map((run) => (
-            <label key={run.id} style={itemStyle}>
-              <input
-                type="checkbox"
-                checked={selectedRunIds.includes(run.id)}
-                onChange={() => toggleRun(run.id)}
-              />
-              <span>
-                <strong>{run.id}</strong>
-                <span style={mutedStyle}>
-                  {" "}
-                  · {run.status} · {run.model}
-                </span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </section>
+      <CompareRunSelector
+        runs={runs}
+        selectedRunIds={selectedRunIds}
+        onToggleRun={toggleRun}
+      />
 
       {result ? (
         <section style={resultStyle}>
@@ -537,28 +518,6 @@ const titleStyle: CSSProperties = {
   margin: 0,
   fontSize: "26px",
   fontWeight: "600",
-};
-
-const listStyle: CSSProperties = {
-  display: "grid",
-  gap: "10px",
-  padding: "16px",
-  borderRadius: "12px",
-  border: "1px solid var(--vscode-panel-border)",
-  background: "var(--vscode-sideBar-background)",
-};
-
-const checkboxGridStyle: CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "16px",
-};
-
-const itemStyle: CSSProperties = {
-  display: "flex",
-  gap: "8px",
-  alignItems: "center",
-  cursor: "pointer",
 };
 
 const mutedStyle: CSSProperties = {
