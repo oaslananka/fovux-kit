@@ -8,80 +8,17 @@ import type { HttpClientConfig, MetricPayload, RunSummary } from "../shared/api"
 import { listRuns, subscribeToMetrics } from "../shared/api";
 import { DashboardInitialState, postToExtension, readInitialState } from "../shared/types";
 
-const COLORS = [
-  "var(--vscode-charts-blue)",
-  "var(--vscode-charts-orange)",
-  "var(--vscode-charts-purple)",
-  "var(--vscode-charts-green)",
-  "var(--vscode-charts-red)",
-];
-const MAP50_KEYS = ["metrics/mAP50(B)", "map50", "mAP50", "metrics/map50", "metrics/mAP50"];
-const BOX_LOSS_KEYS = ["train/box_loss", "loss/box", "box_loss", "box"];
-
-interface NextAction {
-  title: string;
-  description: string;
-  ctaText: string;
-  type: "startServer" | "initializeDemoWorkspace" | "triggerCommand";
-  command?: string;
-  args?: unknown[];
-}
-
-function calculateNextAction(state: DashboardInitialState, hasRuns: boolean): NextAction {
-  if (!state.isServerReachable) {
-    return {
-      title: "Start Fovux Local Server",
-      description:
-        "Connect Fovux Studio to the python-based MCP tool suite to begin model training and evaluation.",
-      ctaText: "Start Server",
-      type: "startServer",
-    };
-  }
-
-  const hasDatasets = !!(state.discoveredDatasets && state.discoveredDatasets.length > 0);
-
-  if (!hasRuns && !hasDatasets) {
-    return {
-      title: "Set Up a Demo Workspace",
-      description:
-        "Initialize a sample YOLO dataset, pre-trained base model, and mock run logs with just one click.",
-      ctaText: "Initialize Demo Workspace",
-      type: "initializeDemoWorkspace",
-    };
-  }
-
-  if (hasDatasets && !hasRuns) {
-    return {
-      title: "Inspect Discovered Dataset",
-      description:
-        "A dataset yaml was detected in your workspace. Inspect classes, label health, and check splits.",
-      ctaText: "Open Dataset Inspector",
-      type: "triggerCommand",
-      command: "fovux.openDatasetInspector",
-      args: [state.discoveredDatasets?.[0]],
-    };
-  }
-
-  const activeRun = state.initialRuns.find((r) => r.status === "running");
-  if (activeRun) {
-    return {
-      title: "Monitor Active Training",
-      description: `Run "${activeRun.id}" is currently training. Watch losses, live metric streams, and epoch curves.`,
-      ctaText: "Focus Running Training",
-      type: "triggerCommand",
-      command: "fovux.openDashboard",
-    };
-  }
-
-  return {
-    title: "Export Finished Model",
-    description:
-      "Your YOLO training runs are complete. Package the model to ONNX or TFLite for edge deployment.",
-    ctaText: "Open Export Wizard",
-    type: "triggerCommand",
-    command: "fovux.openExportWizard",
-  };
-}
+import {
+  BOX_LOSS_KEYS,
+  calculateNextAction,
+  formatMetric,
+  getBasename,
+  MAP50_KEYS,
+  readMetric,
+  toChartSeries,
+  truncatePath,
+  upsertPayload,
+} from "./model";
 
 function DashboardApp(): JSX.Element {
   const initial = readInitialState<DashboardInitialState>({
@@ -539,56 +476,6 @@ function DashboardApp(): JSX.Element {
       return [...current, runId].slice(0, 5);
     });
   }
-}
-
-function upsertPayload(series: MetricPayload[], payload: MetricPayload): MetricPayload[] {
-  const nextSeries = series.filter((item) => item.epoch !== payload.epoch);
-  nextSeries.push(payload);
-  nextSeries.sort((left, right) => left.epoch - right.epoch);
-  return nextSeries;
-}
-
-function toChartSeries(
-  runId: string,
-  series: MetricPayload[],
-  metricKeys: string[],
-  colorIndex: number
-): ChartSeries | null {
-  const points = series
-    .map((item) => ({ x: item.epoch, y: readMetric(item.metrics, metricKeys) }))
-    .filter((point): point is { x: number; y: number } => typeof point.y === "number");
-  if (!points.length) {
-    return null;
-  }
-  return {
-    label: runId,
-    color: COLORS[colorIndex % COLORS.length],
-    points,
-  };
-}
-
-function readMetric(metrics: Record<string, number>, keys: string[]): number | undefined {
-  // Malformed metric payloads are ignored so charts stay resilient during reconnects.
-  for (const key of keys) {
-    const value = metrics[key];
-    if (typeof value === "number") {
-      return value;
-    }
-  }
-  return undefined;
-}
-
-function formatMetric(value: number | undefined): string {
-  return typeof value === "number" ? value.toFixed(3) : "n/a";
-}
-
-function truncatePath(p: string): string {
-  if (p.length <= 40) return p;
-  return "..." + p.slice(-37);
-}
-
-function getBasename(p: string): string {
-  return p.split(/[/\\]/).pop() || p;
 }
 
 // Inline premium CSS styles
