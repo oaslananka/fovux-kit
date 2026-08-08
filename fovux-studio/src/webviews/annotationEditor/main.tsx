@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import type { CSSProperties, JSX, KeyboardEvent, PointerEvent } from "react";
+import type { CSSProperties, JSX, KeyboardEvent } from "react";
 import { createRoot } from "react-dom/client";
 
 import {
@@ -7,46 +7,27 @@ import {
   readInitialState,
   type AnnotationEditorInitialState,
 } from "../shared/types";
+import { AnnotationCanvas } from "./components/AnnotationCanvas";
 import { AnnotationQueueCard, AnnotationToolbar } from "./components/AnnotationControls";
+import { createAnnotationPointerController } from "./controller";
+import { sanitizeAnnotationEditorState } from "./imageUri";
 import {
   annotationEditorReducer,
-  clamp,
   createAnnotationEditorState,
   type AnnotationEditorAction,
-  type Point,
-  type ResizeHandle,
 } from "./model";
-
-function sanitizeImageUri(uri: unknown): string {
-  if (typeof uri !== "string") {
-    return "";
-  }
-
-  const value = uri.trim();
-  if (!value) {
-    return "";
-  }
-
-  if (value.startsWith("vscode-webview-resource:")) {
-    return value;
-  }
-
-  if (/^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/.test(value)) {
-    return value;
-  }
-
-  return "";
-}
 
 function AnnotationEditorApp(): JSX.Element {
   const [editorState, setEditorState] = useState<AnnotationEditorInitialState>(() =>
-    readInitialState<AnnotationEditorInitialState>({
-      imagePath: "",
-      imageUri: "",
-      classNames: ["class_0"],
-      initialBoxes: [],
-      initialError: "Initial annotation editor state was not provided.",
-    })
+    sanitizeAnnotationEditorState(
+      readInitialState<AnnotationEditorInitialState>({
+        imagePath: "",
+        imageUri: "",
+        classNames: ["class_0"],
+        initialBoxes: [],
+        initialError: "Initial annotation editor state was not provided.",
+      })
+    )
   );
   const [datasetSplit, setDatasetSplit] = useState<string>("train");
   const stageRef = useRef<HTMLElement | null>(null);
@@ -55,6 +36,12 @@ function AnnotationEditorApp(): JSX.Element {
     annotationEditorReducer,
     createAnnotationEditorState(editorState.initialBoxes, editorState.initialError)
   );
+  const pointerController = createAnnotationPointerController({
+    stageRef,
+    classNames: editorState.classNames,
+    classId,
+    dispatch,
+  });
 
   useEffect(() => {
     dispatch({
@@ -72,10 +59,7 @@ function AnnotationEditorApp(): JSX.Element {
       }
 
       const nextState = message.state as AnnotationEditorInitialState;
-      setEditorState({
-        ...nextState,
-        imageUri: sanitizeImageUri(nextState.imageUri),
-      });
+      setEditorState(sanitizeAnnotationEditorState(nextState));
     };
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
@@ -106,98 +90,15 @@ function AnnotationEditorApp(): JSX.Element {
 
       {state.status ? <p style={statusStyle}>{state.status}</p> : null}
 
-      <section
-        ref={stageRef}
-        style={stageStyle}
-        onPointerDown={(event) => {
-          event.currentTarget.focus();
-          event.currentTarget.setPointerCapture(event.pointerId);
-          const point = normalizedPoint(event, event.currentTarget);
-          const className = editorState.classNames[classId] ?? `class_${classId}`;
-          dispatch({ type: "beginDraw", classId, className, point });
-        }}
-        onPointerMove={(event) => {
-          const target = stageRef.current;
-          if (target) {
-            dispatch({
-              type: "pointerMove",
-              point: normalizedPoint(event, target),
-            });
-          }
-        }}
-        onPointerUp={(event) => {
-          const target = stageRef.current;
-          if (target) {
-            dispatch({
-              type: "pointerUp",
-              point: normalizedPoint(event, target),
-            });
-          }
-        }}
-        onPointerCancel={() => dispatch({ type: "select", index: null })}
-      >
-        <img
-          src={editorState.imageUri}
-          alt={editorState.imagePath}
-          style={imageStyle}
-          draggable={false}
-        />
-        {[...state.boxes, ...(state.draft ? [state.draft] : [])].map((box, index) => {
-          const isDraft = index >= state.boxes.length;
-          const isSelected = state.selectedIndex === index && !isDraft;
-          return (
-            <span
-              key={`${box.classId}-${box.x}-${box.y}-${index}`}
-              style={{
-                ...boxStyle,
-                ...(isSelected ? selectedBoxStyle : null),
-                left: `${box.x * 100}%`,
-                top: `${box.y * 100}%`,
-                width: `${box.width * 100}%`,
-                height: `${box.height * 100}%`,
-              }}
-              onPointerDown={(event) => {
-                if (isDraft || !stageRef.current) {
-                  return;
-                }
-                event.stopPropagation();
-                event.currentTarget.setPointerCapture(event.pointerId);
-                dispatch({
-                  type: "beginMove",
-                  index,
-                  point: normalizedPoint(event, stageRef.current),
-                });
-              }}
-            >
-              <span style={labelStyle}>{box.className}</span>
-              {isSelected
-                ? (["nw", "ne", "sw", "se"] as const).map((handle) => (
-                    <span
-                      key={handle}
-                      style={{
-                        ...handleStyle,
-                        ...handlePositionStyle(handle),
-                      }}
-                      onPointerDown={(event) => {
-                        if (!stageRef.current) {
-                          return;
-                        }
-                        event.stopPropagation();
-                        event.currentTarget.setPointerCapture(event.pointerId);
-                        dispatch({
-                          type: "beginResize",
-                          handle,
-                          index,
-                          point: normalizedPoint(event, stageRef.current),
-                        });
-                      }}
-                    />
-                  ))
-                : null}
-            </span>
-          );
-        })}
-      </section>
+      <AnnotationCanvas
+        stageRef={stageRef}
+        imageUri={editorState.imageUri}
+        imagePath={editorState.imagePath}
+        boxes={state.boxes}
+        draft={state.draft}
+        selectedIndex={state.selectedIndex}
+        {...pointerController}
+      />
 
       <footer style={footerStyle}>
         <code style={pathStyle}>{editorState.imagePath}</code>
@@ -252,24 +153,6 @@ function handleKeyDown(
   }
 }
 
-function normalizedPoint(event: PointerEvent<HTMLElement>, target: HTMLElement): Point {
-  const rect = target.getBoundingClientRect();
-  return {
-    x: clamp((event.clientX - rect.left) / rect.width),
-    y: clamp((event.clientY - rect.top) / rect.height),
-  };
-}
-
-function handlePositionStyle(handle: ResizeHandle): CSSProperties {
-  return {
-    cursor: `${handle}-resize`,
-    left: handle.includes("w") ? "-5px" : undefined,
-    right: handle.includes("e") ? "-5px" : undefined,
-    top: handle.includes("n") ? "-5px" : undefined,
-    bottom: handle.includes("s") ? "-5px" : undefined,
-  };
-}
-
 const pageStyle: CSSProperties = {
   minHeight: "100vh",
   boxSizing: "border-box",
@@ -281,55 +164,6 @@ const pageStyle: CSSProperties = {
   color: "var(--vscode-editor-foreground)",
   fontFamily: "var(--vscode-font-family)",
   outline: "none",
-};
-
-const stageStyle: CSSProperties = {
-  position: "relative",
-  minHeight: 360,
-  border: "1px solid var(--vscode-panel-border)",
-  background: "var(--vscode-editorWidget-background)",
-  overflow: "hidden",
-  cursor: "crosshair",
-};
-
-const imageStyle: CSSProperties = {
-  width: "100%",
-  height: "100%",
-  objectFit: "contain",
-  display: "block",
-  userSelect: "none",
-  pointerEvents: "none",
-};
-
-const boxStyle: CSSProperties = {
-  position: "absolute",
-  border: "2px solid var(--vscode-charts-orange)",
-  cursor: "move",
-};
-
-const selectedBoxStyle: CSSProperties = {
-  borderColor: "var(--vscode-charts-blue)",
-  boxShadow: "0 0 0 1px var(--vscode-charts-blue)",
-};
-
-const labelStyle: CSSProperties = {
-  position: "absolute",
-  left: 0,
-  top: -20,
-  padding: "2px 6px",
-  background: "var(--vscode-charts-orange)",
-  color: "var(--vscode-editor-background)",
-  fontSize: 11,
-  fontWeight: 700,
-  pointerEvents: "none",
-};
-
-const handleStyle: CSSProperties = {
-  position: "absolute",
-  width: 10,
-  height: 10,
-  border: "1px solid var(--vscode-editor-background)",
-  background: "var(--vscode-charts-blue)",
 };
 
 const statusStyle: CSSProperties = {
