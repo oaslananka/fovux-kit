@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   annotationEditorReducer,
   createAnnotationEditorState,
-} from "../../src/webviews/annotationEditor/main";
+} from "../../src/webviews/annotationEditor/model";
 import { openAnnotationEditor } from "../../src/commands/openAnnotationEditor";
 
 describe("annotation editor reducer", () => {
@@ -111,6 +111,88 @@ describe("annotation editor reducer", () => {
     expect(state.status).toBe("Reset status");
   });
 
+
+  it("handles no-op editor actions without creating history", () => {
+    const state = createAnnotationEditorState([]);
+
+    expect(
+      annotationEditorReducer(state, { type: "beginMove", index: 4, point: { x: 0, y: 0 } })
+    ).toBe(state);
+    expect(
+      annotationEditorReducer(state, {
+        type: "beginResize",
+        index: 4,
+        handle: "nw",
+        point: { x: 0, y: 0 },
+      })
+    ).toBe(state);
+    expect(annotationEditorReducer(state, { type: "deleteSelected" })).toBe(state);
+    expect(annotationEditorReducer(state, { type: "clear" })).toBe(state);
+    expect(annotationEditorReducer(state, { type: "undo" })).toBe(state);
+    expect(annotationEditorReducer(state, { type: "pointerMove", point: { x: 0, y: 0 } })).toBe(
+      state
+    );
+  });
+
+  it("rejects tiny drafts and supports selection, status, and clear", () => {
+    let state = createAnnotationEditorState([
+      {
+        classId: 0,
+        className: "object",
+        x: 0.1,
+        y: 0.1,
+        width: 0.2,
+        height: 0.2,
+      },
+    ]);
+    state = annotationEditorReducer(state, { type: "select", index: 0 });
+    expect(state.selectedIndex).toBe(0);
+    state = annotationEditorReducer(state, { type: "status", status: "Saved" });
+    expect(state.status).toBe("Saved");
+    state = annotationEditorReducer(state, { type: "clear" });
+    expect(state.boxes).toEqual([]);
+    state = annotationEditorReducer(state, { type: "undo" });
+    expect(state.boxes).toHaveLength(1);
+
+    state = annotationEditorReducer(state, {
+      type: "beginDraw",
+      classId: 1,
+      className: "tiny",
+      point: { x: 0.2, y: 0.2 },
+    });
+    state = annotationEditorReducer(state, { type: "pointerUp", point: { x: 0.201, y: 0.201 } });
+    expect(state.boxes).toHaveLength(1);
+    expect(state.draft).toBeNull();
+  });
+
+  it("keeps unchanged moves out of history and previews northwest resize", () => {
+    let state = createAnnotationEditorState([
+      {
+        classId: 0,
+        className: "object",
+        x: 0.2,
+        y: 0.2,
+        width: 0.3,
+        height: 0.3,
+      },
+    ]);
+    state = annotationEditorReducer(state, {
+      type: "beginMove",
+      index: 0,
+      point: { x: 0.2, y: 0.2 },
+    });
+    state = annotationEditorReducer(state, { type: "pointerUp", point: { x: 0.2, y: 0.2 } });
+    expect(state.history).toEqual([]);
+
+    state = annotationEditorReducer(state, {
+      type: "beginResize",
+      index: 0,
+      handle: "nw",
+      point: { x: 0.2, y: 0.2 },
+    });
+    state = annotationEditorReducer(state, { type: "pointerMove", point: { x: 0.1, y: 0.1 } });
+    expect(state.boxes[0]).toMatchObject({ x: 0.1, y: 0.1, width: 0.4, height: 0.4 });
+  });
   it("opens the queue mode editor and loads queue items", async () => {
     resetVscodeMockState();
 
