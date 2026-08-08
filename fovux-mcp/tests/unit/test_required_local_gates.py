@@ -127,3 +127,17 @@ def test_hosted_only_boundary_requires_reason(tmp_path: Path) -> None:
     )
 
     assert any("hosted" in failure and "reason" in failure for failure in failures)
+
+
+def test_security_aggregate_uses_named_subgates() -> None:
+    module = _load_module()
+    taskfile = (REPO_ROOT / "Taskfile.yml").read_text(encoding="utf-8")
+    tasks = module._task_calls(taskfile)
+
+    assert tasks["security"] == {
+        "security:bandit",
+        "security:pip-audit",
+        "security:pnpm-audit",
+        "security:npm-audit",
+        "security:gitleaks",
+    }
