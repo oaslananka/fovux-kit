@@ -45,6 +45,22 @@ export interface HttpClientConfig {
 }
 
 const POLL_FALLBACK_INTERVAL_MS = 2000;
+const API_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
+
+function encodeApiIdentifier(value: string, label: "run id" | "tool name"): string {
+  if (!API_IDENTIFIER_PATTERN.test(value)) {
+    throw new Error(`${label} contains unsupported characters.`);
+  }
+  return encodeURIComponent(value);
+}
+
+function encodeRunId(runId: string): string {
+  return encodeApiIdentifier(runId, "run id");
+}
+
+function encodeToolName(name: string): string {
+  return encodeApiIdentifier(name, "tool name");
+}
 
 class StreamUnavailableError extends Error {}
 
@@ -56,7 +72,7 @@ export async function listRuns(config: HttpClientConfig): Promise<RunSummary[]> 
 }
 
 export async function getRun(config: HttpClientConfig, runId: string): Promise<RunDetail> {
-  const response = await fetch(`${config.baseUrl}/runs/${encodeURIComponent(runId)}`, {
+  const response = await fetch(`${config.baseUrl}/runs/${encodeRunId(runId)}`, {
     headers: authHeaders(config.authToken),
   });
   return handleResponse<RunDetail>(response);
@@ -67,7 +83,7 @@ export async function requestChallenge(
   name: string,
   payload: Record<string, unknown>
 ): Promise<ChallengeResponse> {
-  const response = await fetch(`${config.baseUrl}/tools/${encodeURIComponent(name)}/challenge`, {
+  const response = await fetch(`${config.baseUrl}/tools/${encodeToolName(name)}/challenge`, {
     method: "POST",
     headers: authHeaders(config.authToken),
     body: JSON.stringify(payload),
@@ -80,7 +96,7 @@ export async function invokeTool<T>(
   name: string,
   payload: Record<string, unknown>
 ): Promise<T> {
-  const response = await fetch(`${config.baseUrl}/tools/${encodeURIComponent(name)}`, {
+  const response = await fetch(`${config.baseUrl}/tools/${encodeToolName(name)}`, {
     method: "POST",
     headers: authHeaders(config.authToken),
     body: JSON.stringify(payload),
@@ -151,12 +167,12 @@ async function connectAndStream(
   signal: AbortSignal,
   onMetric: (payload: MetricPayload) => void
 ): Promise<boolean> {
-  let response = await fetch(`${config.baseUrl}/runs/${encodeURIComponent(runId)}/stream`, {
+  let response = await fetch(`${config.baseUrl}/runs/${encodeRunId(runId)}/stream`, {
     headers: authHeaders(config.authToken),
     signal,
   });
   if (response.status === 404) {
-    response = await fetch(`${config.baseUrl}/runs/${encodeURIComponent(runId)}/metrics`, {
+    response = await fetch(`${config.baseUrl}/runs/${encodeRunId(runId)}/metrics`, {
       headers: authHeaders(config.authToken),
       signal,
     });
@@ -225,7 +241,7 @@ async function pollRunMetrics(
   let lastEpoch: number | null = null;
   while (!signal.aborted) {
     try {
-      const response = await fetch(`${config.baseUrl}/runs/${encodeURIComponent(runId)}`, {
+      const response = await fetch(`${config.baseUrl}/runs/${encodeRunId(runId)}`, {
         headers: authHeaders(config.authToken),
         signal,
       });
