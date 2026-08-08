@@ -6,36 +6,11 @@ import type { HttpClientConfig, RunSummary } from "../shared/api";
 import { getRun, invokeTool, listRuns } from "../shared/api";
 import { CompareRunsInitialState, postToExtension, readInitialState } from "../shared/types";
 
-interface ComparedRun {
-  run_id: string;
-  status: string;
-  model: string;
-  epochs: number;
-  current_epoch?: number | null;
-  best_map50?: number | null;
-  best_map50_95?: number | null;
-  precision?: number | null;
-  recall?: number | null;
-  latency_ms?: number | null;
-  model_size_mb?: number | null;
-  config?: Record<string, unknown>;
-  dataset_fingerprint?: string | null;
-  export_target?: string | null;
-  pareto_optimal?: boolean;
-  promotion_state?: "draft" | "candidate" | "approved" | "deployed";
-  run_path: string;
-}
-
-interface CompareResult {
-  compared_runs: ComparedRun[];
-  best_run_id: string | null;
-  report_path: string;
-  chart_path: string;
-  config_diffs: Record<string, Record<string, unknown>>;
-  pareto_frontier_run_ids: string[];
-  model_cards: Record<string, string>;
-  suggested_next_experiment: string;
-}
+import {
+  formatMetric,
+  sortComparedRuns,
+  type CompareResult,
+} from "./model";
 
 function CompareRunsApp(): JSX.Element {
   const initial = readInitialState<CompareRunsInitialState>({
@@ -88,24 +63,10 @@ function CompareRunsApp(): JSX.Element {
   }, [result]);
 
   // Sort logic for compared runs
-  const sortedRuns = useMemo(() => {
-    if (!result) return [];
-    return [...result.compared_runs].sort((a, b) => {
-      const valA = a[sortBy as keyof ComparedRun];
-      const valB = b[sortBy as keyof ComparedRun];
-
-      if (valA === undefined || valA === null) return sortOrder === "desc" ? 1 : -1;
-      if (valB === undefined || valB === null) return sortOrder === "desc" ? -1 : 1;
-
-      if (typeof valA === "number" && typeof valB === "number") {
-        return sortOrder === "desc" ? valB - valA : valA - valB;
-      }
-      if (typeof valA === "string" && typeof valB === "string") {
-        return sortOrder === "desc" ? valB.localeCompare(valA) : valA.localeCompare(valB);
-      }
-      return 0;
-    });
-  }, [result, sortBy, sortOrder]);
+  const sortedRuns = useMemo(
+    () => (result ? sortComparedRuns(result.compared_runs, sortBy, sortOrder) : []),
+    [result, sortBy, sortOrder]
+  );
 
   const toggleRun = (runId: string): void => {
     setSelectedRunIds((current) =>
@@ -542,9 +503,6 @@ function CompareRunsApp(): JSX.Element {
   );
 }
 
-function formatMetric(value: number | null | undefined): string {
-  return typeof value === "number" ? value.toFixed(4) : "n/a";
-}
 
 // Styling (CSS Properties wrapped strictly under 100 characters)
 const pageStyle: CSSProperties = {
