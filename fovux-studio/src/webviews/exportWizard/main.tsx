@@ -9,6 +9,7 @@ import {
   type HttpClientConfig,
 } from "../shared/api";
 import { ChallengeModal } from "../shared/ChallengeModal";
+import { ExportSettingsForm } from "./components/ExportSettingsForm";
 import {
   buildExportRequest,
   extractArtifactPath,
@@ -18,7 +19,6 @@ import {
   type ExportRecommendation,
   type ExportTargetDevice,
   suggestExportPath,
-  targetGroupLabel,
   type DeploymentAdviseResult,
 } from "./targets";
 import {
@@ -340,133 +340,28 @@ function ExportWizardApp(): JSX.Element {
 
       {activeTab === "export" ? (
         <>
-          <section style={formStyle}>
-            <label style={fieldStyle}>
-              <span>Target device</span>
-              <select
-                aria-label="Target device"
-                style={inputStyle}
-                value={targetDevice}
-                onChange={(event) => setTargetDevice(event.target.value as ExportTargetDevice)}
-              >
-                {["cpu", "gpu", "edge", "mobile"].map((group) => (
-                  <optgroup key={group} label={targetGroupLabel(group)}>
-                    {EXPORT_TARGETS.filter((target) => target.group === group).map((target) => {
-                      const disabled = target.requiresCuda && hasCuda === false;
-                      return (
-                        <option key={target.id} value={target.id} disabled={disabled}>
-                          {target.label}
-                          {disabled ? " (CUDA unavailable)" : ""}
-                        </option>
-                      );
-                    })}
-                  </optgroup>
-                ))}
-              </select>
-              <span style={helperTextStyle}>
-                {targetProfile.description}
-                {targetProfile.requiresCuda && hasCuda === false
-                  ? " CUDA was not detected, so this target is disabled."
-                  : ""}
-              </span>
-            </label>
-
-            <label style={fieldStyle}>
-              <span>Checkpoint</span>
-              <select
-                aria-label="Checkpoint"
-                style={inputStyle}
-                value={checkpoint}
-                onChange={(event) => setCheckpoint(event.target.value)}
-                disabled={!exportableModels.length}
-              >
-                {!exportableModels.length ? (
-                  <option value="">No .pt checkpoints available yet</option>
-                ) : null}
-                {exportableModels.map((model) => (
-                  <option key={model.path} value={model.path}>
-                    {model.name} · {model.source}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label style={fieldStyle}>
-              <span>Target format</span>
-              <select
-                aria-label="Target format"
-                style={inputStyle}
-                value={format}
-                onChange={(event) => setFormat(event.target.value as "onnx" | "tflite")}
-              >
-                <option value="onnx">ONNX</option>
-                <option value="tflite">TFLite</option>
-              </select>
-            </label>
-
-            {format === "onnx" && !quantize ? (
-              <label style={checkboxStyle}>
-                <input
-                  type="checkbox"
-                  checked={verifyParity}
-                  onChange={(event) => setVerifyParity(event.target.checked)}
-                />
-                <span>Verify ONNX parity after export</span>
-              </label>
-            ) : null}
-
-            <label style={checkboxStyle}>
-              <input
-                type="checkbox"
-                checked={quantize}
-                onChange={(event) => setQuantize(event.target.checked)}
-              />
-              <span>Enable INT8 quantization</span>
-            </label>
-
-            <label style={checkboxStyle}>
-              <input
-                type="checkbox"
-                checked={runBenchmarkAfterExport}
-                onChange={(event) => setRunBenchmarkAfterExport(event.target.checked)}
-              />
-              <span>Run latency benchmark after export</span>
-            </label>
-
-            {quantize ? (
-              <label style={fieldStyle}>
-                <span>Calibration dataset</span>
-                <input
-                  aria-label="Calibration dataset"
-                  style={inputStyle}
-                  value={calibrationDataset}
-                  onChange={(event) => setCalibrationDataset(event.target.value)}
-                  placeholder="Path to a calibration dataset"
-                />
-              </label>
-            ) : null}
-
-            <label style={fieldStyle}>
-              <span>Output path</span>
-              <input
-                aria-label="Output path"
-                style={inputStyle}
-                value={outputPath}
-                onChange={(event) => setOutputPath(event.target.value)}
-                placeholder="Optional explicit output path"
-              />
-            </label>
-
-            <button
-              type="button"
-              style={buttonStyle}
-              onClick={() => void runExport()}
-              disabled={isExportRunning}
-              aria-busy={isExportRunning}
-            >
-              {isExportRunning ? "Exporting..." : "Run export"}
-            </button>
-          </section>
+          <ExportSettingsForm
+            targetDevice={targetDevice}
+            hasCuda={hasCuda}
+            checkpoint={checkpoint}
+            exportableModels={exportableModels}
+            format={format}
+            verifyParity={verifyParity}
+            quantize={quantize}
+            runBenchmarkAfterExport={runBenchmarkAfterExport}
+            calibrationDataset={calibrationDataset}
+            outputPath={outputPath}
+            isExportRunning={isExportRunning}
+            onTargetDeviceChange={setTargetDevice}
+            onCheckpointChange={setCheckpoint}
+            onFormatChange={setFormat}
+            onVerifyParityChange={setVerifyParity}
+            onQuantizeChange={setQuantize}
+            onRunBenchmarkAfterExportChange={setRunBenchmarkAfterExport}
+            onCalibrationDatasetChange={setCalibrationDataset}
+            onOutputPathChange={setOutputPath}
+            onRunExport={() => void runExport()}
+          />
 
           {!exportableModels.length ? (
             <section style={helperCardStyle}>
@@ -798,12 +693,6 @@ const formStyle: CSSProperties = {
 const fieldStyle: CSSProperties = {
   display: "grid",
   gap: "8px",
-};
-
-const checkboxStyle: CSSProperties = {
-  display: "flex",
-  gap: "10px",
-  alignItems: "center",
 };
 
 const inputStyle: CSSProperties = {
