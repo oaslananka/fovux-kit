@@ -10,12 +10,16 @@ import {
 } from "../shared/api";
 import { ChallengeModal } from "../shared/ChallengeModal";
 import {
+  buildExportRequest,
+  extractArtifactPath,
   EXPORT_TARGETS,
   recommendExportTarget,
   type BenchmarkSummary,
   type ExportRecommendation,
   type ExportTargetDevice,
   suggestExportPath,
+  targetGroupLabel,
+  type DeploymentAdviseResult,
 } from "./targets";
 import {
   ExportWizardInitialState,
@@ -23,35 +27,6 @@ import {
   postToExtension,
   readInitialState,
 } from "../shared/types";
-
-interface DeploymentAdviseResult {
-  target_profile: string;
-  model_path: string;
-  format: string;
-  model_size_mb: number;
-  compatibility_preflight: {
-    compatible: boolean;
-    details: string;
-  };
-  quantization_recommendation: string;
-  readiness_score: number;
-  parity_check: {
-    checked: boolean;
-    max_coordinate_diff: number;
-    class_match_rate: number;
-    details: string;
-  };
-  benchmark_results: {
-    latency_p50_ms: number;
-    latency_p95_ms: number;
-    throughput_fps: number;
-    peak_memory_mb: number;
-    benchmarked_locally: boolean;
-  };
-  risk_warnings: string[];
-  runtime_snippets: Record<string, string>;
-  report_path: string;
-}
 
 function ExportWizardApp(): JSX.Element {
   const [pendingChallenge, setPendingChallenge] = useState<{
@@ -207,12 +182,7 @@ function ExportWizardApp(): JSX.Element {
       setBenchmarkError(null);
       setStatus("Export running...");
       const payload = await selectTool();
-      const artifactPath =
-        typeof payload["output_path"] === "string"
-          ? payload["output_path"]
-          : typeof payload["quantized_path"] === "string"
-            ? payload["quantized_path"]
-            : null;
+      const artifactPath = extractArtifactPath(payload);
       setResultPath(artifactPath);
       let benchmarkSucceeded = true;
       if (runBenchmarkAfterExport) {
@@ -238,39 +208,18 @@ function ExportWizardApp(): JSX.Element {
   }
 
   async function selectTool(): Promise<Record<string, unknown>> {
-    if (format === "onnx" && quantize) {
-      const payload = {
-        checkpoint,
-        calibration_dataset: calibrationDataset,
-        output_path: outputPath || undefined,
-      };
-      const challenge = await requestChallenge(clientConfig, "quantize_int8", payload);
-      const challengeId = await confirmChallenge(challenge);
-      return invokeTool<Record<string, unknown>>(clientConfig, "quantize_int8", {
-        ...payload,
-        challenge_id: challengeId,
-      });
-    }
-
-    if (format === "onnx") {
-      const payload = {
-        checkpoint,
-        output_path: outputPath || undefined,
-        parity_check: verifyParity,
-      };
-      const challenge = await requestChallenge(clientConfig, "export_onnx", payload);
-      const challengeId = await confirmChallenge(challenge);
-      return invokeTool<Record<string, unknown>>(clientConfig, "export_onnx", {
-        ...payload,
-        challenge_id: challengeId,
-      });
-    }
-
-    const payload = { checkpoint, output_path: outputPath || undefined, int8: quantize };
-    const challenge = await requestChallenge(clientConfig, "export_tflite", payload);
+    const request = buildExportRequest({
+      checkpoint,
+      format,
+      quantize,
+      calibrationDataset,
+      outputPath,
+      verifyParity,
+    });
+    const challenge = await requestChallenge(clientConfig, request.tool, request.payload);
     const challengeId = await confirmChallenge(challenge);
-    return invokeTool<Record<string, unknown>>(clientConfig, "export_tflite", {
-      ...payload,
+    return invokeTool<Record<string, unknown>>(clientConfig, request.tool, {
+      ...request.payload,
       challenge_id: challengeId,
     });
   }
@@ -796,21 +745,6 @@ function ExportWizardApp(): JSX.Element {
       />
     </main>
   );
-}
-
-function targetGroupLabel(group: string): string {
-  switch (group) {
-    case "cpu":
-      return "CPU Targets";
-    case "gpu":
-      return "GPU Targets";
-    case "edge":
-      return "Edge Targets";
-    case "mobile":
-      return "Mobile Targets";
-    default:
-      return group;
-  }
 }
 
 // Styling CSS Properties

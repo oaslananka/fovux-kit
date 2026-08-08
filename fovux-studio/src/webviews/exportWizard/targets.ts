@@ -140,3 +140,92 @@ export function recommendExportTarget(summary: BenchmarkSummary): ExportRecommen
     message: "Latency is high enough that GPU acceleration or a smaller model is advisable.",
   };
 }
+
+export interface DeploymentAdviseResult {
+  target_profile: string;
+  model_path: string;
+  format: string;
+  model_size_mb: number;
+  compatibility_preflight: { compatible: boolean; details: string };
+  quantization_recommendation: string;
+  readiness_score: number;
+  parity_check: {
+    checked: boolean;
+    max_coordinate_diff: number;
+    class_match_rate: number;
+    details: string;
+  };
+  benchmark_results: {
+    latency_p50_ms: number;
+    latency_p95_ms: number;
+    throughput_fps: number;
+    peak_memory_mb: number;
+    benchmarked_locally: boolean;
+  };
+  risk_warnings: string[];
+  runtime_snippets: Record<string, string>;
+  report_path: string;
+}
+
+export interface ExportRequestInput {
+  checkpoint: string;
+  format: "onnx" | "tflite";
+  quantize: boolean;
+  calibrationDataset: string;
+  outputPath: string;
+  verifyParity: boolean;
+}
+
+export interface ExportRequest {
+  tool: "quantize_int8" | "export_onnx" | "export_tflite";
+  payload: Record<string, unknown>;
+}
+
+export function buildExportRequest(input: ExportRequestInput): ExportRequest {
+  const outputPath = input.outputPath || undefined;
+  if (input.format === "onnx" && input.quantize) {
+    return {
+      tool: "quantize_int8",
+      payload: {
+        checkpoint: input.checkpoint,
+        calibration_dataset: input.calibrationDataset,
+        output_path: outputPath,
+      },
+    };
+  }
+  if (input.format === "onnx") {
+    return {
+      tool: "export_onnx",
+      payload: {
+        checkpoint: input.checkpoint,
+        output_path: outputPath,
+        parity_check: input.verifyParity,
+      },
+    };
+  }
+  return {
+    tool: "export_tflite",
+    payload: { checkpoint: input.checkpoint, output_path: outputPath, int8: input.quantize },
+  };
+}
+
+export function extractArtifactPath(payload: Record<string, unknown>): string | null {
+  if (typeof payload["output_path"] === "string") return payload["output_path"];
+  if (typeof payload["quantized_path"] === "string") return payload["quantized_path"];
+  return null;
+}
+
+export function targetGroupLabel(group: string): string {
+  switch (group) {
+    case "cpu":
+      return "CPU Targets";
+    case "gpu":
+      return "GPU Targets";
+    case "edge":
+      return "Edge Targets";
+    case "mobile":
+      return "Mobile Targets";
+    default:
+      return group;
+  }
+}
