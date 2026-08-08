@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   estimateTrainingMinutes,
+  mergePresets,
+  parseImportedPresets,
   TRAINING_PRESETS,
 } from "../../src/webviews/trainingLauncher/presets";
-import { mergePresets, parseImportedPresets } from "../../src/webviews/trainingLauncher/main";
 import { getUserPresets, saveUserPreset } from "../../src/fovux/userPresets";
 import { mockGlobalState, resetVscodeMockState } from "./helpers/vscodeMock";
 import "./helpers/vscodeMock";
@@ -127,4 +128,75 @@ describe("training launcher presets", () => {
     expect(merged).toHaveLength(1);
     expect(merged[0]?.config.model).toBe("yolov8n.pt");
   });
+
+  it("accepts direct preset arrays and rejects invalid import shapes", () => {
+    const validPreset = {
+      name: "direct",
+      createdAt: "2026-04-29T00:00:00.000Z",
+      config: {
+        model: "yolov8n.pt",
+        epochs: 25,
+        batch: 8,
+        imgsz: 416,
+        device: "auto",
+        tags: "direct",
+        extraArgs: "{}",
+        maxConcurrentRuns: 1,
+      },
+    };
+
+    expect(parseImportedPresets(JSON.stringify([validPreset]))).toEqual([validPreset]);
+    expect(parseImportedPresets(JSON.stringify({ unexpected: [] }))).toEqual([]);
+    expect(parseImportedPresets(JSON.stringify("not-a-preset-list"))).toEqual([]);
+    expect(parseImportedPresets(JSON.stringify([null, 42, { name: "missing-config" }]))).toEqual(
+      []
+    );
+  });
+
+  it("covers conservative duration floors and keeps unique current presets", () => {
+    expect(estimateTrainingMinutes(0, 0, 160)).toBe(5);
+
+    const imported = parseImportedPresets(
+      JSON.stringify([
+        {
+          name: "imported",
+          createdAt: "2026-04-29T00:00:00.000Z",
+          config: {
+            model: "yolov8n.pt",
+            epochs: 25,
+            batch: 8,
+            imgsz: 416,
+            device: "auto",
+            tags: "imported",
+            extraArgs: "{}",
+            maxConcurrentRuns: 1,
+          },
+        },
+      ])
+    );
+    const current = parseImportedPresets(
+      JSON.stringify([
+        {
+          name: "current",
+          createdAt: "2026-04-29T01:00:00.000Z",
+          config: {
+            model: "yolov8m.pt",
+            epochs: 50,
+            batch: 16,
+            imgsz: 640,
+            device: "auto",
+            tags: "current",
+            extraArgs: "{}",
+            maxConcurrentRuns: 1,
+          },
+        },
+      ])
+    );
+
+    expect(mergePresets(imported, current).map((preset) => preset.name)).toEqual([
+      "imported",
+      "current",
+    ]);
+  });
+
 });

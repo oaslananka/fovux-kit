@@ -1,3 +1,5 @@
+import type { UserPreset } from "../shared/types";
+
 export interface TrainingPreset {
   id: "fast_prototype" | "production" | "mobile_edge" | "accuracy_max";
   label: string;
@@ -71,4 +73,51 @@ export function estimateTrainingMinutes(epochs: number, batch: number, imgsz: nu
   const workload = epochs * Math.max(imgsz / 320, 1);
   const throughputFactor = Math.max(batch, 1) / 8;
   return Math.max(5, Math.round((workload / throughputFactor) * 0.75));
+}
+
+export function parseImportedPresets(rawJson: string): UserPreset[] {
+  const parsed = JSON.parse(rawJson) as unknown;
+  let candidates: unknown[] = [];
+
+  if (Array.isArray(parsed)) {
+    candidates = parsed;
+  } else if (parsed && typeof parsed === "object") {
+    const presets = (parsed as { presets?: unknown }).presets;
+    if (Array.isArray(presets)) {
+      candidates = presets;
+    }
+  }
+
+  return candidates.filter(isUserPreset);
+}
+
+function isUserPreset(value: unknown): value is UserPreset {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  const config = record["config"];
+  if (!config || typeof config !== "object") {
+    return false;
+  }
+  const cfg = config as Record<string, unknown>;
+  return (
+    typeof record["name"] === "string" &&
+    typeof record["createdAt"] === "string" &&
+    typeof cfg["model"] === "string" &&
+    typeof cfg["epochs"] === "number" &&
+    typeof cfg["batch"] === "number" &&
+    typeof cfg["imgsz"] === "number" &&
+    typeof cfg["device"] === "string" &&
+    typeof cfg["tags"] === "string" &&
+    typeof cfg["extraArgs"] === "string" &&
+    typeof cfg["maxConcurrentRuns"] === "number"
+  );
+}
+
+export function mergePresets(imported: UserPreset[], current: UserPreset[]): UserPreset[] {
+  return [
+    ...imported,
+    ...current.filter((candidate) => !imported.some((preset) => preset.name === candidate.name)),
+  ].slice(0, 20);
 }
