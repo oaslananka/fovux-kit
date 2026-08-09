@@ -8,9 +8,12 @@ import { CompareRunsInitialState, postToExtension, readInitialState } from "../s
 
 import { CompareRunSelector } from "./components/CompareRunSelector";
 import {
+  applyPromotionState,
+  buildPromotionTags,
   formatMetric,
   sortComparedRuns,
   type CompareResult,
+  type PromotionState,
 } from "./model";
 
 function CompareRunsApp(): JSX.Element {
@@ -84,22 +87,12 @@ function CompareRunsApp(): JSX.Element {
     }
   };
 
-  const handlePromotionChange = async (
-    runId: string,
-    newState: "draft" | "candidate" | "approved" | "deployed"
-  ): Promise<void> => {
+  const handlePromotionChange = async (runId: string, newState: PromotionState): Promise<void> => {
     try {
       // Fetch details to find existing tags
       const details = await getRun(clientConfig, runId);
       const currentTags = details.tags ?? [];
-
-      const promotionStates = ["candidate", "approved", "deployed"];
-      const baseTags = currentTags.filter((t) => !promotionStates.includes(t.toLowerCase()));
-
-      const nextTags = [...baseTags];
-      if (newState !== "draft") {
-        nextTags.push(newState);
-      }
+      const nextTags = buildPromotionTags(currentTags, newState);
 
       await invokeTool(clientConfig, "run_tag", {
         run_id: runId,
@@ -108,16 +101,7 @@ function CompareRunsApp(): JSX.Element {
 
       // Update state locally
       if (result) {
-        const nextCompared = result.compared_runs.map((r) => {
-          if (r.run_id === runId) {
-            return { ...r, promotion_state: newState };
-          }
-          return r;
-        });
-        setResult({
-          ...result,
-          compared_runs: nextCompared,
-        });
+        setResult(applyPromotionState(result, runId, newState));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -258,11 +242,7 @@ function CompareRunsApp(): JSX.Element {
 
       {error ? <p style={errorStyle}>{error}</p> : null}
 
-      <CompareRunSelector
-        runs={runs}
-        selectedRunIds={selectedRunIds}
-        onToggleRun={toggleRun}
-      />
+      <CompareRunSelector runs={runs} selectedRunIds={selectedRunIds} onToggleRun={toggleRun} />
 
       {result ? (
         <section style={resultStyle}>
@@ -483,7 +463,6 @@ function CompareRunsApp(): JSX.Element {
     </main>
   );
 }
-
 
 // Styling (CSS Properties wrapped strictly under 100 characters)
 const pageStyle: CSSProperties = {
