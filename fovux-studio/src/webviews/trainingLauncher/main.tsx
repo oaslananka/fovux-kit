@@ -10,6 +10,7 @@ import {
   type HttpClientConfig,
 } from "../shared/api";
 import { ChallengeModal } from "../shared/ChallengeModal";
+import { buildTrainingPayload, evaluateTrainingPreflight } from "./model";
 import {
   estimateTrainingMinutes,
   mergePresets,
@@ -356,7 +357,19 @@ function TrainingLauncherApp(): JSX.Element {
   async function submit(): Promise<void> {
     try {
       setError(null);
-      const payload = buildPayload();
+      const payload = buildTrainingPayload({
+        runName,
+        datasetPath,
+        model,
+        epochs,
+        batch,
+        imgsz,
+        device,
+        tags,
+        extraArgs,
+        force,
+        maxConcurrentRuns,
+      });
       if (dryRun) {
         setStatus(JSON.stringify(payload, null, 2));
         return;
@@ -375,26 +388,15 @@ function TrainingLauncherApp(): JSX.Element {
         "train_preflight",
         payload
       );
-      const blockers = Array.isArray(preflight.blockers)
-        ? preflight.blockers.map(String)
-        : [];
-      const nextActions = Array.isArray(preflight.next_actions)
-        ? preflight.next_actions.map(String)
-        : [];
-      if ((preflight.ready === false || blockers.length > 0) && !force) {
-        setError(
-          [
-            "Training preflight blocked launch.",
-            ...blockers.map((item) => `- ${item}`),
-            ...nextActions.map((item) => `Next: ${item}`),
-          ].join("\n")
-        );
+      const preflightEvaluation = evaluateTrainingPreflight(preflight, force);
+      if (preflightEvaluation.blocked) {
+        setError(preflightEvaluation.errorMessage);
         setStatus(null);
         return;
       }
       const launchPayload = { ...payload };
-      if (preflight.ready === false || blockers.length > 0) {
-        launchPayload.preflight_approval_reason = `Studio force override after preflight blockers: ${blockers.join("; ")}`;
+      if (preflightEvaluation.approvalReason) {
+        launchPayload.preflight_approval_reason = preflightEvaluation.approvalReason;
       }
       setStatus("Launching training run...");
       const challenge = await requestChallenge(clientConfig, "train_start", launchPayload);
@@ -416,36 +418,6 @@ function TrainingLauncherApp(): JSX.Element {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
       setStatus(null);
     }
-  }
-
-  function buildPayload(): Record<string, unknown> {
-    if (!datasetPath.trim()) {
-      throw new Error("Dataset path is required.");
-    }
-    let parsedExtra: Record<string, unknown> = {};
-    if (extraArgs.trim()) {
-      const raw = JSON.parse(extraArgs) as unknown;
-      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-        throw new Error("Extra args must be a JSON object.");
-      }
-      parsedExtra = raw as Record<string, unknown>;
-    }
-    return {
-      dataset_path: datasetPath.trim(),
-      model: model.trim(),
-      epochs,
-      batch,
-      imgsz,
-      device,
-      tags: tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-      extra_args: parsedExtra,
-      name: runName.trim() || undefined,
-      force,
-      max_concurrent_runs: Math.max(0, Math.floor(maxConcurrentRuns)),
-    };
   }
 
   async function runExists(name: string): Promise<boolean> {
