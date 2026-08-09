@@ -1,3 +1,5 @@
+export type PromotionState = "draft" | "candidate" | "approved" | "deployed";
+
 export interface ComparedRun {
   run_id: string;
   status: string;
@@ -14,7 +16,7 @@ export interface ComparedRun {
   dataset_fingerprint?: string | null;
   export_target?: string | null;
   pareto_optimal?: boolean;
-  promotion_state?: "draft" | "candidate" | "approved" | "deployed";
+  promotion_state?: PromotionState;
   run_path: string;
 }
 
@@ -55,4 +57,24 @@ export function sortComparedRuns(
 
 export function formatMetric(value: number | null | undefined): string {
   return typeof value === "number" ? value.toFixed(4) : "n/a";
+}
+
+const PROMOTION_TAGS = new Set(["candidate", "approved", "deployed"]);
+
+export function buildPromotionTags(currentTags: string[], newState: PromotionState): string[] {
+  const baseTags = currentTags.filter((tag) => !PROMOTION_TAGS.has(tag.toLowerCase()));
+  return newState === "draft" ? baseTags : [...baseTags, newState];
+}
+
+export function applyPromotionState(
+  result: CompareResult,
+  runId: string,
+  newState: PromotionState
+): CompareResult {
+  return {
+    ...result,
+    compared_runs: result.compared_runs.map((run) =>
+      run.run_id === runId ? { ...run, promotion_state: newState } : run
+    ),
+  };
 }

@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyPromotionState,
+  buildPromotionTags,
   formatMetric,
   sortComparedRuns,
   type ComparedRun,
+  type CompareResult,
 } from "../../src/webviews/compareRuns/model";
 
 const RUNS: ComparedRun[] = [
@@ -41,7 +44,6 @@ describe("compare-runs model", () => {
       "fast",
     ]);
   });
-
 
   it("sorts numeric metrics ascending", () => {
     expect(sortComparedRuns(RUNS, "epochs", "asc").map((run) => run.run_id)).toEqual([
@@ -81,5 +83,45 @@ describe("compare-runs model", () => {
   it("formats optional metrics consistently", () => {
     expect(formatMetric(0.81234)).toBe("0.8123");
     expect(formatMetric(null)).toBe("n/a");
+  });
+
+  it("replaces promotion tags case-insensitively while preserving other tags", () => {
+    expect(buildPromotionTags(["baseline", "Candidate", "DEPLOYED", "edge"], "approved")).toEqual([
+      "baseline",
+      "edge",
+      "approved",
+    ]);
+  });
+
+  it("removes promotion tags when moving a run back to draft", () => {
+    expect(buildPromotionTags(["baseline", "approved", "edge"], "draft")).toEqual([
+      "baseline",
+      "edge",
+    ]);
+  });
+
+  it("applies a promotion state without mutating the compare result", () => {
+    const result: CompareResult = {
+      compared_runs: RUNS,
+      best_run_id: "fast",
+      report_path: "/reports/compare.md",
+      chart_path: "/reports/compare.png",
+      config_diffs: {},
+      pareto_frontier_run_ids: ["fast"],
+      model_cards: {},
+      suggested_next_experiment: "Try a smaller batch.",
+    };
+
+    const next = applyPromotionState(result, "fast", "candidate");
+
+    expect(next.compared_runs.find((run) => run.run_id === "fast")?.promotion_state).toBe(
+      "candidate"
+    );
+    expect(
+      result.compared_runs.find((run) => run.run_id === "fast")?.promotion_state
+    ).toBeUndefined();
+    expect(next.compared_runs.find((run) => run.run_id === "slow")).toBe(
+      result.compared_runs.find((run) => run.run_id === "slow")
+    );
   });
 });
