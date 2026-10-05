@@ -1,12 +1,12 @@
 # Fovux Security Posture Report
 
-Generated on: 2026-07-20 16:27:58 UTC
+Generated on: 2026-10-05 10:15:00 UTC
 
 ## Summary
 - **Visibility:** Public
-- **Secret Scanning:** Enabled
-- **Secret Scanning Push Protection:** Enabled
-- **Dependabot Security Updates:** Enabled
+- **Secret Scanning:** Unavailable
+- **Secret Scanning Push Protection:** Unavailable
+- **Dependabot Security Updates:** Unavailable
 
 ## Branch & Tag Protection Rulesets
 - **main-ci-solo-maintainer:** Enforcement `active`
@@ -18,16 +18,13 @@ Generated on: 2026-07-20 16:27:58 UTC
     - `security-required`
     - `dependency-review`
     - `codeql-required`
+    - `elevated-review-required`
 - **release-tag-protection:** Enforcement `active`
   - Tag deletion prevented: Yes
   - Tag non-fast-forward prevented: Yes
 
 ## Dependabot Alerts Summary
-- **Total Open Alerts:** 2
-  - **Critical:** 0
-  - **High:** 1
-  - **Medium:** 0
-  - **Low:** 1
+- **Total Open Alerts:** Unavailable to current token
 
 ## Deployment Environments
 - **copilot:** No protection rules
@@ -43,4 +40,3 @@ Generated on: 2026-07-20 16:27:58 UTC
 - Scorecard workflow (.github/workflows/scorecard.yml): Present
 - Python SPDX SBOM generator: Present
 - Node.js SPDX SBOM generator: Present
-
