@@ -4,9 +4,9 @@ Generated on: 2026-10-05 10:15:00 UTC
 
 ## Summary
 - **Visibility:** Public
-- **Secret Scanning:** Unavailable
-- **Secret Scanning Push Protection:** Unavailable
-- **Dependabot Security Updates:** Unavailable
+- **Secret Scanning:** Enabled
+- **Secret Scanning Push Protection:** Enabled
+- **Dependabot Security Updates:** Enabled
 
 ## Branch & Tag Protection Rulesets
 - **main-ci-solo-maintainer:** Enforcement `active`
