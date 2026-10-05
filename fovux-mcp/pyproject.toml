@@ -45,6 +45,8 @@ dependencies = [
     "httpx>=0.28.1",
     "cryptography>=46.0",
     "python-multipart>=0.0.27",
+    "anyio>=4.14.2",
+    "pyjwt>=2.15.0",
 ]
 
 [project.optional-dependencies]
