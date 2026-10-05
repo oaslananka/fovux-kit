@@ -10,10 +10,7 @@ vi.mock("node:child_process", async (importOriginal) => {
   return { ...actual, execFile: execFileMock };
 });
 
-import {
-  killProcessTree,
-  WINDOWS_TASKKILL_EXECUTABLE,
-} from "../../src/fovux/serverManager";
+import { killProcessTree, WINDOWS_TASKKILL_EXECUTABLE } from "../../src/fovux/serverManager";
 
 describe("killProcessTree", () => {
   afterEach(() => {

@@ -48,7 +48,11 @@ describe("compare run selector", () => {
       tree,
       (element) => {
         const props = element.props as { type?: string; checked?: boolean; onChange?: unknown };
-        return props.type === "checkbox" && props.checked === false && typeof props.onChange === "function";
+        return (
+          props.type === "checkbox" &&
+          props.checked === false &&
+          typeof props.onChange === "function"
+        );
       },
       "run-b checkbox"
     );

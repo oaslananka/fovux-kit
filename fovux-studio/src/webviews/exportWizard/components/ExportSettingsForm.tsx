@@ -1,11 +1,7 @@
 import type { CSSProperties, JSX } from "react";
 
 import type { ExportWizardModelArtifact } from "../../shared/types";
-import {
-  EXPORT_TARGETS,
-  targetGroupLabel,
-  type ExportTargetDevice,
-} from "../targets";
+import { EXPORT_TARGETS, targetGroupLabel, type ExportTargetDevice } from "../targets";
 
 interface ExportSettingsFormProps {
   targetDevice: ExportTargetDevice;

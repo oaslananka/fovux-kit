@@ -74,7 +74,9 @@ describe("annotation editor controls", () => {
       onClear: vi.fn(),
     });
     const classSelect = findElementByAriaLabel(toolbar, "Class label");
-    const classOnChange = (classSelect.props as { onChange: (event: { target: { value: string } }) => void }).onChange;
+    const classOnChange = (
+      classSelect.props as { onChange: (event: { target: { value: string } }) => void }
+    ).onChange;
     classOnChange({ target: { value: "1" } });
     expect(onClassIdChange).toHaveBeenCalledWith(1);
 
@@ -84,19 +86,21 @@ describe("annotation editor controls", () => {
       onDatasetSplitChange,
     });
     const splitSelect = findElementByAriaLabel(queueCard, "Dataset split");
-    const splitOnChange = (splitSelect.props as { onChange: (event: { target: { value: string } }) => void }).onChange;
+    const splitOnChange = (
+      splitSelect.props as { onChange: (event: { target: { value: string } }) => void }
+    ).onChange;
     splitOnChange({ target: { value: "test" } });
     expect(onDatasetSplitChange).toHaveBeenCalledWith("test");
 
     const fallbackMarkup = renderToStaticMarkup(queueCard);
     expect(fallbackMarkup.match(/N\/A/g)).toHaveLength(2);
   });
-
 });
 
 function findElementByAriaLabel(root: ReactElement, label: string): ReactElement {
-  const match = findElement(root, (element) =>
-    (element.props as { "aria-label"?: string })["aria-label"] === label
+  const match = findElement(
+    root,
+    (element) => (element.props as { "aria-label"?: string })["aria-label"] === label
   );
   if (!match) {
     throw new Error(`Missing element with aria-label ${label}`);
