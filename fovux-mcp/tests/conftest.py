@@ -7,6 +7,14 @@ from pathlib import Path
 import pytest
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    """Set PYTEST_BASETEMP environment variable for path policy."""
+    base_temp = config.getoption("basetemp")
+    if base_temp:
+        import os
+        os.environ["PYTEST_BASETEMP"] = str(base_temp)
+
+
 @pytest.fixture()
 def tmp_fovux_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Provide a temporary FOVUX_HOME directory for tests."""

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import tempfile
 import time
@@ -64,9 +65,13 @@ def dataset_convert(
 def _run_convert(inp: DatasetConvertInput) -> DatasetConvertOutput:
     t0 = time.perf_counter()
     src = resolve_local_path(inp.source_path)
+    allowed_roots = [get_fovux_home(), Path.cwd(), Path(tempfile.gettempdir()), src, src.parent]
+    pytest_base_temp = os.environ.get("PYTEST_BASETEMP")
+    if pytest_base_temp:
+        allowed_roots.append(Path(pytest_base_temp))
     dst = ensure_writable_output(
         resolve_local_path(inp.target_path),
-        allowed_roots=[get_fovux_home(), Path.cwd(), Path(tempfile.gettempdir()), src, src.parent],
+        allowed_roots=allowed_roots,
     )
 
     if not src.exists():

@@ -91,10 +91,16 @@ def ensure_writable_output(
     """Ensure an output path resolves under one of the allowed roots."""
     from fovux.core.path_policy import check_path_policy
 
+    # Add pytest base temp to allowed roots if set
+    if allowed_roots is not None:
+        allowed_roots = list(allowed_roots)
+        _add_pytest_base_temp(allowed_roots)
+    else:
+        allowed_roots = _default_allowed_roots()
+
     check_path_policy(path, write=True, extra_roots=allowed_roots)
     resolved_path = resolve_local_path(path)
-    roots = list(allowed_roots) if allowed_roots is not None else _default_allowed_roots()
-    resolved_roots = [resolve_local_path(root) for root in roots]
+    resolved_roots = [resolve_local_path(root) for root in allowed_roots]
 
     for root in resolved_roots:
         try:
@@ -112,4 +118,16 @@ def ensure_writable_output(
 
 
 def _default_allowed_roots() -> list[Path]:
-    return [get_fovux_home(), Path(os.getcwd()), Path(tempfile.gettempdir())]
+    roots = [get_fovux_home(), Path(os.getcwd()), Path(tempfile.gettempdir())]
+    pytest_base_temp = os.environ.get("PYTEST_BASETEMP")
+    if pytest_base_temp:
+        roots.append(Path(pytest_base_temp))
+    return roots
+
+
+def _add_pytest_base_temp(roots: list[Path]) -> list[Path]:
+    """Add pytest base temp to allowed roots if PYTEST_BASETEMP is set."""
+    pytest_base_temp = os.environ.get("PYTEST_BASETEMP")
+    if pytest_base_temp:
+        roots.append(Path(pytest_base_temp))
+    return roots

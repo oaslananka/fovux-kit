@@ -45,6 +45,8 @@ dependencies = [
     "httpx>=0.28.1",
     "cryptography>=46.0",
     "python-multipart>=0.0.27",
+    "anyio>=4.14.2,<5",
+    "pyjwt>=2.14.0,<3",
 ]
 
 [project.optional-dependencies]
@@ -69,7 +71,7 @@ dev = [
     "pip-audit>=2.10",
     "pre-commit>=4.0",
     "hypothesis>=6.153.2",
-    "httpx2>=2.7.0,<3",
+    "httpx2>=2.12.0,<3",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7",
     "mkdocstrings[python]>=1.0.4",
@@ -77,6 +79,8 @@ dev = [
     "build>=1.2",
     "cyclonedx-bom>=7.3",
     "types-pillow",
+    "urllib3>=2.8.0",
+    "virtualenv>=21.7.13",
 ]
 
 [project.scripts]

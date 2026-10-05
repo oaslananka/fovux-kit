@@ -122,8 +122,13 @@ def get_allowed_roots(write: bool = False) -> list[Path]:
 
     # Base allowed roots
     roots = [home, cwd, temp_dir]
-    if "pytest" in sys.modules and os.environ.get("FOVUX_TEST_ALLOW_TEMP_DIR", "1") == "1":
+    allow_temp = os.environ.get("FOVUX_TEST_ALLOW_TEMP_DIR", "1") == "1"
+    if "pytest" in sys.modules and allow_temp:
         roots.append(Path(tempfile.gettempdir()))
+    # Also allow pytest base temp directory if set and temp is allowed
+    pytest_base_temp = os.environ.get("PYTEST_BASETEMP")
+    if pytest_base_temp and allow_temp:
+        roots.append(Path(pytest_base_temp))
 
     # Add invocation specific whitelisted roots
     roots.extend(_INVOCATION_ROOTS.get() or set())
@@ -136,14 +141,22 @@ def get_allowed_roots(write: bool = False) -> list[Path]:
         elif category == "run_write":
             # Restricted: write runs to runs dir or temp
             run_roots = [home / "runs", temp_dir]
-            if "pytest" in sys.modules and os.environ.get("FOVUX_TEST_ALLOW_TEMP_DIR", "1") == "1":
+            allow_temp = os.environ.get("FOVUX_TEST_ALLOW_TEMP_DIR", "1") == "1"
+            if "pytest" in sys.modules and allow_temp:
                 run_roots.append(Path(tempfile.gettempdir()))
+            pytest_base_temp = os.environ.get("PYTEST_BASETEMP")
+            if pytest_base_temp and allow_temp:
+                run_roots.append(Path(pytest_base_temp))
             return run_roots
         elif category == "export_write":
             # Restricted: write exports to exports dir, cwd, or temp
             export_roots = [home / "exports", cwd, temp_dir]
-            if "pytest" in sys.modules and os.environ.get("FOVUX_TEST_ALLOW_TEMP_DIR", "1") == "1":
+            allow_temp = os.environ.get("FOVUX_TEST_ALLOW_TEMP_DIR", "1") == "1"
+            if "pytest" in sys.modules and allow_temp:
                 export_roots.append(Path(tempfile.gettempdir()))
+            pytest_base_temp = os.environ.get("PYTEST_BASETEMP")
+            if pytest_base_temp and allow_temp:
+                export_roots.append(Path(pytest_base_temp))
             return export_roots
         elif category == "destructive":
             # Restricted: destructive actions to runs or archive
