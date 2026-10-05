@@ -63,8 +63,8 @@ uv run mypy --strict --warn-unused-ignores src/fovux
 uv run ruff check .
 uv run ruff format --check .
 uv run python ../scripts/check_tool_contracts.py
-python ../scripts/check_agent_policy.py
-python ../scripts/check_http_security_policy.py
+uv run python ../scripts/check_agent_policy.py
+uv run python ../scripts/check_http_security_policy.py
 ```
 
 Use slow/network/GPU/security lanes when the changed behavior requires them.
