@@ -42,7 +42,10 @@ curl -X POST http://127.0.0.1:7823/tools/dataset_augment \
 
 ```python
 from fovux.tools.dataset_augment import dataset_augment
-result = dataset_augment("/data/yolo_set", techniques=["flip_h"], multiplier=3, output_path="/data/yolo_aug")
+
+result = dataset_augment(
+    "/data/yolo_set", techniques=["flip_h"], multiplier=3, output_path="/data/yolo_aug"
+)
 ```
 
 ## Notes & Limits

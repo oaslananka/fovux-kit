@@ -7,11 +7,7 @@ import { getRun, invokeTool, listRuns } from "../shared/api";
 import { CompareRunsInitialState, postToExtension, readInitialState } from "../shared/types";
 
 import { CompareRunSelector } from "./components/CompareRunSelector";
-import {
-  formatMetric,
-  sortComparedRuns,
-  type CompareResult,
-} from "./model";
+import { formatMetric, sortComparedRuns, type CompareResult } from "./model";
 
 function CompareRunsApp(): JSX.Element {
   const initial = readInitialState<CompareRunsInitialState>({
@@ -258,11 +254,7 @@ function CompareRunsApp(): JSX.Element {
 
       {error ? <p style={errorStyle}>{error}</p> : null}
 
-      <CompareRunSelector
-        runs={runs}
-        selectedRunIds={selectedRunIds}
-        onToggleRun={toggleRun}
-      />
+      <CompareRunSelector runs={runs} selectedRunIds={selectedRunIds} onToggleRun={toggleRun} />
 
       {result ? (
         <section style={resultStyle}>
@@ -483,7 +475,6 @@ function CompareRunsApp(): JSX.Element {
     </main>
   );
 }
-
 
 // Styling (CSS Properties wrapped strictly under 100 characters)
 const pageStyle: CSSProperties = {
