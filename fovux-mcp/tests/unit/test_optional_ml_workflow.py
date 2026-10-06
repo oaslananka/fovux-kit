@@ -25,7 +25,7 @@ def test_lock_uses_torch_213_setuptools_84_and_no_cuda_runtime() -> None:
     lock = LOCKFILE.read_text(encoding="utf-8")
     assert 'name = "torch"\nversion = "2.13.0+cpu"' in lock
     assert 'name = "torchvision"\nversion = "0.28.0+cpu"' in lock
-    assert 'name = "setuptools"\nversion = "84.0.0"' in lock
+    assert 'name = "setuptools"\nversion = "84.0.0"' in lock  # nosec B101
     assert 'name = "triton"' not in lock  # nosec B101
     assert 'name = "nvidia-cuda-runtime' not in lock  # nosec B101
 
