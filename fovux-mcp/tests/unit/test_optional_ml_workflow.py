@@ -21,11 +21,11 @@ def test_yolo_extra_declares_validated_torch_stack() -> None:
     assert config["tool"]["uv"]["index"][0]["name"] == "pytorch-cpu"
 
 
-def test_lock_uses_torch_213_setuptools_83_and_no_cuda_runtime() -> None:
+def test_lock_uses_torch_213_setuptools_84_and_no_cuda_runtime() -> None:
     lock = LOCKFILE.read_text(encoding="utf-8")
     assert 'name = "torch"\nversion = "2.13.0+cpu"' in lock
     assert 'name = "torchvision"\nversion = "0.28.0+cpu"' in lock
-    assert 'name = "setuptools"\nversion = "83.0.0"' in lock
+    assert 'name = "setuptools"\nversion = "84.0.0"' in lock
     assert 'name = "triton"' not in lock
     assert 'name = "nvidia-cuda-runtime' not in lock
 

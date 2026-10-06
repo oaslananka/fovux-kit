@@ -39,15 +39,19 @@ function sanitizeImageUri(uri: unknown): string {
 }
 
 function AnnotationEditorApp(): JSX.Element {
-  const [editorState, setEditorState] = useState<AnnotationEditorInitialState>(() =>
-    readInitialState<AnnotationEditorInitialState>({
+  const [editorState, setEditorState] = useState<AnnotationEditorInitialState>(() => {
+    const initial = readInitialState<AnnotationEditorInitialState>({
       imagePath: "",
       imageUri: "",
       classNames: ["class_0"],
       initialBoxes: [],
       initialError: "Initial annotation editor state was not provided.",
-    })
-  );
+    });
+    return {
+      ...initial,
+      imageUri: sanitizeImageUri(initial.imageUri),
+    };
+  });
   const [datasetSplit, setDatasetSplit] = useState<string>("train");
   const stageRef = useRef<HTMLElement | null>(null);
   const [classId, setClassId] = useReducer((_current: number, next: number) => next, 0);
