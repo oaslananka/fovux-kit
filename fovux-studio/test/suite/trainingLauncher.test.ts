@@ -198,5 +198,4 @@ describe("training launcher presets", () => {
       "current",
     ]);
   });
-
 });

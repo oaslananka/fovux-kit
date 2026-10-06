@@ -2,7 +2,6 @@
 
 All notable changes to Fovux Studio (`fovuxstudiokit`) are documented here.
 
-
 ## Scope and planning boundary
 
 This package changelog records released `fovux-studio` VS Code extension changes only. The current released baseline is
@@ -20,54 +19,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.5.1](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.5.0...fovux-studio-v1.5.1) (2026-07-22)
 
-
 ### Bug Fixes
 
-* **ci:** reconcile Sonar and Codecov coverage signals ([#180](https://github.com/oaslananka/fovux-kit/issues/180)) ([eb56de7](https://github.com/oaslananka/fovux-kit/commit/eb56de71a3b23969440e81351ef0e67d38dd5994)), refs [#173](https://github.com/oaslananka/fovux-kit/issues/173)
+- **ci:** reconcile Sonar and Codecov coverage signals ([#180](https://github.com/oaslananka/fovux-kit/issues/180)) ([eb56de7](https://github.com/oaslananka/fovux-kit/commit/eb56de71a3b23969440e81351ef0e67d38dd5994)), refs [#173](https://github.com/oaslananka/fovux-kit/issues/173)
 
 ## [1.5.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.4.0...fovux-studio-v1.5.0) (2026-07-21)
 
-
 ### Features
 
-* **studio:** generate LM tools from backend schemas ([8241d12](https://github.com/oaslananka/fovux-kit/commit/8241d129ed3c6cde6e44ea8075a4c8db02d34881))
+- **studio:** generate LM tools from backend schemas ([8241d12](https://github.com/oaslananka/fovux-kit/commit/8241d129ed3c6cde6e44ea8075a4c8db02d34881))
 
 ## [1.4.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.3.0...fovux-studio-v1.4.0) (2026-07-21)
 
-
 ### Features
 
-* **ci:** add Codecov and zizmor observability ([4f7f945](https://github.com/oaslananka/fovux-kit/commit/4f7f9457d11baf3eeb1bafc508c60bcdd9b0a968))
-
+- **ci:** add Codecov and zizmor observability ([4f7f945](https://github.com/oaslananka/fovux-kit/commit/4f7f9457d11baf3eeb1bafc508c60bcdd9b0a968))
 
 ### Bug Fixes
 
-* **ci:** isolate Node compatibility tests ([a0175d5](https://github.com/oaslananka/fovux-kit/commit/a0175d5421ddbafe5579bb433726d6c8ac93447e))
-* **compliance:** normalize Apache-2.0 artifacts ([566dc07](https://github.com/oaslananka/fovux-kit/commit/566dc070c0943250d344e7d2c2efd6e496c36ea1))
-* **security:** patch brace-expansion advisories ([a972a2d](https://github.com/oaslananka/fovux-kit/commit/a972a2df17953a804b76aaf46139ff0a2ccb3ee1))
-* **security:** upgrade js-yaml to 4.3.0 ([c19e888](https://github.com/oaslananka/fovux-kit/commit/c19e88856423703b8b1cef5ee95fc7e43baae5ec))
+- **ci:** isolate Node compatibility tests ([a0175d5](https://github.com/oaslananka/fovux-kit/commit/a0175d5421ddbafe5579bb433726d6c8ac93447e))
+- **compliance:** normalize Apache-2.0 artifacts ([566dc07](https://github.com/oaslananka/fovux-kit/commit/566dc070c0943250d344e7d2c2efd6e496c36ea1))
+- **security:** patch brace-expansion advisories ([a972a2d](https://github.com/oaslananka/fovux-kit/commit/a972a2df17953a804b76aaf46139ff0a2ccb3ee1))
+- **security:** upgrade js-yaml to 4.3.0 ([c19e888](https://github.com/oaslananka/fovux-kit/commit/c19e88856423703b8b1cef5ee95fc7e43baae5ec))
 
 ## [1.3.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.2.0...fovux-studio-v1.3.0) (2026-06-25)
 
-
 ### Features
 
-* add guided Studio workflow ([ed07c54](https://github.com/oaslananka/fovux-kit/commit/ed07c54c19a95f941fd4e9160a2be75c8eb3927c))
-
+- add guided Studio workflow ([ed07c54](https://github.com/oaslananka/fovux-kit/commit/ed07c54c19a95f941fd4e9160a2be75c8eb3927c))
 
 ### Bug Fixes
 
-* align Studio LM tool contracts ([19a81e4](https://github.com/oaslananka/fovux-kit/commit/19a81e4f5fdf4d6f9af01f670d3357173f72371a))
-* harden dashboard resilience contract ([d2e2f12](https://github.com/oaslananka/fovux-kit/commit/d2e2f12aa279f151ed70aa7a6eb743747ba95e75))
-* require preflight before guided training ([90696cf](https://github.com/oaslananka/fovux-kit/commit/90696cf03b7e5338b84fce523c686da2dcb791bf))
+- align Studio LM tool contracts ([19a81e4](https://github.com/oaslananka/fovux-kit/commit/19a81e4f5fdf4d6f9af01f670d3357173f72371a))
+- harden dashboard resilience contract ([d2e2f12](https://github.com/oaslananka/fovux-kit/commit/d2e2f12aa279f151ed70aa7a6eb743747ba95e75))
+- require preflight before guided training ([90696cf](https://github.com/oaslananka/fovux-kit/commit/90696cf03b7e5338b84fce523c686da2dcb791bf))
 
 ## [1.2.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.1.0...fovux-studio-v1.2.0) (2026-06-22)
 
-
 ### Features
 
-* **annotation:** add active learning strategies and reason codes ([#83](https://github.com/oaslananka/fovux-kit/issues/83)) ([025deca](https://github.com/oaslananka/fovux-kit/commit/025deca496a253e20780989a3f64d1dea98b853f))
-* **vscode:** improve granular tool schemas, descriptions, and confirmation ux ([#81](https://github.com/oaslananka/fovux-kit/issues/81)) ([5f192ce](https://github.com/oaslananka/fovux-kit/commit/5f192ce3bf0898264d3084c58f04dfd58b65c72f))
+- **annotation:** add active learning strategies and reason codes ([#83](https://github.com/oaslananka/fovux-kit/issues/83)) ([025deca](https://github.com/oaslananka/fovux-kit/commit/025deca496a253e20780989a3f64d1dea98b853f))
+- **vscode:** improve granular tool schemas, descriptions, and confirmation ux ([#81](https://github.com/oaslananka/fovux-kit/issues/81)) ([5f192ce](https://github.com/oaslananka/fovux-kit/commit/5f192ce3bf0898264d3084c58f04dfd58b65c72f))
 
 ## [1.1.0](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.0.1...fovux-studio-v1.1.0) (2026-06-22)
 

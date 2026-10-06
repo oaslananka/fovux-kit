@@ -69,13 +69,21 @@ function AnnotationEditorApp(): JSX.Element {
   }, [editorState]);
 
   useEffect(() => {
+    const trustedOrigin = window.location.origin;
     const listener = (event: MessageEvent) => {
+      if (event.origin !== trustedOrigin) {
+        return;
+      }
       const message = event.data;
       if (!message || message.type !== "setEditorState" || !message.state) {
         return;
       }
 
       const nextState = message.state as AnnotationEditorInitialState;
+      if (typeof nextState !== "object" || nextState === null || Array.isArray(nextState)) {
+        return;
+      }
+
       setEditorState({
         ...nextState,
         imageUri: sanitizeImageUri(nextState.imageUri),
