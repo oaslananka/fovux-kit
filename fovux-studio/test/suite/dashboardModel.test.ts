@@ -116,5 +116,4 @@ describe("dashboard model", () => {
     expect(truncatePath("short/path")).toBe("short/path");
     expect(getBasename("single-name")).toBe("single-name");
   });
-
 });

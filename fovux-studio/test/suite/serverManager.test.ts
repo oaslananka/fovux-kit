@@ -12,7 +12,6 @@ describe("startFovuxServer", () => {
     vi.resetModules();
   });
 
-
   it("uses the fixed Windows system taskkill executable", async () => {
     const { WINDOWS_TASKKILL_EXECUTABLE } = await import("../../src/fovux/serverManager");
 

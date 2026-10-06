@@ -26,7 +26,6 @@ describe("shared webview api", () => {
     authToken: "token",
   };
 
-
   it("uses validated identifiers in API paths", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
