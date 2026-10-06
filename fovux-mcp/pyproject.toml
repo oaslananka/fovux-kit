@@ -46,6 +46,7 @@ dependencies = [
     "anyio>=4.14.2",
     "cryptography>=46.0",
     "python-multipart>=0.0.27",
+    "pyjwt[crypto]>=2.15.0",
 ]
 
 [project.optional-dependencies]
