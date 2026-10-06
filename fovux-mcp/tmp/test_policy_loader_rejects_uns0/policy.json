@@ -1,1 +1,0 @@
-{"status_context": "elevated-review-required", "elevated_labels": ["risk:high"], "sensitive_paths": [{"category": "workflow", "patterns": ["../outside/**"]}], "required_checks": ["ci-required"], "authorized_associations": ["OWNER"], "ruleset_activation": "bootstrap", "evidence_marker": "<!-- elevated-review-evidence -->"}

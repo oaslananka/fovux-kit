@@ -40,6 +40,7 @@ fovux-mcp/requirements-audit.txt
 fovux-mcp/requirements-build.txt
 fovux-mcp/sbom.cdx.json
 fovux-mcp/sbom.spdx
+fovux-mcp/tmp/
 
 # fovux-studio build artifacts
 fovux-studio/out/

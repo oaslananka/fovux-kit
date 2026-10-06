@@ -81,3 +81,6 @@ site/
 
 # uv
 .python-version
+
+# Testing artifacts
+tmp/

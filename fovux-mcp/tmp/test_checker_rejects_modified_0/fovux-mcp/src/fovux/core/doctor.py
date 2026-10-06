@@ -1,1 +1,0 @@
-Ultralytics AGPL NOTICE

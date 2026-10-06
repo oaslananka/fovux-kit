@@ -1,2 +1,0 @@
-{"run_id": "run_stream", "epoch": 1, "metrics": {"metrics/mAP50(B)": 0.42}}
-{"run_id": "run_stream", "epoch": 2, "metrics": {"metrics/mAP50(B)": 0.55}}

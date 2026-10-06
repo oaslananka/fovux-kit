@@ -1,6 +1,0 @@
-{
-  "status": "failed",
-  "updated_at": "2026-10-06T09:36:59.606705+00:00",
-  "pid": 14603,
-  "error": "Traceback (most recent call last):\n  File \"/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/src/fovux/core/train_worker.py\", line 136, in run\n    model.train(**train_kwargs)\n  File \"/usr/lib/python3.12/unittest/mock.py\", line 1134, in __call__\n    return self._mock_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/unittest/mock.py\", line 1138, in _mock_call\n    return self._execute_mock_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/unittest/mock.py\", line 1193, in _execute_mock_call\n    raise effect\nRuntimeError: boom\n"
-}

@@ -1,3 +1,0 @@
-[fovux.telemetry]
-enabled = true
-endpoint = "https://telemetry.example.test/events"
