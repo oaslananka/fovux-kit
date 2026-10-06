@@ -12,6 +12,7 @@ def pytest_configure(config: pytest.Config) -> None:
     base_temp = config.getoption("basetemp")
     if base_temp:
         import os
+
         os.environ["PYTEST_BASETEMP"] = str(base_temp)
 
 
