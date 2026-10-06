@@ -1,0 +1,8 @@
+version: "3"
+tasks:
+  scan:
+    cmds:
+      - echo scan
+  verify:required:
+    cmds:
+      - task: scan

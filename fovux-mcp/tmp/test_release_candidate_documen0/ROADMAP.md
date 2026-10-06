@@ -1,0 +1,7 @@
+<!-- release-baseline:start -->
+| Component | Published version | Channel status | Evidence |
+| --- | --- | --- | --- |
+| Python package `fovux-mcp` | `1.5.0` | Published on PyPI | `wheel.whl` |
+| npm wrapper `fovux-mcp` | `1.5.0` | Published on npm | `registry.json` |
+| VS Code extension `oaslananka.fovuxstudiokit` | `1.4.0` | Published on VS Marketplace and Open VSX | `studio.json` |
+<!-- release-baseline:end -->

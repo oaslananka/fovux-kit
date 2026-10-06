@@ -1,0 +1,2 @@
+{"artifact_path": "exports/a.onnx", "created_at": "2026-10-06T09:36:55.055609+00:00", "duration_s": 1.234568, "format": "onnx", "id": "export_ebfdc60d694f", "parity_passed": true, "source_checkpoint": "runs/a/weights/best.pt"}
+{"artifact_path": "exports/b.tflite", "created_at": "2026-10-06T09:36:55.072833+00:00", "duration_s": 2.0, "format": "tflite", "id": "export_642ff6286e71", "source_checkpoint": "runs/b/weights/best.pt"}

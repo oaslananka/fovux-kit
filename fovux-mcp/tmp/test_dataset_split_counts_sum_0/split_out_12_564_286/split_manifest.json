@@ -1,0 +1,27 @@
+{
+  "seed": 42,
+  "ratios": [
+    0.564287464242585,
+    0.2864051381177598,
+    0.14930739763965517
+  ],
+  "stratify_by_class": true,
+  "train": [
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/5.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/3.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/10.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/6.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/7.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/4.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/9.png"
+  ],
+  "val": [
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/11.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/2.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/0.png"
+  ],
+  "test": [
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/1.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_12_564_286/images/8.png"
+  ]
+}

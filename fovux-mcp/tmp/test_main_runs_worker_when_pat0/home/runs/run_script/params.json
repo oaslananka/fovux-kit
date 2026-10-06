@@ -1,0 +1,1 @@
+{"model": "yolov8n.pt", "dataset_path": "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_main_runs_worker_when_pat0/home/runs/run_script/dataset", "epochs": 2, "batch": 4, "imgsz": 64, "device": "cpu", "task": "detect", "pid": 1234, "extra_args": {"patience": 5}}

@@ -1,0 +1,269 @@
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+  PYTHON: '{{.PYTHON | default "python"}}'
+  NPM: '{{.NPM | default "npm"}}'
+  PNPM: '{{.PNPM | default "corepack pnpm@10.34.1 --ignore-workspace"}}'
+  PYTEST_TEMP_ROOT: '{{env "TMPDIR" | default (env "TEMP" | default "/tmp")}}'
+  RENOVATE_VERSION: "43.272.4"
+
+tasks:
+  install:
+    desc: Install all dev dependencies
+    cmds:
+      - cmd: cd fovux-mcp && uv sync --frozen --extra dev
+        platforms: [linux, darwin, windows]
+        ignore_error: false
+      - cmd: "{{.PNPM}} --version"
+        platforms: [linux, darwin, windows]
+      - cmd: cd fovux-studio && {{.PNPM}} install --frozen-lockfile
+      - cmd: cd fovux-mcp-npm && {{.NPM}} ci --ignore-scripts
+
+  hooks:
+    desc: Install git hooks
+    cmds:
+      - pre-commit install --install-hooks
+      - pre-commit install --hook-type commit-msg
+      - pre-commit install --hook-type pre-push
+
+  format:
+    desc: Auto-format the codebase
+    cmds:
+      - cmd: cd fovux-mcp && uv run ruff check --fix .
+      - cmd: cd fovux-mcp && uv run ruff format .
+      - cmd: cd fovux-studio && {{.PNPM}} prettier --write --ignore-path ../.prettierignore .
+      - cmd: cd fovux-studio && {{.PNPM}} prettier --write --ignore-path ../.prettierignore ../fovux-mcp-npm
+
+  lint:
+    desc: Run all linters (read-only)
+    cmds:
+      - cmd: cd fovux-mcp && uv run ruff check .
+      - cmd: cd fovux-mcp && uv run ruff format --check .
+      - cmd: cd fovux-studio && {{.PNPM}} run lint
+      - cmd: cd fovux-studio && {{.PNPM}} prettier --check --ignore-path ../.prettierignore ../fovux-mcp-npm
+      - cmd: node --check fovux-mcp-npm/bin/fovux-mcp.js
+      - cmd: actionlint
+      - cmd: uvx zizmor==1.27.0 --pedantic --min-severity=high .github/workflows
+
+  typecheck:
+    desc: Static type checking
+    cmds:
+      - cmd: cd fovux-mcp && uv run mypy --strict --warn-unused-ignores src/fovux
+      - cmd: cd fovux-studio && {{.PNPM}} run typecheck
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - cmd: cd fovux-mcp && uv run pytest -x --no-header -q --basetemp="{{.PYTEST_TEMP_ROOT}}/fovux-kit-pytest"
+      - cmd: cd fovux-studio && {{.PNPM}} test --run
+
+  test:fast:
+    desc: Run only fast tests
+    cmds:
+      - cmd: cd fovux-mcp && uv run pytest -x --no-header -q --basetemp="{{.PYTEST_TEMP_ROOT}}/fovux-kit-pytest" -m "not slow and not integration and not network and not gpu and not security and not chaos and not benchmark"
+
+  test:cov:
+    desc: Run tests with coverage
+    cmds:
+      - cmd: >-
+          cd fovux-mcp && uv run pytest
+          --basetemp="{{.PYTEST_TEMP_ROOT}}/fovux-kit-pytest"
+          --cov=fovux --cov-fail-under=85
+          --cov-report=term-missing --cov-report=html --cov-report=xml
+      - cmd: cd fovux-studio && {{.PNPM}} run coverage:ci
+
+  security:semgrep:
+    desc: Validate and run pinned repository-owned Semgrep rules
+    cmds:
+      - uvx semgrep==1.170.0 validate .semgrep/rules
+      - uvx semgrep==1.170.0 test .semgrep/rules
+      - >-
+        uvx semgrep==1.170.0 scan --config .semgrep/rules --metrics=off --error
+        fovux-mcp/src fovux-studio/src fovux-mcp-npm/bin
+
+  security:trivy:
+    desc: Run the pinned-policy credential-free Trivy filesystem scan
+    cmds:
+      - python scripts/run_trivy.py --required
+
+  security:osv:
+    desc: Run the credential-free OSV lockfile vulnerability scan
+    cmds:
+      - python scripts/run_osv.py --required
+
+  security:sonar:
+    desc: Run credential-aware local Sonar analysis
+    cmds:
+      - python scripts/run_sonar.py {{.CLI_ARGS}}
+
+  security:developer:
+    desc: Run deterministic credential-free developer security scans
+    cmds:
+      - task: security:semgrep
+      - task: security:trivy
+      - task: security:osv
+
+  security:bandit:
+    desc: Run the backend Bandit security scan
+    cmds:
+      - cmd: cd fovux-mcp && uv run bandit -r src/fovux -ll
+
+  security:pip-audit:
+    desc: Audit exported backend runtime dependencies
+    cmds:
+      - cmd: cd fovux-mcp && uv export --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
+      - cmd: cd fovux-mcp && uv run pip-audit --requirement requirements-audit.txt
+
+  security:pnpm-audit:
+    desc: Audit Studio production dependencies
+    cmds:
+      - cmd: cd fovux-studio && {{.PNPM}} audit --prod
+
+  security:npm-audit:
+    desc: Audit npm wrapper production dependencies
+    cmds:
+      - cmd: cd fovux-mcp-npm && {{.NPM}} audit --omit=dev
+
+  security:gitleaks:
+    desc: Run the required repository Gitleaks scan
+    cmds:
+      - cmd: python scripts/run_gitleaks.py --required
+
+  security:
+    desc: Security scans
+    cmds:
+      - task: security:bandit
+      - task: security:pip-audit
+      - task: security:pnpm-audit
+      - task: security:npm-audit
+      - task: security:gitleaks
+
+  security:posture:
+    desc: Run the credential-aware strict repository posture check
+    cmds:
+      - python scripts/generate_security_posture.py --strict
+
+  deps:renovate:validate:
+    desc: Validate Fovux-specific Renovate policy
+    cmds:
+      - python scripts/validate_renovate_config.py
+      - >-
+        npm exec --yes --package=renovate@{{.RENOVATE_VERSION}} --
+        renovate-config-validator renovate.json
+
+  studio:lm-tools:generate:
+    desc: Generate Studio Language Model tool artifacts from the backend schema snapshot
+    cmds:
+      - python scripts/generate_studio_lm_tools.py
+
+  studio:lm-tools:check:
+    desc: Fail when generated Studio Language Model tool artifacts are stale
+    cmds:
+      - python scripts/generate_studio_lm_tools.py --check
+
+  studio:e2e:check:
+    desc: Validate executable packaged-VSIX E2E contracts without downloading VS Code
+    cmds:
+      - python scripts/check_studio_e2e_smoke.py
+
+  studio:e2e:
+    desc: Package and run Fovux Studio in trusted and untrusted VS Code instances
+    cmds:
+      - cmd: cd fovux-studio && {{.PNPM}} run test:e2e:ci
+
+  docs:
+    desc: Build and lint documentation
+    cmds:
+      - cmd: python scripts/check_versions.py
+      - cmd: python scripts/check_docs_truth.py
+      - cmd: python scripts/check_release_truth.py
+      - cmd: python scripts/check_mcp_transport_decision.py
+      - cmd: python scripts/check_mcp_client_compatibility.py
+      - cmd: python scripts/check_http_security_policy.py
+      - cmd: python scripts/check_agent_policy.py
+      - cmd: python scripts/check_audit_schema.py
+      - cmd: uv run --project fovux-mcp python scripts/check_tool_contracts.py
+      - cmd: python scripts/generate_studio_lm_tools.py --check
+      - cmd: uv run --project fovux-mcp python scripts/check_studio_lm_tools.py
+      - cmd: python scripts/check_guided_workflow.py
+      - cmd: python scripts/check_first_run_onboarding.py
+      - cmd: python scripts/check_train_preflight_gate.py
+      - cmd: python scripts/check_task_docs.py
+      - cmd: python scripts/check_required_local_gates.py
+      - cmd: python scripts/check_review_evidence.py --validate-repository
+      - cmd: python scripts/check_test_strategy.py
+      - cmd: python scripts/check_dataset_intelligence.py
+      - cmd: python scripts/check_review_queue.py
+      - cmd: python scripts/check_export_matrix.py
+      - cmd: python scripts/check_deployment_profiles.py
+      - cmd: python scripts/check_benchmark_reproducibility.py
+      - cmd: python scripts/check_int8_workflow.py
+      - cmd: python scripts/check_license_boundaries.py
+      - cmd: python scripts/check_api_stability_plan.py
+      - cmd: python scripts/check_governance_lifecycle.py
+      - cmd: python scripts/check_mcp_apps_strategy.py
+      - cmd: python scripts/check_workbench_readiness.py
+      - cmd: python scripts/check_supply_chain_publishing.py
+      - cmd: python scripts/check_mcp_threat_model.py
+      - cmd: cd fovux-mcp && uv run python scripts/check_tool_docs.py
+      - cmd: cd fovux-mcp && uv run mkdocs build --strict
+      - cmd: cd fovux-mcp && uv run python ../scripts/lint_docs_code.py ..
+
+  build:
+    desc: Build distributable packages
+    cmds:
+      - cmd: cd fovux-mcp && uv build
+      - cmd: cd fovux-studio && {{.PNPM}} run build
+      - cmd: cd fovux-mcp-npm && {{.NPM}} pack --dry-run
+
+  pre-push:
+    desc: What pre-push hook runs (typecheck + fast tests + workflow lint)
+    cmds:
+      - task: typecheck
+      - task: test:fast
+      - cmd: actionlint
+      - cmd: uvx zizmor==1.27.0 --pedantic --min-severity=high .github/workflows
+
+  ci:
+    desc: Run the deterministic primary quality lane locally
+    cmds:
+      - task: install
+      - task: lint
+      - task: typecheck
+      - task: test:cov
+      - task: security
+      - task: docs
+      - task: build
+      - task: release:dry-run
+
+  verify:required:
+    desc: Run every deterministic credential-free required local gate
+    cmds:
+      - task: ci
+      - task: deps:renovate:validate
+      - task: security:developer
+
+  release:dry-run:
+    desc: Validate release automation without creating tags or releases
+    cmds:
+      - cmd: node scripts/validate_release_automation.mjs
+
+  release:verify:
+    desc: Verify that published packages are available on registries and pass smoke tests
+    cmds:
+      - python scripts/verify_registry_releases.py
+
+  ci:act:
+    desc: Run GitHub Actions workflows locally with nektos/act
+    cmds:
+      - act -W .github/workflows/ci.yml --container-architecture linux/amd64
+
+  clean:
+    desc: Remove build artifacts and caches
+    cmds:
+      - cmd: rm -rf dist build .pytest_cache .mypy_cache .ruff_cache htmlcov coverage.xml junit.xml fovux-mcp/dist fovux-mcp/build fovux-mcp/htmlcov fovux-mcp/coverage.xml fovux-mcp/junit.xml fovux-mcp/requirements-audit.txt fovux-studio/out fovux-studio/*.vsix
+        platforms: [linux, darwin]
+      - cmd: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1
+        platforms: [windows]

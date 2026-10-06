@@ -1,0 +1,13 @@
+{
+  "97d9d323d189": {
+    "fingerprint": "97d9d323d189",
+    "scopes": [
+      "admin",
+      "dataset:write",
+      "destructive",
+      "export:write",
+      "read",
+      "run:start"
+    ]
+  }
+}

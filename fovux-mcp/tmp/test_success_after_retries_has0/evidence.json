@@ -1,0 +1,41 @@
+{
+  "expected_versions": {},
+  "schema_version": 2,
+  "steps": [
+    {
+      "channel": "studio",
+      "check": "marketplace",
+      "details": {
+        "attempt": 1,
+        "error": "not visible yet",
+        "max_attempts": 3
+      },
+      "status": "retry",
+      "timestamp": "2026-10-06T09:36:57Z"
+    },
+    {
+      "channel": "studio",
+      "check": "marketplace",
+      "details": {
+        "attempt": 2,
+        "error": "not visible yet",
+        "max_attempts": 3
+      },
+      "status": "retry",
+      "timestamp": "2026-10-06T09:36:57Z"
+    },
+    {
+      "channel": "studio",
+      "check": "marketplace",
+      "details": {},
+      "status": "passed",
+      "timestamp": "2026-10-06T09:36:57Z"
+    }
+  ],
+  "summary": {
+    "failed": 0,
+    "passed": 1,
+    "retries": 2,
+    "skipped": 0
+  }
+}

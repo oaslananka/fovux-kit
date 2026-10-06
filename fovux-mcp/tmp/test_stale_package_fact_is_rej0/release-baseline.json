@@ -1,0 +1,1 @@
+{"schema_version": 1, "reviewed_at": "2026-07-20", "published_release": "1.4.0", "packages": [{"id": "python", "component": "Python package `fovux-mcp`", "version": "1.4.0", "status": "Published on PyPI", "evidence": ["wheel.whl", "source.tar.gz"]}], "milestones": []}

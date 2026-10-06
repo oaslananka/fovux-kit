@@ -1,0 +1,9 @@
+{
+  "6334ab6d5f8e": {
+    "fingerprint": "6334ab6d5f8e",
+    "scopes": [
+      "dataset:write",
+      "read"
+    ]
+  }
+}

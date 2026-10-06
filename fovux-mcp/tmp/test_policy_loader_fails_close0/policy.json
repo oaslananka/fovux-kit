@@ -1,0 +1,1 @@
+{"status_context": "elevated-review-required", "evidence_marker": "<!-- elevated-review-evidence -->", "required_checks": ["ci-required"], "authorized_associations": ["OWNER"], "sensitive_paths": [{"category": "workflow", "patterns": [".github/workflows/**"]}]}

@@ -1,0 +1,1 @@
+{"images": [{"id": 7, "file_name": "örnek.jpg", "width": 200, "height": 100}], "categories": [{"id": 3, "name": "nesne"}], "annotations": [{"id": 11, "image_id": 7, "category_id": 3, "bbox": [20, 10, 80, 40]}]}

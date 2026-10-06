@@ -1,0 +1,8 @@
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+  hosted:
+    runs-on: ubuntu-latest
+  required:
+    needs: [scan, hosted, new-scan]
+    runs-on: ubuntu-latest

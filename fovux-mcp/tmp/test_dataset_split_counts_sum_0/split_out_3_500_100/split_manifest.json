@@ -1,0 +1,17 @@
+{
+  "seed": 42,
+  "ratios": [
+    0.5,
+    0.1,
+    0.4
+  ],
+  "stratify_by_class": true,
+  "train": [
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_3_500_100/images/1.png",
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_3_500_100/images/0.png"
+  ],
+  "val": [],
+  "test": [
+    "/home/runner/work/runtime-core/runtime-core/target/fovux-mcp/tmp/test_dataset_split_counts_sum_0/dataset_3_500_100/images/2.png"
+  ]
+}

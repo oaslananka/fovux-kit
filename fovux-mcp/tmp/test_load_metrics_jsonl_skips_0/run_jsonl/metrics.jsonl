@@ -1,0 +1,4 @@
+
+{"run_id": "run_jsonl", "epoch": 1, "metrics": {"metrics/mAP50(B)": 0.33}}
+not-json
+{"metrics": {"metrics/precision(B)": 0.71}}

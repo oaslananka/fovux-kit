@@ -1,0 +1,57 @@
+---
+name: Elevated Review Evidence
+
+on:
+  # zizmor: ignore[dangerous-triggers] base-only metadata gate; never executes pull-request code
+  pull_request_target:
+    types:
+      [
+        opened,
+        synchronize,
+        reopened,
+        ready_for_review,
+        labeled,
+        unlabeled,
+        edited,
+      ]
+
+concurrency:
+  group: elevated-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+  statuses: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  evaluate:
+    name: Evaluate elevated review evidence
+    if: >-
+      github.repository == 'oaslananka/fovux-kit' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+
+      - name: Evaluate base-only pull request metadata
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/check_review_evidence.py
+          --event-path "$GITHUB_EVENT_PATH"
+          --repository "$GITHUB_REPOSITORY"
