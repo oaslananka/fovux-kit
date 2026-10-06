@@ -27,15 +27,15 @@ def test_yolo_extra_declares_validated_torch_stack() -> None:
 def test_lock_uses_torch_213_setuptools_83_and_no_cuda_runtime() -> None:
     lock = LOCKFILE.read_text(encoding="utf-8")
     if 'name = "torch"\nversion = "2.13.0+cpu"' not in lock:
-        raise AssertionError('torch 2.13.0+cpu not found in lockfile')
+        raise AssertionError("torch 2.13.0+cpu not found in lockfile")
     if 'name = "torchvision"\nversion = "0.28.0+cpu"' not in lock:
-        raise AssertionError('torchvision 0.28.0+cpu not found in lockfile')
+        raise AssertionError("torchvision 0.28.0+cpu not found in lockfile")
     if 'name = "setuptools"\nversion = "84.0.0"' not in lock:
-        raise AssertionError('setuptools 84.0.0 not found in lockfile')
+        raise AssertionError("setuptools 84.0.0 not found in lockfile")
     if 'name = "triton"' in lock:
-        raise AssertionError('triton found in lockfile (should not be present)')
+        raise AssertionError("triton found in lockfile (should not be present)")
     if 'name = "nvidia-cuda-runtime' in lock:
-        raise AssertionError('nvidia-cuda-runtime found in lockfile (should not be present)')
+        raise AssertionError("nvidia-cuda-runtime found in lockfile (should not be present)")
 
 
 def test_temporary_osv_exceptions_are_removed() -> None:
@@ -63,8 +63,7 @@ def test_nightly_workflow_covers_supported_platforms_and_real_smoke() -> None:
         raise AssertionError("--no-install-project --no-build not found in workflow")
     if "--reinstall --no-deps --only-binary :all: opencv-python-headless" not in workflow:
         msg = (
-            "--reinstall --no-deps --only-binary :all: "
-            "opencv-python-headless not found in workflow"
+            "--reinstall --no-deps --only-binary :all: opencv-python-headless not found in workflow"
         )
         raise AssertionError(msg)
     if "YOLO_CONFIG_DIR: ${{ runner.temp }}/ultralytics" not in workflow:
