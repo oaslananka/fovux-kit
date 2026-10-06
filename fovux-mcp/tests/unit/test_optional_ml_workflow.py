@@ -5,6 +5,8 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 PYPROJECT = ROOT / "fovux-mcp" / "pyproject.toml"
 LOCKFILE = ROOT / "fovux-mcp" / "uv.lock"
@@ -21,6 +23,7 @@ def test_yolo_extra_declares_validated_torch_stack() -> None:
     assert config["tool"]["uv"]["index"][0]["name"] == "pytorch-cpu"
 
 
+@pytest.mark.lockfile_check
 def test_lock_uses_torch_213_setuptools_83_and_no_cuda_runtime() -> None:
     lock = LOCKFILE.read_text(encoding="utf-8")
     assert 'name = "torch"\nversion = "2.13.0+cpu"' in lock

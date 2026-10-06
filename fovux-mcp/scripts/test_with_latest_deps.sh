@@ -2,15 +2,30 @@
 # Nightly: test fovux-mcp against latest allowed dependency versions.
 set -euo pipefail
 
-REPORT_FILE="${BASH_SOURCE%/*}/../nightly-compat-report.txt"
-echo "Nightly Compatibility Report - $(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$REPORT_FILE"
-echo "Commit: ${GITHUB_SHA:-local}" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
+SCRIPT_DIR="${BASH_SOURCE%/*}"
+PROJECT_DIR="${SCRIPT_DIR}/.."
+LOCKFILE="${PROJECT_DIR}/uv.lock"
+BACKUP_LOCKFILE="${LOCKFILE}.bak"
+REPORT_FILE="${PROJECT_DIR}/nightly-compat-report.txt"
 
-echo "=== Installing latest compatible deps ===" | tee -a "$REPORT_FILE"
-uv sync --upgrade --extra dev 2>&1 | tee -a "$REPORT_FILE"
+cleanup() {
+    if [[ -f "${BACKUP_LOCKFILE}" ]]; then
+        mv "${BACKUP_LOCKFILE}" "${LOCKFILE}"
+    fi
+}
+trap cleanup EXIT
 
-echo "=== Running test suite ===" | tee -a "$REPORT_FILE"
-uv run pytest -x -q -m "not slow and not gpu and not network" --tb=short 2>&1 | tee -a "$REPORT_FILE"
+echo "Nightly Compatibility Report - $(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${REPORT_FILE}"
+echo "Commit: ${GITHUB_SHA:-local}" >> "${REPORT_FILE}"
+echo "" >> "${REPORT_FILE}"
 
-echo "=== Compat check passed ===" | tee -a "$REPORT_FILE"
+echo "=== Backing up original lockfile ===" | tee -a "${REPORT_FILE}"
+cp "${LOCKFILE}" "${BACKUP_LOCKFILE}"
+
+echo "=== Installing latest compatible deps ===" | tee -a "${REPORT_FILE}"
+uv sync --upgrade --extra dev 2>&1 | tee -a "${REPORT_FILE}"
+
+echo "=== Running test suite ===" | tee -a "${REPORT_FILE}"
+uv run --no-sync pytest -x -q -m "not slow and not gpu and not network and not lockfile_check" --tb=short 2>&1 | tee -a "${REPORT_FILE}"
+
+echo "=== Compat check passed ===" | tee -a "${REPORT_FILE}"

@@ -73,7 +73,7 @@ dev = [
     "hypothesis>=6.153.2",
     "httpx2>=2.12.0,<3",
     "mkdocs>=1.6.1",
-    "mkdocs-material>=9.7",
+    "mkdocs-material>=9.7.7",
     "mkdocstrings[python]>=1.0.4",
     "mutmut==3.6.0",
     "build>=1.2",
@@ -182,6 +182,7 @@ markers = [
     "contract: marks API contract tests",
     "benchmark: marks performance benchmarks",
     "security: marks security/pentest related tests",
+    "lockfile_check: marks tests that validate committed lockfile contents",
 ]
 filterwarnings = [
     'error:Using `httpx` with `starlette\.testclient` is deprecated; install `httpx2` instead\.:starlette.exceptions.StarletteDeprecationWarning',
@@ -236,4 +237,9 @@ exclude_lines = [
     "def __repr__",
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
+]
+
+[dependency-groups]
+dev = [
+    "mkdocs-material==9.7.7",
 ]
