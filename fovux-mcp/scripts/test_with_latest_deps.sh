@@ -23,6 +23,9 @@ echo "=== Installing latest compatible deps ===" | tee -a "$REPORT_FILE"
 cp "$LOCKFILE" "$LOCKFILE_BACKUP"
 uv sync --upgrade --extra dev 2>&1 | tee -a "$REPORT_FILE"
 
+echo "=== Restoring committed lockfile ===" | tee -a "$REPORT_FILE"
+mv "$LOCKFILE_BACKUP" "$LOCKFILE"
+
 echo "=== Running test suite ===" | tee -a "$REPORT_FILE"
 uv run --no-sync pytest -x -q -m "not slow and not gpu and not network" --tb=short 2>&1 | tee -a "$REPORT_FILE"
 
