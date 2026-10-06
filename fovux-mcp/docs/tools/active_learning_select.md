@@ -42,6 +42,7 @@ curl -X POST http://127.0.0.1:7823/tools/active_learning_select \
 
 ```python
 from fovux.tools.active_learning_select import active_learning_select
+
 result = active_learning_select("yolov8n.pt", "/data/unlabeled", strategy="entropy", budget=50)
 ```
 

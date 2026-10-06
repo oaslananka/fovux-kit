@@ -36,6 +36,7 @@ curl -X POST http://127.0.0.1:7823/tools/run_archive \
 
 ```python
 from fovux.tools.run_archive import run_archive
+
 result = run_archive("abc123", output_path="/backups/abc123.tar.gz")
 ```
 
