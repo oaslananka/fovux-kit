@@ -1,5 +1,5 @@
 {
-  "name": "main-ci-solo-maintainer",
+  "name": "main-standard",
   "target": "branch",
   "enforcement": "active",
   "conditions": {

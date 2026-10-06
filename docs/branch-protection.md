@@ -1,7 +1,7 @@
 # Branch Protection
 
 The canonical `main` ruleset is `.github/rulesets/main.json`. It is named
-`main-ci-solo-maintainer`, targets `refs/heads/main`, uses strict status checking, and has no bypass
+`main-standard`, targets `refs/heads/main`, uses strict status checking, and has no bypass
 actors.
 
 Required merge checks:

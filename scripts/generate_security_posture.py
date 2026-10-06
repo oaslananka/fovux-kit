@@ -255,7 +255,7 @@ def main() -> int:
         (
             ruleset
             for ruleset in detailed_rulesets
-            if ruleset.get("name") == "release-tag-protection"
+            if ruleset.get("name") == "release-tags"
         ),
         None,
     )

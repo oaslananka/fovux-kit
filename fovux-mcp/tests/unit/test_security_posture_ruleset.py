@@ -37,7 +37,7 @@ def test_tracked_main_ruleset_is_the_solo_maintainer_contract() -> None:
     module = _load_module()
     policy = module._load_main_ruleset_policy()
 
-    assert policy["name"] == "main-ci-solo-maintainer"
+    assert policy["name"] == "main-standard"
     assert policy["conditions"] == {"ref_name": {"include": ["refs/heads/main"], "exclude": []}}
     assert policy["bypass_actors"] == []
 

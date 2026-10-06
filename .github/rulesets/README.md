@@ -4,7 +4,7 @@ These JSON files are the canonical repository ruleset request payloads. Apply th
 GitHub REST API and use `scripts/generate_security_posture.py --strict` to detect semantic drift
 between the tracked main policy and the live repository configuration.
 
-## `main-ci-solo-maintainer`
+## `main-standard`
 
 `main.json` targets `refs/heads/main` with:
 
@@ -30,7 +30,7 @@ standardized. `scorecard-required` and `release-please` remain visible checks bu
 requirements: their event coverage and release-only behavior do not provide the same stable PR gate
 contract as the four aggregate checks above.
 
-## `release-tag-protection`
+## `release-tags`
 
 `release-tags.json` targets the release tag patterns and blocks deletion and non-fast-forward
 updates. It does not block initial tag creation by release automation.
