@@ -26,8 +26,8 @@ def test_lock_uses_torch_213_setuptools_84_and_no_cuda_runtime() -> None:
     assert 'name = "torch"\nversion = "2.13.0+cpu"' in lock
     assert 'name = "torchvision"\nversion = "0.28.0+cpu"' in lock
     assert 'name = "setuptools"\nversion = "84.0.0"' in lock
-    assert 'name = "triton"' not in lock
-    assert 'name = "nvidia-cuda-runtime' not in lock
+    assert 'name = "triton"' not in lock  # nosec B101
+    assert 'name = "nvidia-cuda-runtime' not in lock  # nosec B101
 
 
 def test_temporary_osv_exceptions_are_removed() -> None:

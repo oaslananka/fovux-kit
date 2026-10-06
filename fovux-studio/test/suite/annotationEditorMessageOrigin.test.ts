@@ -108,70 +108,32 @@ describe("annotation editor message origin validation", () => {
     });
   });
 
-  it("rejects messages from untrusted origin", () => {
-    const validState: AnnotationEditorInitialState = {
-      imagePath: "/test/image.jpg",
-      imageUri: "vscode-webview-resource:/test/image.jpg",
-      classNames: ["class_0"],
-      initialBoxes: [],
-      initialError: null,
-    };
+  describe.each([
+    ["untrusted origin", "https://evil.com"],
+    ["null origin", "null"],
+    ["empty origin", ""],
+  ])("rejects messages from %s", (_, origin) => {
+    it("does not call setEditorState", () => {
+      const validState: AnnotationEditorInitialState = {
+        imagePath: "/test/image.jpg",
+        imageUri: "vscode-webview-resource:/test/image.jpg",
+        classNames: ["class_0"],
+        initialBoxes: [],
+        initialError: null,
+      };
 
-    const event = createMessageEvent(
-      {
-        type: "setEditorState",
-        state: validState,
-      },
-      "https://evil.com"
-    );
+      const event = createMessageEvent(
+        {
+          type: "setEditorState",
+          state: validState,
+        },
+        origin
+      );
 
-    handleMessageEvent(event, mockSetEditorState);
+      handleMessageEvent(event, mockSetEditorState);
 
-    expect(mockSetEditorState).not.toHaveBeenCalled();
-  });
-
-  it("rejects messages with null origin", () => {
-    const validState: AnnotationEditorInitialState = {
-      imagePath: "/test/image.jpg",
-      imageUri: "vscode-webview-resource:/test/image.jpg",
-      classNames: ["class_0"],
-      initialBoxes: [],
-      initialError: null,
-    };
-
-    const event = createMessageEvent(
-      {
-        type: "setEditorState",
-        state: validState,
-      },
-      "null"
-    );
-
-    handleMessageEvent(event, mockSetEditorState);
-
-    expect(mockSetEditorState).not.toHaveBeenCalled();
-  });
-
-  it("rejects messages with empty origin", () => {
-    const validState: AnnotationEditorInitialState = {
-      imagePath: "/test/image.jpg",
-      imageUri: "vscode-webview-resource:/test/image.jpg",
-      classNames: ["class_0"],
-      initialBoxes: [],
-      initialError: null,
-    };
-
-    const event = createMessageEvent(
-      {
-        type: "setEditorState",
-        state: validState,
-      },
-      ""
-    );
-
-    handleMessageEvent(event, mockSetEditorState);
-
-    expect(mockSetEditorState).not.toHaveBeenCalled();
+      expect(mockSetEditorState).not.toHaveBeenCalled();
+    });
   });
 
   it("rejects messages with wrong type", () => {

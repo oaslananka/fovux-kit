@@ -80,7 +80,7 @@ function AnnotationEditorApp(): JSX.Element {
       }
 
       const nextState = message.state as AnnotationEditorInitialState;
-      if (typeof nextState !== "object" || nextState === null || Array.isArray(nextState)) {
+      if (typeof nextState !== "object" || Array.isArray(nextState)) {
         return;
       }
 

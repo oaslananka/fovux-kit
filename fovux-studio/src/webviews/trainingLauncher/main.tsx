@@ -89,7 +89,11 @@ function TrainingLauncherApp(): JSX.Element {
     [batch, epochs, imgsz]
   );
   useEffect(() => {
+    const trustedOrigin = window.location.origin;
     const listener = (event: MessageEvent<ExtensionToWebviewMessage>): void => {
+      if (event.origin !== trustedOrigin) {
+        return;
+      }
       const message = event.data;
       if (!message || typeof message.type !== "string") {
         return;
