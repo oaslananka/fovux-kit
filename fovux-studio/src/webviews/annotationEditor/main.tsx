@@ -66,6 +66,9 @@ function AnnotationEditorApp(): JSX.Element {
 
   useEffect(() => {
     const listener = (event: MessageEvent) => {
+      if (event.origin !== window.origin) {
+        return;
+      }
       const message = event.data;
       if (!message || message.type !== "setEditorState" || !message.state) {
         return;

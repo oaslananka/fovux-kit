@@ -90,6 +90,9 @@ function TrainingLauncherApp(): JSX.Element {
   );
   useEffect(() => {
     const listener = (event: MessageEvent<ExtensionToWebviewMessage>): void => {
+      if (event.origin !== window.origin) {
+        return;
+      }
       const message = event.data;
       if (!message || typeof message.type !== "string") {
         return;
