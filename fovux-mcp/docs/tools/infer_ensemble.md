@@ -43,6 +43,7 @@ curl -X POST http://127.0.0.1:7823/tools/infer_ensemble \
 
 ```python
 from fovux.tools.infer_ensemble import infer_ensemble
+
 result = infer_ensemble(["yolov8n.pt", "yolov8s.pt"], "/data/test.jpg", fusion_method="wbf")
 ```
 

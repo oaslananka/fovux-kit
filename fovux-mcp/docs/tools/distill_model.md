@@ -47,6 +47,7 @@ curl -X POST http://127.0.0.1:7823/tools/distill_model \
 
 ```python
 from fovux.tools.distill_model import distill_model
+
 result = distill_model("yolov8l.pt", "/data/yolo_set", student_model="yolov8n.pt", temperature=4.0)
 ```
 

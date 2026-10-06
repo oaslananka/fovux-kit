@@ -42,7 +42,10 @@ curl -X POST http://127.0.0.1:7823/tools/model_compare_visual \
 
 ```python
 from fovux.tools.model_compare_visual import model_compare_visual
-result = model_compare_visual("yolov8n.pt", "yolov8s.pt", ["/data/img1.jpg"], output_dir="/tmp/compare")
+
+result = model_compare_visual(
+    "yolov8n.pt", "yolov8s.pt", ["/data/img1.jpg"], output_dir="/tmp/compare"
+)
 ```
 
 ## Notes & Limits
