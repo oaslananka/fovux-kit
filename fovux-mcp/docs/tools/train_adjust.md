@@ -38,6 +38,7 @@ curl -X POST http://127.0.0.1:7823/tools/train_adjust \
 
 ```python
 from fovux.tools.train_adjust import train_adjust
+
 result = train_adjust("abc123", lr=0.001, epochs=200)
 ```
 
