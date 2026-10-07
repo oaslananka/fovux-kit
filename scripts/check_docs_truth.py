@@ -33,7 +33,9 @@ def _tool_names() -> set[str]:
 
 
 def _granular_lm_tool_count() -> int:
-    overrides = json.loads(_read(STUDIO_ROOT / "src" / "fovux" / "tools" / "overrides.json"))
+    overrides = json.loads(
+        _read(STUDIO_ROOT / "src" / "fovux" / "tools" / "overrides.json")
+    )
     tools = overrides.get("tools")
     if not isinstance(tools, dict):
         raise ValueError("Studio LM overrides tools must be an object")
@@ -83,7 +85,9 @@ def _is_release_candidate_context(*, commit_subject: str | None = None) -> bool:
     if event_name != "push" or ref_name != "main":
         return False
 
-    subject = commit_subject if commit_subject is not None else _current_commit_subject()
+    subject = (
+        commit_subject if commit_subject is not None else _current_commit_subject()
+    )
     return re.fullmatch(r"chore\(release\): release \(#[0-9]+\)", subject) is not None
 
 
@@ -132,7 +136,9 @@ def main() -> int:
         "fovux-mcp-npm": _read(ROOT / "fovux-mcp-npm" / "CHANGELOG.md"),
         "fovux-studio": _read(STUDIO_ROOT / "CHANGELOG.md"),
     }
-    release_docs = _read(ROOT / "docs" / "release.md") + _read(ROOT / "docs" / "release-process.md")
+    release_docs = _read(ROOT / "docs" / "release.md") + _read(
+        ROOT / "docs" / "release-process.md"
+    )
 
     if not release_candidate_context:
         _expect(
@@ -168,7 +174,8 @@ def main() -> int:
             failures,
         )
         _expect(
-            f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools" in mcp_readme,
+            f"Fovux MCP {mcp_version} currently exposes {len(tools)} local tools"
+            in mcp_readme,
             _with_regen(
                 "fovux-mcp/README.md tool count is stale",
                 "python scripts/check_docs_truth.py",
@@ -206,7 +213,8 @@ def main() -> int:
         failures,
     )
     _expect(
-        "not documented as a standards-compliant MCP Streamable HTTP endpoint" in architecture,
+        "not documented as a standards-compliant MCP Streamable HTTP endpoint"
+        in architecture,
         _with_regen(
             "docs/architecture.md does not distinguish the current HTTP/SSE API "
             "from MCP Streamable HTTP",
@@ -239,7 +247,8 @@ def main() -> int:
     )
     if not release_candidate_context:
         _expect(
-            f"Fovux {mcp_version} is the current reviewed release baseline" in release_notes,
+            f"Fovux {mcp_version} is the current reviewed release baseline"
+            in release_notes,
             _with_regen(
                 "RELEASE_NOTES.md does not describe the current reviewed release baseline",
                 "python scripts/check_docs_truth.py",

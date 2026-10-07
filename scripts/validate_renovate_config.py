@@ -146,7 +146,10 @@ def _validate_core_policy(config: dict[str, Any]) -> list[str]:
             errors.append(message)
 
     pre_commit_config = config.get("pre-commit")
-    if not isinstance(pre_commit_config, dict) or pre_commit_config.get("enabled") is not True:
+    if (
+        not isinstance(pre_commit_config, dict)
+        or pre_commit_config.get("enabled") is not True
+    ):
         errors.append("pre-commit manager must be explicitly enabled")
 
     vulnerability_alerts = config.get("vulnerabilityAlerts")

@@ -54,7 +54,9 @@ def _write_json_sbom(name: str, output: Path) -> None:
         "packages": [_package_json(dist) for dist in distributions],
     }
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output.write_text(
+        json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def _write_tag_value_sbom(name: str, output: Path) -> None:
@@ -110,7 +112,9 @@ def _package_json(dist: metadata.Distribution) -> dict[str, object]:
 
 
 def _distributions() -> list[metadata.Distribution]:
-    return sorted(metadata.distributions(), key=lambda item: item.metadata["Name"].lower())
+    return sorted(
+        metadata.distributions(), key=lambda item: item.metadata["Name"].lower()
+    )
 
 
 def _license_for(dist: metadata.Distribution) -> str:
@@ -132,7 +136,9 @@ def _sanitize(value: str) -> str:
 
 
 def _sanitize_license_expression(value: str) -> str:
-    allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.+() ")
+    allowed = set(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.+() "
+    )
     normalized = " ".join(value.split())
     if normalized and all(char in allowed for char in normalized):
         return normalized

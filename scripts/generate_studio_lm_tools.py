@@ -117,7 +117,9 @@ def _validate_schema(schema: object, *, path: str) -> dict[str, Any]:
     return deepcopy(value)
 
 
-def _validate_override(name: str, raw: object, *, requires_confirmation: bool) -> dict[str, Any]:
+def _validate_override(
+    name: str, raw: object, *, requires_confirmation: bool
+) -> dict[str, Any]:
     override = _json_object(raw, label=f"overrides.tools.{name}")
     fields = set(override)
     missing = sorted(REQUIRED_OVERRIDE_FIELDS - fields)
@@ -125,7 +127,9 @@ def _validate_override(name: str, raw: object, *, requires_confirmation: bool) -
     if missing:
         raise ValueError(f"{name} override is missing fields: {', '.join(missing)}")
     if unsupported:
-        raise ValueError(f"{name} has unsupported override fields: {', '.join(unsupported)}")
+        raise ValueError(
+            f"{name} has unsupported override fields: {', '.join(unsupported)}"
+        )
 
     tool_name = override.get("name")
     if not isinstance(tool_name, str) or not NAME_PATTERN.fullmatch(tool_name):
@@ -153,11 +157,17 @@ def _validate_override(name: str, raw: object, *, requires_confirmation: bool) -
     confirmation = override.get("confirmationKind")
     if confirmation is not None:
         if confirmation not in CUSTOM_CONFIRMATION_KINDS:
-            raise ValueError(f"{name} has unsupported confirmationKind {confirmation!r}")
+            raise ValueError(
+                f"{name} has unsupported confirmationKind {confirmation!r}"
+            )
         if confirmation != name:
-            raise ValueError(f"{name} confirmationKind must match its backend tool name")
+            raise ValueError(
+                f"{name} confirmationKind must match its backend tool name"
+            )
         if not requires_confirmation:
-            raise ValueError(f"{name} cannot define confirmation copy for a read-only tool")
+            raise ValueError(
+                f"{name} cannot define confirmation copy for a read-only tool"
+            )
     return deepcopy(override)
 
 
@@ -188,7 +198,9 @@ def build_generated_artifacts(
     if set(mapping_names) != set(override_tools):
         missing = sorted(set(mapping_names) - set(override_tools))
         extra = sorted(set(override_tools) - set(mapping_names))
-        raise ValueError(f"Studio LM override mapping drift: missing={missing}, extra={extra}")
+        raise ValueError(
+            f"Studio LM override mapping drift: missing={missing}, extra={extra}"
+        )
 
     snapshot_tools: dict[str, dict[str, Any]] = {}
     for raw_tool in _json_array(snapshot.get("tools"), label="snapshot.tools"):
@@ -205,7 +217,9 @@ def build_generated_artifacts(
         backend = snapshot_tools.get(mcp_name)
         if backend is None:
             raise ValueError(f"Studio LM override maps unknown backend tool {mcp_name}")
-        policy = _json_object(backend.get("http_policy"), label=f"{mcp_name}.http_policy")
+        policy = _json_object(
+            backend.get("http_policy"), label=f"{mcp_name}.http_policy"
+        )
         requires_confirmation = policy.get("requires_confirmation")
         required_scope = policy.get("required_scope")
         category = policy.get("category")
@@ -247,9 +261,13 @@ def build_generated_artifacts(
         if isinstance(tool, dict) and tool.get("name") == "fovux_call_tool"
     ]
     if len(generic) != 1:
-        raise ValueError("package.json must contain exactly one generic fovux_call_tool")
+        raise ValueError(
+            "package.json must contain exactly one generic fovux_call_tool"
+        )
 
-    generated_package_tools: list[dict[str, Any]] = [deepcopy(cast(dict[str, Any], generic[0]))]
+    generated_package_tools: list[dict[str, Any]] = [
+        deepcopy(cast(dict[str, Any], generic[0]))
+    ]
     for tool in generated:
         package_tool: dict[str, Any] = {
             "name": tool["name"],
@@ -334,7 +352,9 @@ def generate(*, check: bool) -> list[Path]:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true", help="fail when generated files differ")
+    parser.add_argument(
+        "--check", action="store_true", help="fail when generated files differ"
+    )
     return parser.parse_args()
 
 

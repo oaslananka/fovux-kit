@@ -55,7 +55,9 @@ def detect_current_branch(parser: argparse.ArgumentParser) -> str:
     return branch
 
 
-def build_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> list[str]:
+def build_command(
+    args: argparse.Namespace, parser: argparse.ArgumentParser
+) -> list[str]:
     """Build SonarScanner arguments without putting credentials on the command line."""
     branch = args.branch or detect_current_branch(parser)
     _validate_branch(parser, branch, "--branch")

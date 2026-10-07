@@ -10,7 +10,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 SPDX_LICENSE = "Apache-2.0"
-CANONICAL_APACHE_SHA256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+CANONICAL_APACHE_SHA256 = (
+    "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+)
 LICENSE_PATHS = (
     Path("LICENSE"),
     Path("fovux-mcp/LICENSE"),
@@ -84,7 +86,9 @@ def _python_manifest_failures(root: Path) -> list[str]:
         else set()
     )
     if not {"LICENSE", "NOTICE"} <= declared_files:
-        failures.append("fovux-mcp project.license-files must include LICENSE and NOTICE")
+        failures.append(
+            "fovux-mcp project.license-files must include LICENSE and NOTICE"
+        )
     return failures
 
 
@@ -110,7 +114,9 @@ def _node_manifest_failures(root: Path) -> list[str]:
                 else set()
             )
             if not {"LICENSE", "NOTICE"} <= declared_files:
-                failures.append("fovux-mcp-npm package files must include LICENSE and NOTICE")
+                failures.append(
+                    "fovux-mcp-npm package files must include LICENSE and NOTICE"
+                )
     return failures
 
 
@@ -167,13 +173,17 @@ def _boundary_documentation_failures(root: Path) -> list[str]:
     report_code = _read(root / "fovux-mcp" / "src" / "fovux" / "core" / "doctor.py")
     failures.extend(
         _missing_phrases(
-            report_code, ["Ultralytics", "AGPL", "NOTICE"], "Doctor license notice missing"
+            report_code,
+            ["Ultralytics", "AGPL", "NOTICE"],
+            "Doctor license notice missing",
         )
     )
     bundle = _read(root / "fovux-mcp" / "src" / "fovux" / "tools" / "bundles.py")
     failures.extend(
         _missing_phrases(
-            bundle, ["package_versions", "Ultralytics"], "Support bundle inventory missing"
+            bundle,
+            ["package_versions", "Ultralytics"],
+            "Support bundle inventory missing",
         )
     )
     return failures

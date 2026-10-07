@@ -41,7 +41,9 @@ def _documented_task_refs() -> list[tuple[Path, int, str]]:
                 continue
             seen_files.add(path)
             in_fence = False
-            for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            for line_no, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), 1
+            ):
                 stripped = line.strip()
                 if stripped.startswith("```"):
                     in_fence = not in_fence
@@ -75,7 +77,9 @@ def main() -> int:
         print("Regenerate/check with: `python scripts/check_task_docs.py`.")
         return 1
 
-    print(f"Task docs check passed: {len(refs)} documented task references, {len(tasks)} tasks.")
+    print(
+        f"Task docs check passed: {len(refs)} documented task references, {len(tasks)} tasks."
+    )
     return 0
 
 

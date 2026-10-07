@@ -124,11 +124,15 @@ def load_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         if category in categories:
             raise ValueError(f"Sensitive path category is duplicated: {category}")
         categories.add(category)
-        patterns = _string_list(entry.get("patterns"), field=f"sensitive_paths[{index}].patterns")
+        patterns = _string_list(
+            entry.get("patterns"), field=f"sensitive_paths[{index}].patterns"
+        )
         for pattern in patterns:
             path = Path(pattern)
             if path.is_absolute() or ".." in path.parts or pattern.startswith("/"):
-                raise ValueError(f"Sensitive path pattern must be repository-relative: {pattern}")
+                raise ValueError(
+                    f"Sensitive path pattern must be repository-relative: {pattern}"
+                )
             if pattern in all_patterns:
                 raise ValueError(f"Sensitive path pattern is duplicated: {pattern}")
             all_patterns.add(pattern)
@@ -143,7 +147,9 @@ def classify_elevated(
     policy: Mapping[str, object],
 ) -> Classification:
     """Classify a pull request from immutable paths plus policy labels."""
-    elevated_labels = set(_string_list(policy.get("elevated_labels"), field="elevated_labels"))
+    elevated_labels = set(
+        _string_list(policy.get("elevated_labels"), field="elevated_labels")
+    )
     label_reasons = tuple(sorted(elevated_labels.intersection(labels)))
 
     sensitive_paths = policy.get("sensitive_paths")
@@ -213,7 +219,10 @@ def parse_evidence_body(
     if set(fields) != set(_EVIDENCE_FIELDS.values()):
         return None
     evidence_sha = fields["head_sha"].lower()
-    if not re.fullmatch(r"[0-9a-f]{40}", evidence_sha) or evidence_sha != head_sha.lower():
+    if (
+        not re.fullmatch(r"[0-9a-f]{40}", evidence_sha)
+        or evidence_sha != head_sha.lower()
+    ):
         return None
     reviewer_match = re.fullmatch(r"@([A-Za-z0-9-]+)", fields["reviewer"])
     if reviewer_match is None:
@@ -223,11 +232,20 @@ def parse_evidence_body(
     validation_evidence = fields["validation_evidence"]
     bot_agent_findings = fields["bot_agent_findings"]
     residual_risk = fields["residual_risk"]
-    if len(risk_assessment) < 20 or len(validation_evidence) < 20 or len(residual_risk) < 10:
+    if (
+        len(risk_assessment) < 20
+        or len(validation_evidence) < 20
+        or len(residual_risk) < 10
+    ):
         return None
-    if bot_agent_findings.strip().lower() in _PLACEHOLDER_VALUES or len(bot_agent_findings) < 20:
+    if (
+        bot_agent_findings.strip().lower() in _PLACEHOLDER_VALUES
+        or len(bot_agent_findings) < 20
+    ):
         return None
-    required_checks = _string_list(policy.get("required_checks"), field="required_checks")
+    required_checks = _string_list(
+        policy.get("required_checks"), field="required_checks"
+    )
     if any(context not in validation_evidence for context in required_checks):
         return None
 
@@ -273,7 +291,9 @@ def evaluate_review_evidence(
             ("unresolved-review-threads",),
         )
 
-    required_checks = _string_list(policy.get("required_checks"), field="required_checks")
+    required_checks = _string_list(
+        policy.get("required_checks"), field="required_checks"
+    )
     check_states = {check.context: check.state.lower() for check in snapshot.checks}
     for context in required_checks:
         state = check_states.get(context)
@@ -307,7 +327,9 @@ def evaluate_review_evidence(
         )
 
     authorized = set(
-        _string_list(policy.get("authorized_associations"), field="authorized_associations")
+        _string_list(
+            policy.get("authorized_associations"), field="authorized_associations"
+        )
     )
     if snapshot.author_association.upper() in authorized:
         if evidence.reviewer.lower() != snapshot.author_login.lower():
@@ -391,7 +413,9 @@ def _read_contract_file(root: Path, relative: str, failures: list[str]) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _ruleset_contract(raw: str, failures: list[str]) -> tuple[set[str], dict[str, object]]:
+def _ruleset_contract(
+    raw: str, failures: list[str]
+) -> tuple[set[str], dict[str, object]]:
     try:
         policy = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -416,9 +440,13 @@ def _ruleset_contract(raw: str, failures: list[str]) -> tuple[set[str], dict[str
             checks = parameters.get("required_status_checks")
             if isinstance(checks, list):
                 for check in checks:
-                    if isinstance(check, dict) and isinstance(check.get("context"), str):
+                    if isinstance(check, dict) and isinstance(
+                        check.get("context"), str
+                    ):
                         status_contexts.add(cast(str, check["context"]))
-        if rule.get("type") == "pull_request" and isinstance(rule.get("parameters"), dict):
+        if rule.get("type") == "pull_request" and isinstance(
+            rule.get("parameters"), dict
+        ):
             pull_parameters = cast(dict[str, object], rule["parameters"])
     return status_contexts, pull_parameters
 
@@ -435,18 +463,26 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     context = cast(str, policy["status_context"])
     marker = cast(str, policy["evidence_marker"])
     activation = cast(str, policy["ruleset_activation"])
-    required_checks = set(_string_list(policy.get("required_checks"), field="required_checks"))
+    required_checks = set(
+        _string_list(policy.get("required_checks"), field="required_checks")
+    )
     expected_checks = _MANDATORY_RULESET_CHECKS | {"Review Threads"}
     if required_checks != expected_checks:
         failures.append(
-            "Review evidence required_checks must remain " + ", ".join(sorted(expected_checks))
+            "Review evidence required_checks must remain "
+            + ", ".join(sorted(expected_checks))
         )
 
-    workflow = _read_contract_file(root, ".github/workflows/review-evidence-gate.yml", failures)
+    workflow = _read_contract_file(
+        root, ".github/workflows/review-evidence-gate.yml", failures
+    )
     thread_workflow = _read_contract_file(
         root, ".github/workflows/review-thread-gate.yml", failures
     )
-    if "types: [opened, synchronize, reopened, ready_for_review]" not in thread_workflow:
+    if (
+        "types: [opened, synchronize, reopened, ready_for_review]"
+        not in thread_workflow
+    ):
         failures.append(
             "Review Thread Gate must emit its status when a ready pull request is opened"
         )
@@ -470,9 +506,13 @@ def validate_repository(root: Path = ROOT) -> list[str]:
             "Pull request template must instruct authors to edit evidence in the pull request body"
         )
     if "new pull request comment" in template_lower:
-        failures.append("Pull request template must not use comments as review evidence")
+        failures.append(
+            "Pull request template must not use comments as review evidence"
+        )
 
-    public_policy = _read_contract_file(root, "docs/elevated-review-policy.md", failures)
+    public_policy = _read_contract_file(
+        root, "docs/elevated-review-policy.md", failures
+    )
     branch_docs = _read_contract_file(root, "docs/branch-protection.md", failures)
     taskfile = _read_contract_file(root, "Taskfile.yml", failures)
     categories = {
@@ -500,9 +540,13 @@ def validate_repository(root: Path = ROOT) -> list[str]:
             f"Review evidence activation phase {activation} is not synchronized in docs"
         )
     if context not in branch_docs:
-        failures.append(f"Branch protection docs missing review status context: {context}")
+        failures.append(
+            f"Branch protection docs missing review status context: {context}"
+        )
     if "python scripts/check_review_evidence.py --validate-repository" not in taskfile:
-        failures.append("Taskfile docs gate is missing review evidence repository validation")
+        failures.append(
+            "Taskfile docs gate is missing review evidence repository validation"
+        )
 
     ruleset_raw = _read_contract_file(root, ".github/rulesets/main.json", failures)
     status_contexts, pull_parameters = _ruleset_contract(ruleset_raw, failures)
@@ -573,7 +617,9 @@ def run_for_pull_request(
     policy: Mapping[str, object],
 ) -> Decision:
     """Fetch metadata, evaluate policy, and publish the head commit status."""
-    required_checks = tuple(_string_list(policy.get("required_checks"), field="required_checks"))
+    required_checks = tuple(
+        _string_list(policy.get("required_checks"), field="required_checks")
+    )
     snapshot = client.fetch_snapshot(repository, number, required_checks)
     decision = evaluate_review_evidence(snapshot, policy)
     context = policy.get("status_context")
@@ -628,7 +674,9 @@ class GitHubApiClient:
                 body = response.read()
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"GitHub API {method} {path} failed: {exc.code} {detail}") from exc
+            raise RuntimeError(
+                f"GitHub API {method} {path} failed: {exc.code} {detail}"
+            ) from exc
         if not body:
             return None
         return json.loads(body)
@@ -648,7 +696,9 @@ class GitHubApiClient:
             if not isinstance(payload, list):
                 raise RuntimeError(f"GitHub API response for {path} must be a list")
             page_items = [
-                cast(dict[str, object], item) for item in payload if isinstance(item, dict)
+                cast(dict[str, object], item)
+                for item in payload
+                if isinstance(item, dict)
             ]
             items.extend(page_items)
             if len(payload) < 100:
@@ -666,7 +716,9 @@ class GitHubApiClient:
             if not isinstance(raw_runs, list):
                 raise RuntimeError("GitHub check-runs response is missing check_runs")
             page_items = [
-                cast(dict[str, object], item) for item in raw_runs if isinstance(item, dict)
+                cast(dict[str, object], item)
+                for item in raw_runs
+                if isinstance(item, dict)
             ]
             items.extend(page_items)
             if len(raw_runs) < 100:
@@ -707,7 +759,9 @@ class GitHubApiClient:
                 raise RuntimeError("GitHub GraphQL response must be an object")
             errors = response.get("errors")
             if errors:
-                raise RuntimeError(f"GitHub GraphQL review-thread query failed: {errors}")
+                raise RuntimeError(
+                    f"GitHub GraphQL review-thread query failed: {errors}"
+                )
             data = response.get("data")
             if not isinstance(data, dict):
                 raise RuntimeError("GitHub GraphQL response is missing data")
@@ -722,14 +776,22 @@ class GitHubApiClient:
                 raise RuntimeError("GitHub GraphQL response is missing reviewThreads")
             nodes = threads.get("nodes")
             if not isinstance(nodes, list):
-                raise RuntimeError("GitHub GraphQL response is missing review thread nodes")
+                raise RuntimeError(
+                    "GitHub GraphQL response is missing review thread nodes"
+                )
             for node in nodes:
                 if not isinstance(node, dict):
                     continue
-                if node.get("isResolved") is False and node.get("isOutdated") is not True:
+                if (
+                    node.get("isResolved") is False
+                    and node.get("isOutdated") is not True
+                ):
                     unresolved += 1
             page_info = threads.get("pageInfo")
-            if not isinstance(page_info, dict) or page_info.get("hasNextPage") is not True:
+            if (
+                not isinstance(page_info, dict)
+                or page_info.get("hasNextPage") is not True
+            ):
                 return unresolved
             next_cursor = page_info.get("endCursor")
             if not isinstance(next_cursor, str) or not next_cursor:

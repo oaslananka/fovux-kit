@@ -161,7 +161,7 @@ def _version_sources(root: Path) -> dict[str, dict[str, str]]:
             **{
                 f"docs/release-notes/{p.name}": _read_title_version(p)
                 for p in sorted((root / "docs" / "release-notes").glob("*.md"))
-            }
+            },
         },
     }
 
@@ -203,7 +203,9 @@ def _check_docs_group(sources: dict[str, str]) -> bool:
     # Root CHANGELOG top version must match the current package version.
     changelog_v = sources.get("CHANGELOG.md (root)", "")
     if changelog_v != manifest_version:
-        print(f"  !! CHANGELOG.md (root) top version is {changelog_v}, expected {manifest_version}")
+        print(
+            f"  !! CHANGELOG.md (root) top version is {changelog_v}, expected {manifest_version}"
+        )
         ok = False
 
     # RELEASE_NOTES.md must match the current package version.
@@ -223,7 +225,9 @@ def _check_docs_group(sources: dict[str, str]) -> bool:
             ok = False
             continue
         if version != expected:
-            print(f"  !! {key}: title version is {version}, expected {expected} (filename)")
+            print(
+                f"  !! {key}: title version is {version}, expected {expected} (filename)"
+            )
             ok = False
 
     if ok:

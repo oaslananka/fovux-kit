@@ -38,7 +38,9 @@ def _json(path: Path) -> dict[str, Any]:
 
 
 def _load_generator() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("generate_studio_lm_tools", GENERATOR_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "generate_studio_lm_tools", GENERATOR_PATH
+    )
     if spec is None or spec.loader is None:
         raise RuntimeError("Cannot load Studio LM tool generator")
     module = importlib.util.module_from_spec(spec)
@@ -70,7 +72,9 @@ def main() -> int:
     if package and expected_package:
         actual_contributes = package.get("contributes")
         expected_contributes = expected_package.get("contributes")
-        if not isinstance(actual_contributes, dict) or not isinstance(expected_contributes, dict):
+        if not isinstance(actual_contributes, dict) or not isinstance(
+            expected_contributes, dict
+        ):
             failures.append("package.json contributes must be an object")
         elif actual_contributes.get("languageModelTools") != expected_contributes.get(
             "languageModelTools"
@@ -109,7 +113,9 @@ def main() -> int:
         if not isinstance(schema, dict) or schema.get("type") != "object":
             failures.append(f"{name} inputSchema must be an object schema")
         if not isinstance(tool.get("requiresConfirmation"), bool):
-            failures.append(f"{name} requiresConfirmation must be generated from policy")
+            failures.append(
+                f"{name} requiresConfirmation must be generated from policy"
+            )
         if not isinstance(tool.get("requiredScope"), str):
             failures.append(f"{name} requiredScope must be generated from policy")
         if not isinstance(mcp_name, str) or mcp_name not in backend:
@@ -123,7 +129,9 @@ def main() -> int:
     ):
         failures.append("Snapshot Studio MCP mappings must be a string array")
     elif mapped_backend != set(snapshot_mappings):
-        failures.append("Generated Studio mapping set differs from snapshot Studio MCP mappings")
+        failures.append(
+            "Generated Studio mapping set differs from snapshot Studio MCP mappings"
+        )
 
     if generated_tools and snapshot.get("studio_lm_tool_count") != len(generated_tools):
         failures.append("Generated Studio LM tool count differs from snapshot count")

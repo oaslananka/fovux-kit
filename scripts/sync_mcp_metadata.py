@@ -46,7 +46,9 @@ def _read_package_versions(root: Path) -> tuple[str, str, str]:
         if not _VERSION_PATTERN.fullmatch(version):
             raise SystemExit(f"Invalid release version: {version}")
     if npm_version != mcp_version:
-        raise SystemExit("The npm wrapper version must match the Python package version")
+        raise SystemExit(
+            "The npm wrapper version must match the Python package version"
+        )
     return mcp_version, npm_version, studio_version
 
 
@@ -136,7 +138,9 @@ def _sync_smithery_yaml(mcp_root: Path, version: str) -> bool:
 
 
 def _extract_changelog_section(text: str, version: str, *, label: str) -> str:
-    heading = re.search(rf"^##\s+\[{re.escape(version)}\][^\n]*\n", text, flags=re.MULTILINE)
+    heading = re.search(
+        rf"^##\s+\[{re.escape(version)}\][^\n]*\n", text, flags=re.MULTILINE
+    )
     if heading is None:
         raise ValueError(f"{label} changelog is missing release {version}")
     next_heading = re.search(r"^##\s+\[", text[heading.end() :], flags=re.MULTILINE)
@@ -198,7 +202,8 @@ def render_candidate_release_notes(
         "studio": studio_version,
     }
     changed = {
-        package_id: str(published_packages.get(package_id, {}).get("version", "")) != version
+        package_id: str(published_packages.get(package_id, {}).get("version", ""))
+        != version
         for package_id, version in versions.items()
     }
 
@@ -246,7 +251,9 @@ def render_candidate_release_notes(
         mcp_changes = _extract_changelog_section(
             changelogs["mcp"], mcp_version, label="fovux-mcp"
         )
-        sections.append(f"### Python package `fovux-mcp` {mcp_version}\n\n{mcp_changes}")
+        sections.append(
+            f"### Python package `fovux-mcp` {mcp_version}\n\n{mcp_changes}"
+        )
     if changed["npm"]:
         npm_changes = _extract_changelog_section(
             changelogs["npm"], npm_version, label="fovux-mcp-npm"
@@ -273,7 +280,9 @@ def render_candidate_release_notes(
             "- the existing Studio VSIX packaging, VS Marketplace, and Open VSX evidence remains "
             "verified and is not republished;"
         )
-    evidence_lines.append("- registry verification evidence JSON for every package published in this release.")
+    evidence_lines.append(
+        "- registry verification evidence JSON for every package published in this release."
+    )
     evidence = "\n".join(evidence_lines)
 
     return f"""# Fovux {mcp_version} Release Notes
@@ -327,17 +336,25 @@ def _sync_root_changelog(root: Path, version: str) -> bool:
         "### Added\n\n"
         "- Synchronized release package updates.\n\n"
     )
-    path.write_text(content[:first_header] + new_section + content[first_header:], encoding="utf-8")
+    path.write_text(
+        content[:first_header] + new_section + content[first_header:], encoding="utf-8"
+    )
     print(f"Updated root CHANGELOG.md to include version {version}")
     return True
 
 
-def _sync_docs(root: Path, mcp_version: str, npm_version: str, studio_version: str) -> bool:
+def _sync_docs(
+    root: Path, mcp_version: str, npm_version: str, studio_version: str
+) -> bool:
     changed = _sync_root_changelog(root, mcp_version)
     changelogs = {
         "mcp": (root / "fovux-mcp" / CHANGELOG_FILENAME).read_text(encoding="utf-8"),
-        "npm": (root / "fovux-mcp-npm" / CHANGELOG_FILENAME).read_text(encoding="utf-8"),
-        "studio": (root / "fovux-studio" / CHANGELOG_FILENAME).read_text(encoding="utf-8"),
+        "npm": (root / "fovux-mcp-npm" / CHANGELOG_FILENAME).read_text(
+            encoding="utf-8"
+        ),
+        "studio": (root / "fovux-studio" / CHANGELOG_FILENAME).read_text(
+            encoding="utf-8"
+        ),
     }
     rendered = render_candidate_release_notes(
         mcp_version=mcp_version,
@@ -355,7 +372,9 @@ def _sync_docs(root: Path, mcp_version: str, npm_version: str, studio_version: s
         current = path.read_text(encoding="utf-8") if path.exists() else ""
         if current != rendered:
             path.write_text(rendered, encoding="utf-8")
-            print(f"Updated {path.relative_to(root)} for release candidate {mcp_version}")
+            print(
+                f"Updated {path.relative_to(root)} for release candidate {mcp_version}"
+            )
             changed = True
     return changed
 

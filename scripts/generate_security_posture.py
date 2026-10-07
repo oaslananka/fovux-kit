@@ -96,7 +96,8 @@ def _required_status_checks(policy: dict[str, Any]) -> set[str]:
     return {
         context
         for check in checks
-        if isinstance(check, dict) and isinstance((context := check.get("context")), str)
+        if isinstance(check, dict)
+        and isinstance((context := check.get("context")), str)
     }
 
 
@@ -120,7 +121,9 @@ def _display_security_status(status: str | None) -> str:
 def _is_restricted_api_error(exc: subprocess.CalledProcessError) -> bool:
     """Return whether GitHub rejected an endpoint for token permission reasons."""
     details = f"{exc.stderr or ''}\n{exc.output or ''}".lower()
-    return any(marker in details for marker in ("403", "resource not accessible", "permission"))
+    return any(
+        marker in details for marker in ("403", "resource not accessible", "permission")
+    )
 
 
 def _fetch_dependabot_alerts() -> list[Any] | None:
@@ -140,7 +143,9 @@ def _fetch_dependabot_alerts() -> list[Any] | None:
     return data
 
 
-def _main_ruleset_deviations(expected: dict[str, Any], live: dict[str, Any]) -> list[str]:
+def _main_ruleset_deviations(
+    expected: dict[str, Any], live: dict[str, Any]
+) -> list[str]:
     """Describe semantic drift between tracked and live main rulesets."""
     deviations: list[str] = []
     name = str(expected.get("name", "main ruleset"))
@@ -196,7 +201,9 @@ def main() -> int:
                 raise ValueError("Expected ruleset summary objects")
             ruleset_id = ruleset_summary.get("id")
             if ruleset_id:
-                ruleset_detail = _run_gh_api(f"repos/oaslananka/fovux-kit/rulesets/{ruleset_id}")
+                ruleset_detail = _run_gh_api(
+                    f"repos/oaslananka/fovux-kit/rulesets/{ruleset_id}"
+                )
                 if not isinstance(ruleset_detail, dict):
                     raise ValueError("Expected ruleset detail object")
                 detailed_rulesets.append(ruleset_detail)
@@ -235,8 +242,12 @@ def main() -> int:
         deviations.append(f"Repo visibility is {visibility} (expected public)")
 
     secret_scanning = _security_analysis_status(repo_data, "secret_scanning")
-    push_protection = _security_analysis_status(repo_data, "secret_scanning_push_protection")
-    dependabot_updates = _security_analysis_status(repo_data, "dependabot_security_updates")
+    push_protection = _security_analysis_status(
+        repo_data, "secret_scanning_push_protection"
+    )
+    dependabot_updates = _security_analysis_status(
+        repo_data, "dependabot_security_updates"
+    )
 
     if secret_scanning is not None and secret_scanning != "enabled":  # noqa: S105
         deviations.append("Secret scanning is not enabled")
@@ -248,7 +259,11 @@ def main() -> int:
     # Analyze rulesets against the tracked canonical policy.
     main_ruleset_name = str(expected_main_ruleset.get("name", ""))
     main_ruleset = next(
-        (ruleset for ruleset in detailed_rulesets if ruleset.get("name") == main_ruleset_name),
+        (
+            ruleset
+            for ruleset in detailed_rulesets
+            if ruleset.get("name") == main_ruleset_name
+        ),
         None,
     )
     tag_ruleset = next(
@@ -275,7 +290,9 @@ def main() -> int:
         if "deletion" not in rule_types:
             deviations.append("release-tag-protection does not prevent tag deletion")
         if "non_fast_forward" not in rule_types:
-            deviations.append("release-tag-protection does not prevent non-fast-forward tags")
+            deviations.append(
+                "release-tag-protection does not prevent non-fast-forward tags"
+            )
 
     # Dependabot Alerts check. Ruleset validation remains strict when this
     # privileged endpoint is unavailable to the workflow token.
@@ -299,7 +316,9 @@ def main() -> int:
 
     sec_scan_status = secret_scanning.capitalize() if secret_scanning else "Disabled"
     push_prot_status = push_protection.capitalize() if push_protection else "Disabled"
-    dep_up_status = dependabot_updates.capitalize() if dependabot_updates else "Disabled"
+    dep_up_status = (
+        dependabot_updates.capitalize() if dependabot_updates else "Disabled"
+    )
 
     report_lines = [
         "# Fovux Security Posture Report",
@@ -324,7 +343,9 @@ def main() -> int:
         status_checks = []
         if status_checks_rule:
             params = status_checks_rule.get("parameters", {})
-            status_checks = [c.get("context") for c in params.get("required_status_checks", [])]
+            status_checks = [
+                c.get("context") for c in params.get("required_status_checks", [])
+            ]
 
         has_linear = "Yes" if "required_linear_history" in rule_types else "No"
         has_sigs = "Yes" if "required_signatures" in rule_types else "No"

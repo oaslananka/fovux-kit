@@ -43,4 +43,3 @@ Generated on: 2026-07-20 16:27:58 UTC
 - Scorecard workflow (.github/workflows/scorecard.yml): Present
 - Python SPDX SBOM generator: Present
 - Node.js SPDX SBOM generator: Present
-
