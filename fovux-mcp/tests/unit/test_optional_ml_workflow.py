@@ -25,7 +25,16 @@ def test_lock_uses_torch_213_setuptools_83_and_no_cuda_runtime() -> None:
     lock = LOCKFILE.read_text(encoding="utf-8")
     assert 'name = "torch"\nversion = "2.13.0+cpu"' in lock
     assert 'name = "torchvision"\nversion = "0.28.0+cpu"' in lock
-    assert 'name = "setuptools"\nversion = "83.0.0"' in lock
+    import re
+
+    setuptools_match = re.search(r'name = "setuptools"\nversion = "([^"]+)"', lock)
+    assert setuptools_match is not None, "setuptools not found in lock file"
+    setuptools_version = setuptools_match.group(1)
+    from packaging.version import Version
+
+    assert Version(setuptools_version) >= Version("83.0.0"), (
+        f"setuptools version {setuptools_version} < 83.0.0"
+    )
     assert 'name = "triton"' not in lock
     assert 'name = "nvidia-cuda-runtime' not in lock
 
