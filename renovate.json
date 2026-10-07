@@ -1,6 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>oaslananka/.github:renovate-config"],
+  "extends": [
+    "github>oaslananka/.github:renovate-config"
+  ],
   "enabledManagers": [
     "pep621",
     "npm",
@@ -10,32 +12,76 @@
     "pre-commit"
   ],
   "timezone": "Europe/Istanbul",
-  "schedule": ["after 2am and before 6am on monday"],
+  "schedule": [
+    "after 2am and before 6am on monday"
+  ],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 6,
-  "labels": ["dependencies", "goal:supply-chain"],
+  "labels": [
+    "dependencies",
+    "goal:supply-chain"
+  ],
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "Dependency Dashboard",
-  "dependencyDashboardLabels": ["dependencies", "goal:supply-chain"],
+  "dependencyDashboardLabels": [
+    "dependencies",
+    "goal:supply-chain"
+  ],
   "prBodyNotes": [
     "Fovux-specific dependency policy is defined in `renovate.json` and extends the shared `oaslananka/.github` baseline.",
     "Protected runtime, protocol, computer-vision, and security-tooling groups never automerge.",
-    "GitHub Dependabot owns security-update pull requests during the initial hosted-App rollout; Renovate vulnerability alert sources are disabled to prevent duplicate remediation PRs."
+    "Renovate owns dependency and vulnerability-remediation pull requests; GitHub Dependabot alerts remain enabled, while Dependabot PR generation is disabled to prevent duplicate remediation PRs."
   ],
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 6am on monday"],
+    "schedule": [
+      "before 6am on monday"
+    ],
     "automerge": false,
-    "addLabels": ["dependencies", "goal:supply-chain"]
+    "addLabels": [
+      "dependencies",
+      "goal:supply-chain",
+      "automerge:enabled",
+      "risk:low"
+    ]
   },
   "vulnerabilityAlerts": {
-    "enabled": false
+    "enabled": true,
+    "labels": [
+      "dependencies",
+      "goal:supply-chain",
+      "area:security",
+      "risk:high",
+      "requires-review"
+    ],
+    "prCreation": "immediate",
+    "vulnerabilityFixStrategy": "highest"
   },
   "packageRules": [
     {
+      "description": "Delegate low-risk dependency merging to Mergify.",
+      "matchUpdateTypes": [
+        "patch",
+        "digest",
+        "pin"
+      ],
+      "automerge": false,
+      "addLabels": [
+        "automerge:enabled",
+        "risk:low"
+      ]
+    },
+    {
       "description": "Label Python and uv dependency changes for fovux-mcp.",
-      "matchFileNames": ["fovux-mcp/pyproject.toml", "fovux-mcp/uv.lock"],
-      "addLabels": ["python", "python:uv", "component:fovux-mcp"]
+      "matchFileNames": [
+        "fovux-mcp/pyproject.toml",
+        "fovux-mcp/uv.lock"
+      ],
+      "addLabels": [
+        "python",
+        "python:uv",
+        "component:fovux-mcp"
+      ]
     },
     {
       "description": "Label Studio npm and pnpm dependency changes.",
@@ -43,7 +89,10 @@
         "fovux-studio/package.json",
         "fovux-studio/pnpm-lock.yaml"
       ],
-      "addLabels": ["typescript", "component:fovux-studio"]
+      "addLabels": [
+        "typescript",
+        "component:fovux-studio"
+      ]
     },
     {
       "description": "Label npm wrapper dependency changes.",
@@ -51,22 +100,38 @@
         "fovux-mcp-npm/package.json",
         "fovux-mcp-npm/package-lock.json"
       ],
-      "addLabels": ["component:fovux-mcp-npm"]
+      "addLabels": [
+        "component:fovux-mcp-npm"
+      ]
     },
     {
       "description": "Group non-major pre-commit hook updates.",
-      "matchManagers": ["pre-commit"],
-      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "matchManagers": [
+        "pre-commit"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
       "groupName": "pre-commit hooks",
       "groupSlug": "pre-commit-hooks",
-      "addLabels": ["area:ci", "area:security"]
+      "addLabels": [
+        "area:ci",
+        "area:security"
+      ]
     },
     {
       "description": "Require approval for every major update.",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "dependencyDashboardApproval": true,
       "automerge": false,
-      "addLabels": ["major-update", "risk:high"]
+      "addLabels": [
+        "major-update",
+        "risk:high"
+      ]
     },
     {
       "description": "Protect the MCP protocol and transport stack.",
@@ -81,7 +146,11 @@
       "groupName": "MCP protocol stack",
       "groupSlug": "mcp-protocol-stack",
       "automerge": false,
-      "addLabels": ["area:mcp", "area:compatibility", "risk:high"]
+      "addLabels": [
+        "area:mcp",
+        "area:compatibility",
+        "risk:high"
+      ]
     },
     {
       "description": "Protect Torch, YOLO, CUDA, and optional ML runtime packages.",
@@ -96,7 +165,10 @@
       "groupName": "YOLO and PyTorch stack",
       "groupSlug": "yolo-pytorch-stack",
       "automerge": false,
-      "addLabels": ["area:compatibility", "risk:high"]
+      "addLabels": [
+        "area:compatibility",
+        "risk:high"
+      ]
     },
     {
       "description": "Protect the computer-vision runtime compatibility stack.",
@@ -112,7 +184,10 @@
       "groupName": "computer vision runtime",
       "groupSlug": "computer-vision-runtime",
       "automerge": false,
-      "addLabels": ["area:compatibility", "risk:high"]
+      "addLabels": [
+        "area:compatibility",
+        "risk:high"
+      ]
     },
     {
       "description": "Protect Studio runtime and extension build majors.",
@@ -128,16 +203,26 @@
       "groupName": "Studio runtime stack",
       "groupSlug": "studio-runtime-stack",
       "automerge": false,
-      "addLabels": ["component:fovux-studio", "area:compatibility", "risk:high"]
+      "addLabels": [
+        "component:fovux-studio",
+        "area:compatibility",
+        "risk:high"
+      ]
     },
     {
       "description": "Protect Node support-policy updates.",
-      "matchPackageNames": ["node", "@types/node"],
+      "matchPackageNames": [
+        "node",
+        "@types/node"
+      ],
       "groupName": "Node support policy",
       "groupSlug": "node-support-policy",
       "dependencyDashboardApproval": true,
       "automerge": false,
-      "addLabels": ["area:compatibility", "risk:high"]
+      "addLabels": [
+        "area:compatibility",
+        "risk:high"
+      ]
     },
     {
       "description": "Protect release and security tooling updates.",
@@ -156,11 +241,18 @@
       "groupName": "release and security tooling",
       "groupSlug": "release-security-tooling",
       "automerge": false,
-      "addLabels": ["area:security", "area:ci", "risk:high"]
+      "addLabels": [
+        "area:security",
+        "area:ci",
+        "risk:high"
+      ]
     }
   ],
   "pre-commit": {
     "enabled": true
   },
-  "osvVulnerabilityAlerts": false
+  "osvVulnerabilityAlerts": false,
+  "automerge": false,
+  "automergeType": "pr",
+  "platformAutomerge": false
 }
