@@ -36,6 +36,10 @@ def main() -> int:
     launcher = _read(
         ROOT / "fovux-studio" / "src" / "webviews" / "trainingLauncher" / "main.tsx"
     )
+    launcher_model = _read(
+        ROOT / "fovux-studio" / "src" / "webviews" / "trainingLauncher" / "model.ts"
+    )
+    launcher_contract = f"{launcher}\n{launcher_model}"
     preflight_index = launcher.find('"train_preflight"')
     start_index = launcher.find('"train_start"')
     if preflight_index < 0 or start_index < 0 or preflight_index > start_index:
@@ -43,7 +47,7 @@ def main() -> int:
             "Training launcher must call train_preflight before train_start"
         )
     for phrase in ["blockers", "next_actions", "preflight_approval_reason", "force"]:
-        if phrase not in launcher:
+        if phrase not in launcher_contract:
             failures.append(
                 f"Training launcher missing preflight gate phrase: {phrase}"
             )
