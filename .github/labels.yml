@@ -406,6 +406,14 @@
   color: "0e8a16"
   description: "Renovate may merge after all required checks pass"
 
+- name: "automerge:enabled"
+  color: "0e8a16"
+  description: "Mergify auto-merge is enabled for this PR"
+
+- name: "automerge:disabled"
+  color: "b60205"
+  description: "Mergify auto-merge is explicitly disabled for this PR"
+
 - name: "runtime"
   color: "5319e7"
   description: "Runtime support-policy or engine update"

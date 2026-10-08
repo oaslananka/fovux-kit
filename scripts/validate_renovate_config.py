@@ -152,11 +152,11 @@ def _validate_core_policy(config: dict[str, Any]) -> list[str]:
     vulnerability_alerts = config.get("vulnerabilityAlerts")
     if (
         not isinstance(vulnerability_alerts, dict)
-        or vulnerability_alerts.get("enabled") is not False
+        or vulnerability_alerts.get("enabled") is not True
         or config.get("osvVulnerabilityAlerts") is not False
     ):
         errors.append(
-            "Renovate vulnerability alerts must stay disabled while Dependabot owns security PRs"
+            "Renovate must own vulnerability-remediation PRs (vulnerabilityAlerts.enabled=true, osvVulnerabilityAlerts=false)"
         )
     return errors
 
