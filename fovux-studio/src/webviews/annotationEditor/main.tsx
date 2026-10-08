@@ -8,6 +8,7 @@ import {
   type AnnotationEditorInitialState,
 } from "../shared/types";
 import { AnnotationQueueCard, AnnotationToolbar } from "./components/AnnotationControls";
+import { readTrustedEditorMessage, sanitizeAnnotationEditorState } from "./security";
 import {
   annotationEditorReducer,
   clamp,
@@ -17,37 +18,17 @@ import {
   type ResizeHandle,
 } from "./model";
 
-function sanitizeImageUri(uri: unknown): string {
-  if (typeof uri !== "string") {
-    return "";
-  }
-
-  const value = uri.trim();
-  if (!value) {
-    return "";
-  }
-
-  if (value.startsWith("vscode-webview-resource:")) {
-    return value;
-  }
-
-  if (/^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/.test(value)) {
-    return value;
-  }
-
-  return "";
-}
-
 function AnnotationEditorApp(): JSX.Element {
-  const [editorState, setEditorState] = useState<AnnotationEditorInitialState>(() =>
-    readInitialState<AnnotationEditorInitialState>({
+  const [editorState, setEditorState] = useState<AnnotationEditorInitialState>(() => {
+    const fallback: AnnotationEditorInitialState = {
       imagePath: "",
       imageUri: "",
       classNames: ["class_0"],
       initialBoxes: [],
       initialError: "Initial annotation editor state was not provided.",
-    })
-  );
+    };
+    return sanitizeAnnotationEditorState(readInitialState(fallback), fallback) ?? fallback;
+  });
   const [datasetSplit, setDatasetSplit] = useState<string>("train");
   const stageRef = useRef<HTMLElement | null>(null);
   const [classId, setClassId] = useReducer((_current: number, next: number) => next, 0);
@@ -65,17 +46,12 @@ function AnnotationEditorApp(): JSX.Element {
   }, [editorState]);
 
   useEffect(() => {
+    const trustedOrigin = window.location.origin;
     const listener = (event: MessageEvent) => {
-      const message = event.data;
-      if (!message || message.type !== "setEditorState" || !message.state) {
-        return;
+      const nextState = readTrustedEditorMessage(event, trustedOrigin);
+      if (nextState !== null) {
+        setEditorState(nextState);
       }
-
-      const nextState = message.state as AnnotationEditorInitialState;
-      setEditorState({
-        ...nextState,
-        imageUri: sanitizeImageUri(nextState.imageUri),
-      });
     };
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
