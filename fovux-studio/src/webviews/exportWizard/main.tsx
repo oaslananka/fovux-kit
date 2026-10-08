@@ -9,6 +9,7 @@ import {
   type HttpClientConfig,
 } from "../shared/api";
 import { ChallengeModal } from "../shared/ChallengeModal";
+import { DeploymentAdvisorPanel } from "./components/DeploymentAdvisorPanel";
 import { ExportSettingsForm } from "./components/ExportSettingsForm";
 import {
   buildExportRequest,
@@ -277,14 +278,6 @@ function ExportWizardApp(): JSX.Element {
     }
   }
 
-  const scoreColor = useMemo(() => {
-    if (!advisorResult) return "#ff6a3d";
-    const score = advisorResult.readiness_score;
-    if (score >= 80) return "#00ffb4";
-    if (score >= 50) return "var(--vscode-charts-orange)";
-    return "#ff6a3d";
-  }, [advisorResult]);
-
   return (
     <main style={pageStyle}>
       <header style={headerStyle}>
@@ -394,234 +387,21 @@ function ExportWizardApp(): JSX.Element {
           ) : null}
         </>
       ) : (
-        <>
-          <section style={formStyle}>
-            <label style={fieldStyle}>
-              <span>Select Model Artifact</span>
-              <select
-                aria-label="Select Model"
-                style={inputStyle}
-                value={advisorModelPath}
-                onChange={(e) => setAdvisorModelPath(e.target.value)}
-                disabled={!models.length}
-              >
-                {!models.length ? <option value="">No models available</option> : null}
-                {models.map((model) => (
-                  <option key={model.path} value={model.path}>
-                    {model.name} · {model.format.toUpperCase()} ({model.source})
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label style={fieldStyle}>
-              <span>Deployment Target Profile</span>
-              <select
-                aria-label="Target Profile"
-                style={inputStyle}
-                value={advisorTargetProfile}
-                onChange={(e) => setAdvisorTargetProfile(e.target.value)}
-              >
-                <option value="cpu_server">CPU Server (onnxruntime)</option>
-                <option value="nvidia_gpu_tensorrt">NVIDIA GPU / TensorRT</option>
-                <option value="jetson">Jetson Embedded GPU</option>
-                <option value="raspberry_pi">Raspberry Pi (TFLite/ONNX)</option>
-                <option value="android_tflite">Android (TFLite)</option>
-                <option value="browser_wasm">Browser / WASM runtime</option>
-              </select>
-            </label>
-
-            <label style={fieldStyle}>
-              <span>Validation Dataset Path (Optional parity check)</span>
-              <input
-                aria-label="Validation Dataset"
-                style={inputStyle}
-                value={advisorDatasetPath}
-                onChange={(e) => setAdvisorDatasetPath(e.target.value)}
-                placeholder="e.g. C:\Users\Admin\Desktop\data\coco_mini"
-              />
-            </label>
-
-            <button
-              type="button"
-              style={buttonStyle}
-              onClick={() => void runDeploymentAdvisor()}
-              disabled={isAdvisorRunning || !models.length}
-            >
-              {isAdvisorRunning ? "Analyzing..." : "Run Deployment Advisor"}
-            </button>
-          </section>
-
-          {advisorResult ? (
-            <section style={resultStyle}>
-              <div style={advisorResultHeaderStyle}>
-                <div>
-                  <strong>Readiness Score</strong>
-                  <div style={{ ...readinessScoreStyle, color: scoreColor }}>
-                    {advisorResult.readiness_score}/100
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  style={secondaryButtonStyle}
-                  onClick={() =>
-                    postToExtension({ type: "openPath", path: advisorResult.report_path })
-                  }
-                >
-                  Reveal Markdown Report
-                </button>
-              </div>
-
-              {/* Compatibility & Quantization checklist */}
-              <div style={gridContainerStyle}>
-                <div style={advisorDetailCardStyle}>
-                  <strong>Compatibility Checklist</strong>
-                  <div style={{ marginTop: "6px", fontSize: "13px" }}>
-                    Compatible:{" "}
-                    {advisorResult.compatibility_preflight.compatible ? (
-                      <span style={checkSuccessStyle}>Yes</span>
-                    ) : (
-                      <span style={checkFailStyle}>No</span>
-                    )}
-                  </div>
-                  <p style={{ ...helperTextStyle, marginTop: "6px" }}>
-                    {advisorResult.compatibility_preflight.details}
-                  </p>
-                </div>
-
-                <div style={advisorDetailCardStyle}>
-                  <strong>Quantization Recommendation</strong>
-                  <p style={{ ...helperTextStyle, marginTop: "8px" }}>
-                    {advisorResult.quantization_recommendation}
-                  </p>
-                </div>
-              </div>
-
-              {/* Risk Warnings */}
-              {advisorResult.risk_warnings.length > 0 ? (
-                <div style={warningsContainerStyle}>
-                  <strong>Warnings &amp; Risks Detected</strong>
-                  {advisorResult.risk_warnings.map((w, idx) => (
-                    <div key={idx} style={{ marginTop: "6px", fontSize: "13px" }}>
-                      ⚠️ {w}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {/* Parity Check */}
-              <div style={advisorDetailCardStyle}>
-                <strong>Prediction Parity (Against PT Checkpoint)</strong>
-                {advisorResult.parity_check.checked ? (
-                  <div style={{ marginTop: "6px", fontSize: "13px" }}>
-                    <div>
-                      Max coordinate diff:{" "}
-                      <code>{advisorResult.parity_check.max_coordinate_diff}</code>
-                    </div>
-                    <div>
-                      Class parity rate:{" "}
-                      <code>{(advisorResult.parity_check.class_match_rate * 100).toFixed(0)}%</code>
-                    </div>
-                    <p style={{ ...helperTextStyle, marginTop: "4px" }}>
-                      {advisorResult.parity_check.details}
-                    </p>
-                  </div>
-                ) : (
-                  <p style={{ ...helperTextStyle, marginTop: "6px" }}>
-                    {advisorResult.parity_check.details}
-                  </p>
-                )}
-              </div>
-
-              {/* Benchmarks Matrix */}
-              <div style={advisorDetailCardStyle}>
-                <strong>Latency Benchmark Matrix</strong>
-                <table style={benchmarkTableStyle}>
-                  <thead>
-                    <tr>
-                      <th style={thStyle}>Metric</th>
-                      <th style={thStyle}>Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr style={rowStyle}>
-                      <td style={tdStyle}>Format</td>
-                      <td style={tdStyle}>{advisorResult.format.toUpperCase()}</td>
-                    </tr>
-                    <tr style={rowStyle}>
-                      <td style={tdStyle}>Model Size</td>
-                      <td style={tdStyle}>{advisorResult.model_size_mb} MB</td>
-                    </tr>
-                    <tr style={rowStyle}>
-                      <td style={tdStyle}>Latency (p50)</td>
-                      <td style={tdStyle}>
-                        {advisorResult.benchmark_results.latency_p50_ms.toFixed(1)} ms
-                      </td>
-                    </tr>
-                    <tr style={rowStyle}>
-                      <td style={tdStyle}>Latency (p95)</td>
-                      <td style={tdStyle}>
-                        {advisorResult.benchmark_results.latency_p95_ms.toFixed(1)} ms
-                      </td>
-                    </tr>
-                    <tr style={rowStyle}>
-                      <td style={tdStyle}>Throughput</td>
-                      <td style={tdStyle}>
-                        {advisorResult.benchmark_results.throughput_fps.toFixed(1)} FPS
-                      </td>
-                    </tr>
-                    <tr style={rowStyle}>
-                      <td style={tdStyle}>Peak Memory</td>
-                      <td style={tdStyle}>
-                        {advisorResult.benchmark_results.peak_memory_mb.toFixed(1)} MB
-                      </td>
-                    </tr>
-                    <tr style={rowStyle}>
-                      <td style={tdStyle}>Benchmarked Locally</td>
-                      <td style={tdStyle}>
-                        {advisorResult.benchmark_results.benchmarked_locally ? "Yes" : "Estimated"}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Copy-Paste snippets */}
-              <div style={advisorDetailCardStyle}>
-                <strong>Integration Runtime Code Snippets</strong>
-                <div style={snippetTabsContainerStyle}>
-                  {["python", "node", "docker"].map((tabName) => (
-                    <button
-                      key={tabName}
-                      type="button"
-                      style={
-                        advisorSnippetTab === tabName ? activeSnippetTabStyle : snippetTabStyle
-                      }
-                      onClick={() => setAdvisorSnippetTab(tabName)}
-                    >
-                      {tabName === "node" ? "Node.js" : tabName.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ position: "relative", marginTop: "8px" }}>
-                  <button
-                    type="button"
-                    style={copyButtonStyle}
-                    onClick={() => {
-                      const text = advisorResult.runtime_snippets[advisorSnippetTab] || "";
-                      void navigator.clipboard.writeText(text);
-                    }}
-                  >
-                    Copy
-                  </button>
-                  <pre style={snippetPreStyle}>
-                    {advisorResult.runtime_snippets[advisorSnippetTab] || "Snippet not available"}
-                  </pre>
-                </div>
-              </div>
-            </section>
-          ) : null}
-        </>
+        <DeploymentAdvisorPanel
+          models={models}
+          modelPath={advisorModelPath}
+          targetProfile={advisorTargetProfile}
+          datasetPath={advisorDatasetPath}
+          result={advisorResult}
+          isRunning={isAdvisorRunning}
+          snippetTab={advisorSnippetTab}
+          onModelPathChange={setAdvisorModelPath}
+          onTargetProfileChange={setAdvisorTargetProfile}
+          onDatasetPathChange={setAdvisorDatasetPath}
+          onSnippetTabChange={setAdvisorSnippetTab}
+          onRun={() => void runDeploymentAdvisor()}
+          onOpenPath={(path) => postToExtension({ type: "openPath", path })}
+        />
       )}
       <ChallengeModal
         challenge={pendingChallenge ? pendingChallenge.challenge : null}
@@ -678,31 +458,6 @@ const titleStyle: CSSProperties = {
   fontSize: "26px",
   fontWeight: "600",
   lineHeight: "1.15",
-};
-
-const formStyle: CSSProperties = {
-  display: "grid",
-  gap: "14px",
-  padding: "20px",
-  borderRadius: "18px",
-  border: "1px solid var(--vscode-panel-border)",
-  background: "var(--vscode-sideBar-background)",
-  maxWidth: "720px",
-};
-
-const fieldStyle: CSSProperties = {
-  display: "grid",
-  gap: "8px",
-};
-
-const inputStyle: CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: "10px",
-  border: "1px solid var(--vscode-input-border)",
-  background: "var(--vscode-input-background)",
-  color: "var(--vscode-input-foreground)",
-  outline: "none",
 };
 
 const buttonStyle: CSSProperties = {
@@ -794,120 +549,6 @@ const activeTabStyle: CSSProperties = {
   background: "var(--vscode-button-background)",
   color: "var(--vscode-button-foreground)",
   border: "1px solid var(--vscode-button-border, var(--vscode-panel-border))",
-};
-
-const advisorResultHeaderStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  borderBottom: "1px solid var(--vscode-panel-border)",
-  paddingBottom: "12px",
-};
-
-const readinessScoreStyle: CSSProperties = {
-  fontSize: "28px",
-  fontWeight: "bold",
-  marginTop: "4px",
-};
-
-const gridContainerStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "12px",
-};
-
-const advisorDetailCardStyle: CSSProperties = {
-  padding: "14px",
-  borderRadius: "10px",
-  background: "var(--vscode-editorWidget-background)",
-  border: "1px solid var(--vscode-panel-border)",
-};
-
-const checkSuccessStyle: CSSProperties = {
-  color: "#00ffb4",
-  fontWeight: "bold",
-};
-
-const checkFailStyle: CSSProperties = {
-  color: "#ff6a3d",
-  fontWeight: "bold",
-};
-
-const warningsContainerStyle: CSSProperties = {
-  padding: "14px",
-  borderRadius: "10px",
-  background: "rgba(255, 106, 61, 0.08)",
-  border: "1px solid #ff6a3d",
-};
-
-const benchmarkTableStyle: CSSProperties = {
-  width: "100%",
-  borderCollapse: "collapse",
-  marginTop: "8px",
-  fontSize: "13px",
-};
-
-const thStyle: CSSProperties = {
-  borderBottom: "1px solid var(--vscode-panel-border)",
-  padding: "6px 8px",
-  color: "var(--vscode-descriptionForeground)",
-  textAlign: "left",
-};
-
-const rowStyle: CSSProperties = {
-  borderBottom: "1px solid var(--vscode-panel-border)",
-};
-
-const tdStyle: CSSProperties = {
-  padding: "6px 8px",
-};
-
-const snippetTabsContainerStyle: CSSProperties = {
-  display: "flex",
-  gap: "6px",
-  marginTop: "8px",
-  borderBottom: "1px solid var(--vscode-panel-border)",
-  paddingBottom: "6px",
-};
-
-const snippetTabStyle: CSSProperties = {
-  padding: "4px 8px",
-  borderRadius: "4px",
-  border: "none",
-  background: "transparent",
-  color: "var(--vscode-descriptionForeground)",
-  cursor: "pointer",
-  fontSize: "12px",
-};
-
-const activeSnippetTabStyle: CSSProperties = {
-  ...snippetTabStyle,
-  background: "rgba(255, 255, 255, 0.08)",
-  color: "var(--vscode-editor-foreground)",
-};
-
-const snippetPreStyle: CSSProperties = {
-  padding: "10px",
-  borderRadius: "6px",
-  background: "var(--vscode-sideBar-background)",
-  border: "1px solid var(--vscode-panel-border)",
-  fontFamily: "var(--vscode-editor-font-family, monospace)",
-  fontSize: "12px",
-  margin: 0,
-  overflowX: "auto",
-};
-
-const copyButtonStyle: CSSProperties = {
-  position: "absolute",
-  right: "8px",
-  top: "8px",
-  padding: "4px 8px",
-  borderRadius: "4px",
-  border: "1px solid var(--vscode-panel-border)",
-  background: "var(--vscode-editorWidget-background)",
-  color: "var(--vscode-editor-foreground)",
-  cursor: "pointer",
-  fontSize: "11px",
 };
 
 const rootNode = document.getElementById("root");
