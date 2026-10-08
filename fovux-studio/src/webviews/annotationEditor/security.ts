@@ -1,4 +1,4 @@
-import type { AnnotationEditorInitialState } from "../shared/types";
+import type { AnnotationEditorInitialState, DatasetSampleBox } from "../shared/types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -22,7 +22,7 @@ export function sanitizeImageUri(uri: unknown): string {
   return "";
 }
 
-function isBox(value: unknown): boolean {
+function isBox(value: unknown): value is DatasetSampleBox {
   if (!isRecord(value)) {
     return false;
   }
@@ -31,9 +31,14 @@ function isBox(value: unknown): boolean {
     typeof value.classId === "number" &&
     Number.isInteger(value.classId) &&
     typeof value.className === "string" &&
-    ["x", "y", "width", "height"].every(
-      (key) => typeof value[key] === "number" && Number.isFinite(value[key])
-    )
+    typeof value.x === "number" &&
+    Number.isFinite(value.x) &&
+    typeof value.y === "number" &&
+    Number.isFinite(value.y) &&
+    typeof value.width === "number" &&
+    Number.isFinite(value.width) &&
+    typeof value.height === "number" &&
+    Number.isFinite(value.height)
   );
 }
 
@@ -49,15 +54,42 @@ export function sanitizeAnnotationEditorState(
     !value.classNames.every((name: unknown) => typeof name === "string") ||
     !Array.isArray(value.initialBoxes) ||
     !value.initialBoxes.every(isBox) ||
-    (value.initialError !== null && typeof value.initialError !== "string")
+    (value.initialError !== null && typeof value.initialError !== "string") ||
+    (value.isQueueMode !== undefined && typeof value.isQueueMode !== "boolean") ||
+    (value.queueReason !== undefined && typeof value.queueReason !== "string") ||
+    (value.queueScore !== undefined &&
+      (typeof value.queueScore !== "number" || !Number.isFinite(value.queueScore))) ||
+    (value.queueEntryId !== undefined && typeof value.queueEntryId !== "string") ||
+    (value.datasetPath !== undefined && typeof value.datasetPath !== "string")
   ) {
     return fallback;
   }
 
-  return {
-    ...(value as unknown as AnnotationEditorInitialState),
+  const state: AnnotationEditorInitialState = {
+    imagePath: value.imagePath as string,
     imageUri: sanitizeImageUri(value.imageUri),
+    classNames: value.classNames as string[],
+    initialBoxes: value.initialBoxes as DatasetSampleBox[],
+    initialError: value.initialError as string | null,
   };
+
+  if (value.isQueueMode !== undefined) {
+    state.isQueueMode = value.isQueueMode as boolean;
+  }
+  if (value.queueReason !== undefined) {
+    state.queueReason = value.queueReason as string;
+  }
+  if (value.queueScore !== undefined) {
+    state.queueScore = value.queueScore as number;
+  }
+  if (value.queueEntryId !== undefined) {
+    state.queueEntryId = value.queueEntryId as string;
+  }
+  if (value.datasetPath !== undefined) {
+    state.datasetPath = value.datasetPath as string;
+  }
+
+  return state;
 }
 
 /** Reject cross-origin and malformed updates before applying editor state. */

@@ -46,6 +46,45 @@ describe("annotation editor webview security", () => {
     expect(sanitizeAnnotationEditorState(null, initial)).toBe(initial);
   });
 
+  it("rejects malformed queue metadata instead of copying untrusted fields", () => {
+    expect(sanitizeAnnotationEditorState({ ...initial, isQueueMode: "true" }, initial)).toBe(
+      initial
+    );
+    expect(
+      sanitizeAnnotationEditorState({ ...initial, queueScore: Number.POSITIVE_INFINITY }, initial)
+    ).toBe(initial);
+    expect(
+      sanitizeAnnotationEditorState(
+        {
+          ...initial,
+          initialBoxes: [{ classId: 0, className: "person", x: "bad", y: 0, width: 1, height: 1 }],
+        },
+        initial
+      )
+    ).toBe(initial);
+  });
+
+  it("preserves validated queue metadata but strips unknown fields", () => {
+    const state = sanitizeAnnotationEditorState({
+      ...initial,
+      isQueueMode: true,
+      queueReason: "review",
+      queueScore: 0.5,
+      queueEntryId: "entry_1",
+      datasetPath: "/tmp/dataset",
+      unexpectedProperty: "must not reach the UI",
+    });
+    expect(state).toMatchObject({
+      ...initial,
+      isQueueMode: true,
+      queueReason: "review",
+      queueScore: 0.5,
+      queueEntryId: "entry_1",
+      datasetPath: "/tmp/dataset",
+    });
+    expect(state).not.toHaveProperty("unexpectedProperty");
+  });
+
   it("accepts valid extension updates from the webview origin", () => {
     const event = {
       origin: "vscode-webview://trusted",
