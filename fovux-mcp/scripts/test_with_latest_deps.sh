@@ -18,7 +18,7 @@ restore_lock() {
   rm -f "$SAVED_LOCK"
 }
 trap restore_lock EXIT
-uv sync --upgrade --extra dev 2>&1 | tee -a "$REPORT_FILE"
+uv sync --upgrade --extra dev --no-build 2>&1 | tee -a "$REPORT_FILE"
 restore_lock
 trap - EXIT
 
