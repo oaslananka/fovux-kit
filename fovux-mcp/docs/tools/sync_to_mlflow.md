@@ -39,6 +39,7 @@ curl -X POST http://127.0.0.1:7823/tools/sync_to_mlflow \
 
 ```python
 from fovux.tools.sync_to_mlflow import sync_to_mlflow
+
 result = sync_to_mlflow("abc123", tracking_uri="http://localhost:5000")
 ```
 

@@ -9,13 +9,7 @@ export const COLORS = [
   "var(--vscode-charts-green)",
   "var(--vscode-charts-red)",
 ];
-export const MAP50_KEYS = [
-  "metrics/mAP50(B)",
-  "map50",
-  "mAP50",
-  "metrics/map50",
-  "metrics/mAP50",
-];
+export const MAP50_KEYS = ["metrics/mAP50(B)", "map50", "mAP50", "metrics/map50", "metrics/mAP50"];
 export const BOX_LOSS_KEYS = ["train/box_loss", "loss/box", "box_loss", "box"];
 
 export interface NextAction {
