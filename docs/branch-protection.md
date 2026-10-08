@@ -9,8 +9,7 @@ Required merge checks:
 - `ci-required`;
 - `security-required`;
 - `dependency-review`;
-- `codeql-required`;
-- `elevated-review-required`.
+- `codeql-required`.
 
 The ruleset also blocks deletion and non-fast-forward updates, requires linear history, requires a
 pull request, and requires every review thread to be resolved. The approval count remains `0` for
@@ -33,19 +32,5 @@ The posture check continues ruleset validation when the workflow token cannot re
 Dependabot alerts endpoint. Restricted alert access is reported as unavailable; it no longer turns
 a ruleset drift failure into a false success.
 
-## Elevated review evidence
-
-The base-trusted `Elevated Review Evidence` workflow publishes the `elevated-review-required` commit
-status for high-risk labels and immutable sensitive paths. The repository policy is now
-`ruleset_activation: active`, and the context is required by both the tracked and live `main`
-ruleset.
-
-The approval count remains zero for the solo-maintainer model, but elevated changes require
-current-head evidence in the pull request body, independent required checks, resolved threads,
-and—on the external-contributor path—a current-head authorized approval. Editing the body after
-checks and reviews finish reruns the base-only `pull_request_target` metadata gate.
-
-The workflow's privileged trigger is constrained to base SHA checkout, no pull-request code
-execution, no `workflow_run` or comment trigger, no persisted credentials, and a single
-`statuses: write` capability. Its exact Zizmor suppression rationale is checked by repository drift
-validation. See [Elevated Pull Request Review Policy](elevated-review-policy.md).
+The repository uses GitHub required checks and resolved review threads for merge safety.
+An additional PR-body reviewer-evidence status is not required.

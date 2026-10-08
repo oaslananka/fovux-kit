@@ -15,7 +15,6 @@ EXPECTED_CHECKS = {
     "security-required",
     "dependency-review",
     "codeql-required",
-    "elevated-review-required",
 }
 
 

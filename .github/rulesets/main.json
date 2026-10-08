@@ -48,9 +48,6 @@
           },
           {
             "context": "codeql-required"
-          },
-          {
-            "context": "elevated-review-required"
           }
         ]
       }

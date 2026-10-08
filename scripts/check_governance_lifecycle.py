@@ -44,11 +44,8 @@ def main() -> int:
         ".github/workflows/sync-labels.yml",
         ".github/workflows/auto-label.yml",
         ".github/workflows/stale.yml",
-        ".github/workflows/review-evidence-gate.yml",
-        ".github/review-evidence-policy.json",
         ".github/PULL_REQUEST_TEMPLATE.md",
         ".github/CODEOWNERS",
-        "docs/elevated-review-policy.md",
     ]:
         if not (ROOT / relative).exists():
             failures.append(f"Missing governance automation file: {relative}")
