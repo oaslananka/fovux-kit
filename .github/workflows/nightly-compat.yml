@@ -8,6 +8,8 @@ on:
       - "fovux-mcp/uv.lock"
       - "fovux-mcp/osv-scanner.toml"
       - "fovux-mcp/tests/compat/test_optional_ml_stack.py"
+      - "fovux-mcp/scripts/test_with_latest_deps.sh"
+      - "fovux-mcp/tests/unit/test_nightly_dependency_script.py"
       - ".github/workflows/nightly-compat.yml"
   schedule:
     - cron: "0 3 * * *"
