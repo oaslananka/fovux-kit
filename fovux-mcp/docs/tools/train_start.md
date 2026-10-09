@@ -29,7 +29,7 @@ Launch a non-blocking YOLO training subprocess.
 ## Common Errors
 
 - dataset path missing
-- requested run already running
+- requested run already running or pending; neither state can be force-replaced
 - `force=true` with an existing run requires an available training slot and saves the old
   run to `FOVUX_HOME/archive/<run_id>.tar.gz` before replacing it. If an archive
   already exists, the replacement is refused instead of overwriting recovery data.

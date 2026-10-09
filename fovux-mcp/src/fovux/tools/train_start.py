@@ -117,9 +117,9 @@ def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
     existing = registry.get_run(run_id)
     if existing is not None:
         existing_status = str(existing.status)
-        if existing_status == "running":
+        if existing_status in {"running", "pending"}:
             raise FovuxTrainingAlreadyRunningError(
-                f"Run '{run_id}' is already running. Stop it before starting a new run."
+                f"Run '{run_id}' is already {existing_status}. Stop it before starting a new run."
             )
         if not inp.force:
             raise FovuxTrainingAlreadyRunningError(
