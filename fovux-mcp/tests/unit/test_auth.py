@@ -96,9 +96,16 @@ def test_resolve_session_scopes_returns_intersection(tmp_path: Path) -> None:
     assert resolved == {Scope.READ, Scope.DATASET_WRITE}
 
 
-def test_resolve_session_scopes_fallback_to_all_on_missing(tmp_path: Path) -> None:
-    """When no session file or token is missing, fall back to all scopes."""
-    assert resolve_session_scopes("unknown", home=tmp_path) == ALL_SCOPES
+def test_resolve_session_scopes_rejects_unknown_tokens(tmp_path: Path) -> None:
+    """An unrecognized bearer token must never receive full privileges."""
+    assert resolve_session_scopes("unknown", home=tmp_path) == set()
+
+
+def test_empty_session_scopes_grant_no_privileges(tmp_path: Path) -> None:
+    """An explicitly empty scope list cannot silently become admin access."""
+    token = create_session_token(scopes=set(), home=tmp_path)
+    assert is_known_session_token(token, home=tmp_path)
+    assert resolve_session_scopes(token, home=tmp_path) == set()
 
 
 def test_revoke_session_token_removes_it(tmp_path: Path) -> None:
@@ -191,14 +198,14 @@ def test_session_store_rejects_non_mapping_payload(tmp_path: Path) -> None:
 
 
 def test_resolve_session_scopes_rejects_non_list_scope_metadata(tmp_path: Path) -> None:
-    """Malformed scope metadata should fall back to the safe compatibility scope set."""
+    """Malformed scope metadata must fail closed, not grant every scope."""
     raw = create_session_token(scopes={Scope.READ}, home=tmp_path)
     fingerprint = token_fingerprint(raw)
     sessions = json.loads(auth_session_path(tmp_path).read_text(encoding="utf-8"))
     sessions[fingerprint]["scopes"] = "read"
     auth_session_path(tmp_path).write_text(json.dumps(sessions), encoding="utf-8")
 
-    assert resolve_session_scopes(raw, home=tmp_path) == ALL_SCOPES
+    assert resolve_session_scopes(raw, home=tmp_path) == set()
 
 
 def test_resolve_session_scopes_skips_invalid_entries(tmp_path: Path) -> None:
