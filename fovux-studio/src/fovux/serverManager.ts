@@ -109,6 +109,8 @@ async function startServerProcess(): Promise<void> {
   } catch (error) {
     if (managedProcess === proc) {
       managedProcess = null;
+    }
+    if (!proc.killed) {
       killProcessTree(proc);
     }
     throw error;

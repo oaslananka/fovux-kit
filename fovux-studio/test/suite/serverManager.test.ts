@@ -57,6 +57,38 @@ describe("startFovuxServer", () => {
     }
   });
 
+  it("does not leak or rekill a previously stopped server when startup times out", async () => {
+    vi.useFakeTimers();
+    const proc = Object.assign(new EventEmitter(), {
+      pid: 123456,
+      killed: false,
+      stdout: new EventEmitter(),
+      stderr: new EventEmitter(),
+      kill: vi.fn(),
+    });
+    proc.kill.mockImplementation(() => {
+      proc.killed = true;
+      return true;
+    });
+    const spawn = vi.fn(() => proc);
+    vi.doMock("node:child_process", () => ({ spawn, execFile: vi.fn() }));
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    try {
+      const { startFovuxServer, stopFovuxServer } = await import("../../src/fovux/serverManager");
+      const starting = startFovuxServer();
+      const failure = expect(starting).rejects.toThrow(/did not become healthy/i);
+      await vi.advanceTimersByTimeAsync(500);
+      await stopFovuxServer();
+      await vi.advanceTimersByTimeAsync(15_000);
+      await failure;
+      expect(proc.kill).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+      vi.doUnmock("node:child_process");
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("shows an information message when the server is already running", async () => {
     const fovuxHome = await mkdtemp(join(tmpdir(), "fovux-server-manager-"));
     vi.stubEnv("FOVUX_HOME", fovuxHome);
