@@ -129,7 +129,10 @@ def run(run_dir: Path) -> None:
             "name": "weights",
             "exist_ok": True,
         }
+        train_kwargs.update(params.get("options", {}))
         train_kwargs.update(params.get("extra_args", {}))
+        if params.get("max_runtime_seconds") is not None:
+            train_kwargs["time"] = params["max_runtime_seconds"] / 3600
         if params.get("resume_checkpoint"):
             train_kwargs["resume"] = True
 
