@@ -172,12 +172,12 @@ def _validate_labels(config: dict[str, Any], labels_path: Path) -> list[str]:
     except OSError as exc:
         return [f"Cannot load label catalog: {exc}"]
     unknown = sorted(collect_configured_labels(config) - known_labels)
-    missing_shared = sorted(REQUIRED_POLICY_LABELS - known_labels)
+    missing_required = sorted(REQUIRED_POLICY_LABELS - known_labels)
     errors: list[str] = []
     if unknown:
         errors.append(f"Unknown Renovate labels: {unknown}")
-    if missing_shared:
-        errors.append(f"Missing required Renovate labels: {missing_shared}")
+    if missing_required:
+        errors.append(f"Missing required Renovate labels: {missing_required}")
     return errors
 
 
