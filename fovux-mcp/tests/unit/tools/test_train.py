@@ -668,6 +668,9 @@ def test_train_resume_updates_params_and_status(fake_fovux_home):
     assert pid_payload["process"]["pid"] == 22222
     assert params["resume_checkpoint"] == str(last_pt)
     assert params["epochs"] == 9
+    persisted = get_registry(FovuxPaths(fake_fovux_home).runs_db).get_run(start_out.run_id)
+    assert persisted is not None  # nosec B101 - pytest assertion
+    assert persisted.pid == 22222  # nosec B101 - pytest assertion
 
 
 def test_train_resume_uses_windows_process_group(fake_fovux_home):
