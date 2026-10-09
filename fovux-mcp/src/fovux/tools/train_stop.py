@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -113,21 +110,3 @@ def _refuse_missing_process_identity(
             "refusing to signal a PID by number alone."
         ),
     )
-
-
-def _kill_pid(pid: int, *, force: bool) -> str:
-    try:
-        if sys.platform == "win32":
-            flag = "/F" if force else ""
-            args = ["taskkill", "/PID", str(pid)]
-            if flag:
-                args.append(flag)
-            subprocess.run(args, capture_output=True, check=False)  # noqa: S603
-        else:
-            import signal as _signal
-
-            sig = getattr(_signal, "SIGKILL", _signal.SIGTERM) if force else _signal.SIGTERM
-            os.kill(pid, sig)
-        return f"Signal sent to PID {pid}."
-    except (ProcessLookupError, OSError):
-        return f"PID {pid} no longer exists."

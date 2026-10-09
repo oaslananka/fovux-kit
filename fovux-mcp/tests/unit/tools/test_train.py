@@ -28,7 +28,7 @@ from fovux.schemas.training import (
 from fovux.tools.train_resume import _run_train_resume
 from fovux.tools.train_start import _run_train_start
 from fovux.tools.train_status import _pid_alive, _read_metrics, _run_train_status
-from fovux.tools.train_stop import _kill_pid, _run_train_stop
+from fovux.tools.train_stop import _run_train_stop
 
 FIXTURES = Path(__file__).parent.parent.parent / "fixtures"
 
@@ -831,43 +831,6 @@ def test_pid_alive_current_process():
 def test_pid_alive_bogus_pid():
     """A very large bogus PID should not be alive."""
     assert _pid_alive(2_000_000) is False
-
-
-def test_kill_pid_uses_sigterm(monkeypatch):
-    """POSIX stop requests should send SIGTERM when force is disabled."""
-    import signal
-
-    from fovux.tools import train_stop as train_stop_module
-
-    monkeypatch.setattr(train_stop_module.sys, "platform", "linux")
-    with patch.object(train_stop_module.os, "kill") as kill:
-        message = _kill_pid(321, force=False)
-
-    kill.assert_called_once_with(321, signal.SIGTERM)
-    assert "Signal sent" in message
-
-
-def test_kill_pid_uses_taskkill_on_windows(monkeypatch):
-    """Windows stop requests should delegate to taskkill and honor force mode."""
-    from fovux.tools import train_stop as train_stop_module
-
-    monkeypatch.setattr(train_stop_module.sys, "platform", "win32")
-    with patch.object(train_stop_module.subprocess, "run") as run:
-        message = _kill_pid(654, force=True)
-
-    run.assert_called_once_with(["taskkill", "/PID", "654", "/F"], capture_output=True, check=False)
-    assert "Signal sent" in message
-
-
-def test_kill_pid_handles_missing_process(monkeypatch):
-    """A missing process should return a descriptive noop message."""
-    from fovux.tools import train_stop as train_stop_module
-
-    monkeypatch.setattr(train_stop_module.sys, "platform", "linux")
-    with patch.object(train_stop_module.os, "kill", side_effect=ProcessLookupError):
-        message = _kill_pid(999, force=True)
-
-    assert "no longer exists" in message
 
 
 def test_train_validation_failures():
