@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from sqlalchemy.orm import Session
 
+from fovux.core.errors import FovuxTrainingRunNotFoundError
 from fovux.core.run_registry.catalog_repository import CatalogRepository
 from fovux.core.run_registry.database import RegistryDatabase
 from fovux.core.run_registry.events import EventStore
@@ -159,5 +162,52 @@ def test_update_extra_handles_missing_and_legacy_non_mapping_values(tmp_path: Pa
         updated = repository.get_run("legacy-extra")
         assert updated is not None
         assert json.loads(str(updated.extra_json)) == {"new": True}
+    finally:
+        database.close()
+
+
+def test_atomic_reservation_rejects_parallel_second_slot(tmp_path: Path) -> None:
+    """Two simultaneous SQLite connections cannot reserve one training slot."""
+    from fovux.core.errors import FovuxTrainingAlreadyRunningError
+
+    database = RegistryDatabase(tmp_path / "concurrent.db")
+    repository, _ = _repository(database)
+    start = Barrier(2)
+
+    def reserve(index: int) -> str:
+        request = RunCreateRequest(
+            run_id=f"parallel_{index}",
+            run_path=tmp_path / f"parallel_{index}",
+            model="yolo.pt",
+            dataset_path=tmp_path / "dataset",
+            task="detect",
+            epochs=1,
+        )
+        start.wait(timeout=5)
+        try:
+            repository.reserve_run_slot(request, max_concurrent_runs=1)
+        except FovuxTrainingAlreadyRunningError:
+            return "rejected"
+        return "reserved"
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(reserve, (1, 2)))
+        assert sorted(outcomes) == ["rejected", "reserved"]  # nosec B101 - pytest assertion
+        assert len(repository.list_runs()) == 1  # nosec B101 - pytest assertion
+    finally:
+        database.close()
+
+
+def test_resume_claim_for_missing_run_fails_closed(tmp_path: Path) -> None:
+    """Expected-state transitions must reject missing runs."""
+    database = RegistryDatabase(tmp_path / "runs.db")
+    repository, _ = _repository(database)
+    try:
+        with pytest.raises(FovuxTrainingRunNotFoundError, match="missing"):
+            repository.update_status(
+                "missing", "running", expected_from=frozenset({"stopped", "failed"})
+            )
+        assert repository.list_runs() == []  # nosec B101 - pytest assertion
     finally:
         database.close()
