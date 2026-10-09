@@ -128,7 +128,19 @@ def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
             )
 
     if existing is not None and inp.force:
-        shutil.rmtree(run_dir, ignore_errors=True)
+        from fovux.schemas.management import RunArchiveInput
+        from fovux.tools.run_archive import _run_run_archive
+
+        if inp.max_concurrent_runs > 0:
+            active = len(registry.list_runs(status="running", limit=10_000))
+            pending = len(registry.list_runs(status="pending", limit=10_000))
+            if active + pending >= inp.max_concurrent_runs:
+                raise FovuxTrainingAlreadyRunningError(
+                    f"Cannot replace run '{run_id}': training capacity is full."
+                )
+        # Preserve the previous checkpoints before reusing this run name.
+        _run_run_archive(RunArchiveInput(run_id=run_id, delete_original=False))
+        shutil.rmtree(run_dir)
         registry.delete_run(run_id)
 
     run_dir.mkdir(parents=True, exist_ok=True)

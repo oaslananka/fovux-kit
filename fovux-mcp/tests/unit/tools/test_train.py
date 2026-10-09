@@ -180,6 +180,37 @@ def test_train_start_force_overwrites_finished_run(fake_fovux_home):
     assert forced.run_id == "retryable"
     assert forced.pid == 101
     assert not (forced.run_path / "metrics.jsonl").exists()
+    import tarfile
+
+    with tarfile.open(FovuxPaths(fake_fovux_home).home / "archive" / "retryable.tar.gz") as archive:
+        assert "retryable/metrics.jsonl" in archive.getnames()  # nosec B101 - pytest assertion
+
+
+def test_force_replacement_preserves_existing_run_if_capacity_full(fake_fovux_home) -> None:
+    """Force must not discard a prior run when no new training slot is available."""
+    with patch("fovux.tools.train_start.subprocess.Popen", return_value=_fake_popen(pid=100)):
+        previous = _run_train_start(
+            TrainStartInput(dataset_path=FIXTURES / "mini_yolo", name="repeatable")
+        )
+    registry = get_registry(FovuxPaths(fake_fovux_home).runs_db)
+    registry.update_status(previous.run_id, "failed")
+    (previous.run_path / "model.pt").write_bytes(b"previous weights")
+
+    with patch("fovux.tools.train_start.subprocess.Popen", return_value=_fake_popen(pid=101)):
+        _run_train_start(TrainStartInput(dataset_path=FIXTURES / "mini_yolo", name="busy"))
+
+    with (
+        patch("fovux.tools.train_start.subprocess.Popen") as spawn,
+        pytest.raises(FovuxTrainingAlreadyRunningError, match="capacity is full"),
+    ):
+        _run_train_start(
+            TrainStartInput(dataset_path=FIXTURES / "mini_yolo", name="repeatable", force=True)
+        )
+
+    spawn.assert_not_called()
+    assert (previous.run_path / "model.pt").read_bytes() == b"previous weights"  # nosec B101 - pytest assertion
+    assert registry.get_run(previous.run_id).status == "failed"  # nosec B101 - pytest assertion
+    assert not (FovuxPaths(fake_fovux_home).home / "archive" / "repeatable.tar.gz").exists()  # nosec B101 - pytest assertion
 
 
 def test_train_start_uses_explicit_options_and_cpu_policy(fake_fovux_home) -> None:
