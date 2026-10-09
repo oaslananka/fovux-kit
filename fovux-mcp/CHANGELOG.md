@@ -12,6 +12,22 @@ GitHub milestones, not in package changelog sections.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.6.3](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.6.2...fovux-mcp-v1.6.3) (2026-10-09)
+
+
+### Bug Fixes
+
+* **data:** protect datasets and run archive recovery files ([#262](https://github.com/oaslananka/fovux-kit/issues/262)) ([3d9f6fd](https://github.com/oaslananka/fovux-kit/commit/3d9f6fdb70935cf24cd340c07bf094661129f421))
+* Security remediation: oaslananka/fovux-kit code scanning (8) [884bdc2f] ([#249](https://github.com/oaslananka/fovux-kit/issues/249)) ([10e8469](https://github.com/oaslananka/fovux-kit/commit/10e846967641c6e506732477aca9b322edc88132))
+* **security:** close Sonar vulnerability backlog ([#199](https://github.com/oaslananka/fovux-kit/issues/199)) ([4e77033](https://github.com/oaslananka/fovux-kit/commit/4e77033088313b973d04cfc3b367bb2a6c12b01e))
+* **security:** refresh vulnerable dependency locks ([#202](https://github.com/oaslananka/fovux-kit/issues/202)) ([3deaeff](https://github.com/oaslananka/fovux-kit/commit/3deaeffa8dd2dfe03707dad65555f281553cf7ca))
+* **security:** reject empty and malformed session permissions ([#258](https://github.com/oaslananka/fovux-kit/issues/258)) ([fb61fb7](https://github.com/oaslananka/fovux-kit/commit/fb61fb7f7d8906c211d7e8414b545fbdf3df468b))
+* **security:** restore dependency security baseline ([#209](https://github.com/oaslananka/fovux-kit/issues/209)) ([927f0bc](https://github.com/oaslananka/fovux-kit/commit/927f0bc15d188f2ae504672113a162d27c980002))
+* **training:** honor explicit optimizer and duration settings ([#263](https://github.com/oaslananka/fovux-kit/issues/263)) ([c4b32e3](https://github.com/oaslananka/fovux-kit/commit/c4b32e3faf6b054b01f9473e2ef85233d387c026))
+* **training:** preserve prior run artifacts during forced replacement ([#266](https://github.com/oaslananka/fovux-kit/issues/266)) ([6a81b86](https://github.com/oaslananka/fovux-kit/commit/6a81b86c74b2e359b58c7d3e84b7ad2e27821ea8))
+* **training:** reject duplicate resume workers with atomic status claim ([#261](https://github.com/oaslananka/fovux-kit/issues/261)) ([da78c99](https://github.com/oaslananka/fovux-kit/commit/da78c996122f33d695f34ea2c2565caafed025a1))
+* **training:** serialize SQLite capacity reservations ([#260](https://github.com/oaslananka/fovux-kit/issues/260)) ([f894176](https://github.com/oaslananka/fovux-kit/commit/f894176f82801639116a1206311f330815090bbe))
+
 ## [1.6.2](https://github.com/oaslananka/fovux-kit/compare/fovux-mcp-v1.6.1...fovux-mcp-v1.6.2) (2026-07-22)
 
 

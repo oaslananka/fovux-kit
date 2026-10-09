@@ -17,6 +17,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Renamed the Marketplace display name to `Fovux Studio Kit` so the first public VSIX publish uses
   a unique display name while keeping the `oaslananka.fovuxstudiokit` extension identifier stable.
 
+## [1.5.2](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.5.1...fovux-studio-v1.5.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* Security remediation: oaslananka/fovux-kit code scanning (8) [884bdc2f] ([#249](https://github.com/oaslananka/fovux-kit/issues/249)) ([10e8469](https://github.com/oaslananka/fovux-kit/commit/10e846967641c6e506732477aca9b322edc88132))
+* **security:** close Sonar vulnerability backlog ([#199](https://github.com/oaslananka/fovux-kit/issues/199)) ([4e77033](https://github.com/oaslananka/fovux-kit/commit/4e77033088313b973d04cfc3b367bb2a6c12b01e))
+* **security:** refresh vulnerable dependency locks ([#202](https://github.com/oaslananka/fovux-kit/issues/202)) ([3deaeff](https://github.com/oaslananka/fovux-kit/commit/3deaeffa8dd2dfe03707dad65555f281553cf7ca))
+* **security:** restore dependency security baseline ([#209](https://github.com/oaslananka/fovux-kit/issues/209)) ([927f0bc](https://github.com/oaslananka/fovux-kit/commit/927f0bc15d188f2ae504672113a162d27c980002))
+* **security:** validate annotation webview state ([#251](https://github.com/oaslananka/fovux-kit/issues/251)) ([82f326f](https://github.com/oaslananka/fovux-kit/commit/82f326f968d2b00b0b1681974572e8bcb81e5eb7))
+* **studio:** clean up startup failures and exponential SSE retry ([#264](https://github.com/oaslananka/fovux-kit/issues/264)) ([eecfc0b](https://github.com/oaslananka/fovux-kit/commit/eecfc0b7144557d3dda832fe23ac3b0f5fdd8240))
+* **studio:** restore complete Semgrep parsing ([#196](https://github.com/oaslananka/fovux-kit/issues/196)) ([49c3a63](https://github.com/oaslananka/fovux-kit/commit/49c3a63a1284bda14eb57b081d8ddb6fc8dc3052))
+* **studio:** validate dynamic API identifiers ([#217](https://github.com/oaslananka/fovux-kit/issues/217)) ([880fcfc](https://github.com/oaslananka/fovux-kit/commit/880fcfc3999b91d0567bf7d6fe4bc1da6ec192f2))
+
 ## [1.5.1](https://github.com/oaslananka/fovux-kit/compare/fovux-studio-v1.5.0...fovux-studio-v1.5.1) (2026-07-22)
 
 ### Bug Fixes
