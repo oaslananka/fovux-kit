@@ -12,6 +12,7 @@ import pytest
 
 from fovux.core.errors import (
     FovuxDatasetNotFoundError,
+    FovuxError,
     FovuxTrainingAlreadyRunningError,
     FovuxTrainingError,
     FovuxTrainingRunNotFoundError,
@@ -246,6 +247,34 @@ def test_train_start_rejects_unenforceable_guards(fake_fovux_home, overrides) ->
         with pytest.raises(FovuxTrainingError):
             _run_train_start(TrainStartInput(dataset_path=FIXTURES / "mini_yolo", **overrides))
     spawn.assert_not_called()
+
+
+def test_force_replacement_does_not_overwrite_existing_recovery_archive(fake_fovux_home) -> None:
+    """An archive collision cannot discard an existing run or backup."""
+    with patch("fovux.tools.train_start.subprocess.Popen", return_value=_fake_popen(pid=100)):
+        prior = _run_train_start(
+            TrainStartInput(dataset_path=FIXTURES / "mini_yolo", name="protected")
+        )
+    registry = get_registry(FovuxPaths(fake_fovux_home).runs_db)
+    registry.update_status(prior.run_id, "failed")
+    old_weights = prior.run_path / "old.pt"
+    old_weights.write_bytes(b"old weights")
+    archive = FovuxPaths(fake_fovux_home).home / "archive" / "protected.tar.gz"
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    archive.write_bytes(b"prior backup")
+
+    with (
+        patch("fovux.tools.train_start.subprocess.Popen") as spawn,
+        pytest.raises(FovuxError, match="already exists"),
+    ):
+        _run_train_start(
+            TrainStartInput(dataset_path=FIXTURES / "mini_yolo", name="protected", force=True)
+        )
+
+    spawn.assert_not_called()
+    assert old_weights.read_bytes() == b"old weights"  # nosec B101 - pytest assertion
+    assert archive.read_bytes() == b"prior backup"  # nosec B101 - pytest assertion
+    assert registry.get_run("protected").status == "failed"  # nosec B101 - pytest assertion
 
 
 def test_train_start_enforces_max_concurrent_runs(fake_fovux_home):
