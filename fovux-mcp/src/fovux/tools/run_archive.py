@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import tarfile
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -33,18 +35,28 @@ def _run_run_archive(inp: RunArchiveInput) -> RunArchiveOutput:
     record = registry.get_run(inp.run_id)
     if record is None:
         raise FovuxTrainingRunNotFoundError(inp.run_id)
-    if str(record.status) == "running":
-        raise FovuxError(f"Run '{inp.run_id}' is still running and cannot be archived.")
+    if str(record.status) in {"running", "pending", "archived"}:
+        raise FovuxError(f"Run '{inp.run_id}' cannot be archived in status {record.status}.")
 
     run_dir = ensure_within_root(Path(record.run_path), paths.runs)
     archive_dir = ensure_within_root(paths.home / "archive", paths.home)
     archive_dir.mkdir(parents=True, exist_ok=True)
     archive_path = ensure_within_root(archive_dir / f"{inp.run_id}.tar.gz", archive_dir)
+    if not run_dir.is_dir():
+        raise FovuxError(f"Run directory '{run_dir}' is missing; refusing to replace an archive.")
+    if archive_path.exists():
+        raise FovuxError(f"Archive '{archive_path}' already exists; refusing to overwrite it.")
     archived_files = sum(1 for path in run_dir.rglob("*") if path.is_file())
 
     if not inp.dry_run:
-        with tarfile.open(archive_path, "w:gz") as archive:
-            archive.add(run_dir, arcname=inp.run_id)
+        with tempfile.NamedTemporaryFile(dir=archive_dir, suffix=".tar.gz", delete=False) as staged:
+            staged_path = Path(staged.name)
+        try:
+            with tarfile.open(staged_path, "w:gz") as archive:
+                archive.add(run_dir, arcname=inp.run_id)
+            os.replace(staged_path, archive_path)
+        finally:
+            staged_path.unlink(missing_ok=True)
 
     deleted = False
     if inp.delete_original:
