@@ -134,6 +134,43 @@ describe("shared webview api", () => {
     }
   });
 
+  it("resets SSE backoff when a valid metric arrives after reconnect", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls += 1;
+        if (calls === 2) {
+          return {
+            ok: true,
+            body: streamFrom([
+              'event: metric\ndata: {"runId":"run1","epoch":1,"metrics":{"mAP":0.7}}\n\n',
+            ]),
+          };
+        }
+        throw new Error("offline");
+      })
+    );
+    const errors: string[] = [];
+    const unsubscribe = subscribeToMetrics(
+      config,
+      "run1",
+      () => {},
+      (error) => errors.push(error)
+    );
+    try {
+      await vi.advanceTimersByTimeAsync(2_100);
+      expect(errors[0]).toContain("Reconnecting in 1000ms");
+      expect(errors[1]).toContain("Reconnecting in 1000ms");
+      expect(errors[2]).toContain("Reconnecting in 2000ms");
+    } finally {
+      unsubscribe();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("falls back to polling when both SSE endpoints are unavailable", async () => {
     const received: unknown[] = [];
     const errors: string[] = [];
