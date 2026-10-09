@@ -165,10 +165,10 @@ def resolve_session_scopes(
     """Resolve the scopes for a given bearer token."""
     meta = _read_sessions(home).get(token_fingerprint(token))
     if meta is None:
-        return ALL_SCOPES
+        return set()
     raw_scopes = meta.get("scopes")
     if not isinstance(raw_scopes, list):
-        return ALL_SCOPES
+        return set()
     resolved: set[Scope] = set()
     for name in raw_scopes:
         if not isinstance(name, str):
@@ -177,7 +177,7 @@ def resolve_session_scopes(
             resolved.add(Scope(name))
         except ValueError:
             pass
-    return resolved if resolved else ALL_SCOPES
+    return resolved
 
 
 def revoke_session_token(token: str, home: Path | None = None) -> bool:

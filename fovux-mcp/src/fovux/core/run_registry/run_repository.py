@@ -128,6 +128,8 @@ class RunRepository:
         with self._session_factory() as session:
             with session.begin():
                 if max_concurrent_runs is not None and max_concurrent_runs > 0:
+                    # SQLite SELECT alone does not acquire a write reservation.
+                    session.connection().exec_driver_sql("BEGIN IMMEDIATE")
                     active_count = (
                         session.query(RunRecord)
                         .filter(RunRecord.status.in_(["running", "pending"]))
