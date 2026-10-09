@@ -42,21 +42,30 @@ def _run_train_resume(inp: TrainResumeInput) -> TrainResumeOutput:
     if record is None:
         raise FovuxTrainingRunNotFoundError(inp.run_id)
 
-    run_dir = ensure_within_root(Path(record.run_path), paths.runs)
-    params_path = run_dir / "params.json"
-    params = (
-        cast(dict[str, Any], json.loads(params_path.read_text())) if params_path.exists() else {}
-    )
+    # Claim the terminal run before touching checkpoint files or spawning a worker.
+    registry.update_status(inp.run_id, "running", expected_from=frozenset({"failed", "stopped"}))
+    try:
+        run_dir = ensure_within_root(Path(record.run_path), paths.runs)
+        params_path = run_dir / "params.json"
+        params = (
+            cast(dict[str, Any], json.loads(params_path.read_text()))
+            if params_path.exists()
+            else {}
+        )
 
-    last_pt = run_dir / "weights" / "last.pt"
-    if not last_pt.exists():
-        last_pt = run_dir / "last.pt"
+        last_pt = run_dir / "weights" / "last.pt"
+        if not last_pt.exists():
+            last_pt = run_dir / "last.pt"
 
-    params["resume_checkpoint"] = str(last_pt) if last_pt.exists() else None
-    if inp.epochs is not None:
-        params["epochs"] = inp.epochs
+        params["resume_checkpoint"] = str(last_pt) if last_pt.exists() else None
+        if inp.epochs is not None:
+            params["epochs"] = inp.epochs
 
-    write_json_atomically(params_path, params)
+        write_json_atomically(params_path, params)
+
+    except Exception:
+        registry.update_status(inp.run_id, "failed")
+        raise
 
     command = [sys.executable, "-m", "fovux.core.train_worker", str(run_dir)]
     popen_kwargs: dict[str, Any] = {

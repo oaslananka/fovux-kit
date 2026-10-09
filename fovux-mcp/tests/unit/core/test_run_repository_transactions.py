@@ -11,6 +11,7 @@ from threading import Barrier
 import pytest
 from sqlalchemy.orm import Session
 
+from fovux.core.errors import FovuxTrainingRunNotFoundError
 from fovux.core.run_registry.catalog_repository import CatalogRepository
 from fovux.core.run_registry.database import RegistryDatabase
 from fovux.core.run_registry.events import EventStore
@@ -194,5 +195,19 @@ def test_atomic_reservation_rejects_parallel_second_slot(tmp_path: Path) -> None
             outcomes = list(pool.map(reserve, (1, 2)))
         assert sorted(outcomes) == ["rejected", "reserved"]  # nosec B101 - pytest assertion
         assert len(repository.list_runs()) == 1  # nosec B101 - pytest assertion
+    finally:
+        database.close()
+
+
+def test_resume_claim_for_missing_run_fails_closed(tmp_path: Path) -> None:
+    """Expected-state transitions must reject missing runs."""
+    database = RegistryDatabase(tmp_path / "runs.db")
+    repository, _ = _repository(database)
+    try:
+        with pytest.raises(FovuxTrainingRunNotFoundError, match="missing"):
+            repository.update_status(
+                "missing", "running", expected_from=frozenset({"stopped", "failed"})
+            )
+        assert repository.list_runs() == []  # nosec B101 - pytest assertion
     finally:
         database.close()

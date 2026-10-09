@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from fovux.core.errors import FovuxTrainingAlreadyRunningError, FovuxTrainingRunNotFoundError
 from fovux.core.run_registry.catalog_repository import CatalogRepository
 from fovux.core.run_registry.events import EventStore
 from fovux.core.run_registry.lifecycle import RunLifecyclePolicy, RunStatus
@@ -174,15 +175,25 @@ class RunRepository:
         run_id: str,
         status: RunStatus,
         pid: int | None = None,
+        *,
+        expected_from: frozenset[str] | None = None,
     ) -> None:
         """Validate and atomically persist a run status transition."""
         with self._session_factory() as session:
             with session.begin():
+                if expected_from is not None:
+                    session.connection().exec_driver_sql("BEGIN IMMEDIATE")
                 stmt = select(RunRecord).where(RunRecord.id == run_id)
                 record = session.execute(stmt).scalar_one_or_none()
                 if record is None:
+                    if expected_from is not None:
+                        raise FovuxTrainingRunNotFoundError(run_id)
                     return
                 current_status = str(record.status)
+                if expected_from is not None and current_status not in expected_from:
+                    raise FovuxTrainingAlreadyRunningError(
+                        f"Run '{run_id}' cannot resume from status '{current_status}'."
+                    )
                 changed = RunLifecyclePolicy.apply(
                     record,
                     status,

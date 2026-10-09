@@ -656,6 +656,7 @@ def test_train_resume_updates_params_and_status(fake_fovux_home):
             "fovux.tools.train_resume.subprocess.Popen", return_value=_fake_popen(pid=22222)
         ) as popen,
     ):
+        get_registry(FovuxPaths(fake_fovux_home).runs_db).update_status(start_out.run_id, "failed")
         resume_out = _run_train_resume(TrainResumeInput(run_id=start_out.run_id, epochs=9))
 
     params = json.loads((start_out.run_path / "params.json").read_text())
@@ -667,6 +668,9 @@ def test_train_resume_updates_params_and_status(fake_fovux_home):
     assert pid_payload["process"]["pid"] == 22222
     assert params["resume_checkpoint"] == str(last_pt)
     assert params["epochs"] == 9
+    persisted = get_registry(FovuxPaths(fake_fovux_home).runs_db).get_run(start_out.run_id)
+    assert persisted is not None  # nosec B101 - pytest assertion
+    assert persisted.pid == 22222  # nosec B101 - pytest assertion
 
 
 def test_train_resume_uses_windows_process_group(fake_fovux_home):
@@ -685,6 +689,7 @@ def test_train_resume_uses_windows_process_group(fake_fovux_home):
             "fovux.tools.train_resume.subprocess.Popen", return_value=_fake_popen(pid=44444)
         ) as popen,
     ):
+        get_registry(FovuxPaths(fake_fovux_home).runs_db).update_status(start_out.run_id, "failed")
         _run_train_resume(TrainResumeInput(run_id=start_out.run_id))
 
     assert popen.call_args.kwargs["creationflags"] == 512
@@ -702,6 +707,7 @@ def test_train_resume_marks_failed_when_spawn_fails(fake_fovux_home):
         patch("fovux.tools.train_resume.subprocess.Popen", side_effect=OSError("python missing")),
         pytest.raises(FovuxTrainingSubprocessError, match="python missing"),
     ):
+        get_registry(FovuxPaths(fake_fovux_home).runs_db).update_status(start_out.run_id, "failed")
         _run_train_resume(TrainResumeInput(run_id=start_out.run_id))
 
     record = get_registry(paths.runs_db).get_run(start_out.run_id)
@@ -726,6 +732,7 @@ def test_train_resume_terminates_worker_when_bookkeeping_fails(fake_fovux_home):
         ),
         pytest.raises(FovuxTrainingSubprocessError, match="snapshot failed"),
     ):
+        get_registry(FovuxPaths(fake_fovux_home).runs_db).update_status(start_out.run_id, "failed")
         _run_train_resume(TrainResumeInput(run_id=start_out.run_id))
 
     proc.terminate.assert_called_once()
@@ -759,6 +766,7 @@ def test_train_resume_terminates_worker_group_after_identity_capture(fake_fovux_
             signal_sent=True,
             message="stopped",
         )
+        get_registry(FovuxPaths(fake_fovux_home).runs_db).update_status(start_out.run_id, "failed")
         _run_train_resume(TrainResumeInput(run_id=start_out.run_id))
 
     terminate.assert_called_once()
@@ -797,6 +805,7 @@ def test_train_resume_reports_worker_group_cleanup_failure(fake_fovux_home):
             signal_sent=True,
             message="still alive",
         )
+        get_registry(FovuxPaths(fake_fovux_home).runs_db).update_status(start_out.run_id, "failed")
         _run_train_resume(TrainResumeInput(run_id=start_out.run_id))
 
     terminate.assert_called_once()
@@ -812,6 +821,7 @@ def test_train_resume_falls_back_when_last_checkpoint_is_missing(fake_fovux_home
         start_out = _run_train_start(TrainStartInput(dataset_path=FIXTURES / "mini_yolo"))
 
     with patch("fovux.tools.train_resume.subprocess.Popen", return_value=_fake_popen(pid=33333)):
+        get_registry(FovuxPaths(fake_fovux_home).runs_db).update_status(start_out.run_id, "failed")
         _run_train_resume(TrainResumeInput(run_id=start_out.run_id))
 
     params = json.loads((start_out.run_path / "params.json").read_text())
@@ -983,3 +993,79 @@ def test_train_start_atomic_concurrency_lock(fake_fovux_home, tmp_path):
     # Attempting to start second run must fail because of concurrency limit
     with pytest.raises(FovuxTrainingAlreadyRunningError, match="concurrent"):
         _run_train_start(TrainStartInput(dataset_path=dataset, name="run_2", max_concurrent_runs=1))
+
+
+def test_resume_corrupt_params_ends_claim_without_spawning(fake_fovux_home) -> None:
+    """A claimed run must be marked failed if its resume inputs cannot be prepared."""
+    with patch("fovux.tools.train_start.subprocess.Popen", return_value=_fake_popen(pid=11111)):
+        started = _run_train_start(TrainStartInput(dataset_path=FIXTURES / "mini_yolo"))
+    registry = get_registry(FovuxPaths(fake_fovux_home).runs_db)
+    registry.update_status(started.run_id, "failed")
+    (started.run_path / "params.json").write_text("not-json", encoding="utf-8")
+    previous_pid = (started.run_path / "pid.txt").read_bytes()
+
+    with (
+        patch("fovux.tools.train_resume.subprocess.Popen") as spawn,
+        pytest.raises(json.JSONDecodeError),
+    ):
+        _run_train_resume(TrainResumeInput(run_id=started.run_id))
+
+    spawn.assert_not_called()
+    assert registry.get_run(started.run_id).status == "failed"  # nosec B101 - pytest assertion
+    assert (started.run_path / "pid.txt").read_bytes() == previous_pid  # nosec B101 - pytest assertion
+
+
+def test_resume_refuses_active_worker_without_mutating_run(fake_fovux_home) -> None:
+    """A running run must keep its original process identity and parameters."""
+    with patch("fovux.tools.train_start.subprocess.Popen", return_value=_fake_popen(pid=11111)):
+        started = _run_train_start(TrainStartInput(dataset_path=FIXTURES / "mini_yolo"))
+    params = (started.run_path / "params.json").read_bytes()
+    identity = (started.run_path / "pid.txt").read_bytes()
+
+    with (
+        patch("fovux.tools.train_resume.subprocess.Popen") as spawn,
+        pytest.raises(FovuxTrainingAlreadyRunningError, match="cannot resume"),
+    ):
+        _run_train_resume(TrainResumeInput(run_id=started.run_id, epochs=1000))
+
+    spawn.assert_not_called()
+    assert (started.run_path / "params.json").read_bytes() == params
+    assert (started.run_path / "pid.txt").read_bytes() == identity
+    assert (
+        get_registry(FovuxPaths(fake_fovux_home).runs_db).get_run(started.run_id).status
+        == "running"
+    )
+
+
+def test_parallel_resume_claims_only_one_worker(fake_fovux_home: Path) -> None:
+    """Two clients cannot both claim a failed run for resumption."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    paths = FovuxPaths(fake_fovux_home)
+    registry = get_registry(paths.runs_db)
+    registry.create_run(
+        run_id="same_run",
+        run_path=paths.runs / "same_run",
+        model="yolov8n.pt",
+        dataset_path=FIXTURES / "mini_yolo",
+        task="detect",
+        epochs=1,
+    )
+    registry.update_status("same_run", "failed")
+    start = Barrier(2)
+
+    def claim() -> str:
+        start.wait(timeout=5)
+        try:
+            registry.update_status(
+                "same_run", "running", expected_from=frozenset({"failed", "stopped"})
+            )
+        except FovuxTrainingAlreadyRunningError:
+            return "rejected"
+        return "claimed"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(lambda _: claim(), range(2)))
+    assert sorted(outcomes) == ["claimed", "rejected"]
+    assert registry.get_run("same_run").status == "running"
