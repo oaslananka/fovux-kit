@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from fovux.core.errors import (
+    FovuxError,
     FovuxPathValidationError,
     FovuxTrainingError,
     FovuxTrainingRunNotFoundError,
@@ -119,3 +120,29 @@ def test_run_tag_unknown_run_raises(run_home) -> None:
 def test_normalize_tags_returns_sorted_unique_values() -> None:
     """Tag normalization should be deterministic."""
     assert _normalize_tags([" z ", "a", "", "a"]) == ["a", "z"]
+
+
+def test_repeated_archive_does_not_replace_previous_checkpoint(run_home) -> None:
+    """An archived run must retain its original tar even on repeated invocation."""
+    import tarfile
+
+    paths, registry, completed_path, _ = run_home
+    result = _run_run_archive(RunArchiveInput(run_id="run_done"))
+    saved = result.archive_path.read_bytes()
+    assert not completed_path.exists()  # nosec B101 - pytest assertion
+    with pytest.raises(FovuxError, match="archived"):
+        _run_run_archive(RunArchiveInput(run_id="run_done"))
+    assert result.archive_path.read_bytes() == saved  # nosec B101 - pytest assertion
+    with tarfile.open(result.archive_path, "r:gz") as archive:
+        assert "run_done/artifact.txt" in archive.getnames()  # nosec B101 - pytest assertion
+    assert registry.get_run("run_done").status == "archived"  # nosec B101 - pytest assertion
+
+
+def test_archive_rejects_missing_run_directory_before_writing(run_home) -> None:
+    """No new or existing recovery archive is touched when source is missing."""
+    paths, _, completed_path, _ = run_home
+    (completed_path / "artifact.txt").unlink()
+    completed_path.rmdir()
+    with pytest.raises(FovuxError, match="missing"):
+        _run_run_archive(RunArchiveInput(run_id="run_done"))
+    assert not (paths.home / "archive" / "run_done.tar.gz").exists()  # nosec B101 - pytest assertion
