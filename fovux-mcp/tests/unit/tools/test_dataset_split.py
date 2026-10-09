@@ -105,3 +105,42 @@ def test_split_is_reproducible_for_same_seed(tmp_path: Path) -> None:
     first_manifest = json.loads(first.manifest_path.read_text(encoding="utf-8"))
     second_manifest = json.loads(second.manifest_path.read_text(encoding="utf-8"))
     assert first_manifest == second_manifest
+
+
+@pytest.mark.parametrize("relative_output", [".", "images", "labels/train", "../"])
+def test_split_rejects_output_overlapping_source_dataset(
+    tmp_path: Path, relative_output: str
+) -> None:
+    """Force-overwrite must never delete source images or annotations."""
+    from shutil import copytree
+
+    source = copytree(FIXTURES / "mini_yolo", tmp_path / "dataset")
+    sentinel = source / "labels" / "train" / "000.txt"
+    original = sentinel.read_bytes()
+    with pytest.raises(FovuxDatasetFormatError, match="overlaps source dataset"):
+        _run_split(
+            DatasetSplitInput(
+                dataset_path=source,
+                output_path=source / relative_output,
+                overwrite=True,
+            )
+        )
+    assert sentinel.read_bytes() == original
+    assert (source / "data.yaml").exists()
+
+
+def test_split_preserves_duplicate_basenames_across_original_splits(tmp_path: Path) -> None:
+    """Combining original train and val must not overwrite identically named samples."""
+    output = _run_split(
+        DatasetSplitInput(
+            dataset_path=FIXTURES / "mini_yolo",
+            ratios=(1.0, 0.0, 0.0),
+            stratify_by_class=False,
+            output_path=tmp_path / "combined",
+        )
+    )
+    image_files = list((output.output_path / "images" / "train").iterdir())
+    label_files = list((output.output_path / "labels" / "train").iterdir())
+    assert len(image_files) == output.train_count
+    assert len(label_files) == output.train_count
+    assert {p.stem for p in image_files} == {p.stem for p in label_files}
