@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-EXPECTED_PRESET = "github>oaslananka/.github:renovate-config"
-SHARED_PRESET_LABELS = {
+EXPECTED_PRESET = "config:recommended"
+REQUIRED_POLICY_LABELS = {
     "automerge",
     "ci",
     "dependencies",
@@ -125,7 +125,7 @@ def package_is_non_automerge(config: dict[str, Any], package: str) -> bool:
 def _validate_core_policy(config: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if EXPECTED_PRESET not in _string_values(config.get("extends")):
-        errors.append(f"Missing explicit shared preset: {EXPECTED_PRESET}")
+        errors.append(f"Missing supported base preset: {EXPECTED_PRESET}")
 
     managers = _string_values(config.get("enabledManagers"))
     missing_managers = sorted(EXPECTED_MANAGERS - managers)
@@ -172,12 +172,12 @@ def _validate_labels(config: dict[str, Any], labels_path: Path) -> list[str]:
     except OSError as exc:
         return [f"Cannot load label catalog: {exc}"]
     unknown = sorted(collect_configured_labels(config) - known_labels)
-    missing_shared = sorted(SHARED_PRESET_LABELS - known_labels)
+    missing_required = sorted(REQUIRED_POLICY_LABELS - known_labels)
     errors: list[str] = []
     if unknown:
         errors.append(f"Unknown Renovate labels: {unknown}")
-    if missing_shared:
-        errors.append(f"Missing inherited Renovate labels: {missing_shared}")
+    if missing_required:
+        errors.append(f"Missing required Renovate labels: {missing_required}")
     return errors
 
 
