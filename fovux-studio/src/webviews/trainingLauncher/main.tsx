@@ -25,7 +25,7 @@ import {
   type UserPreset,
 } from "../shared/types";
 
-function TrainingLauncherApp(): JSX.Element {
+export function TrainingLauncherApp(): JSX.Element {
   const [pendingChallenge, setPendingChallenge] = useState<{
     challenge: ChallengeResponse;
     resolve: (val: string) => void;
@@ -375,9 +375,7 @@ function TrainingLauncherApp(): JSX.Element {
         "train_preflight",
         payload
       );
-      const blockers = Array.isArray(preflight.blockers)
-        ? preflight.blockers.map(String)
-        : [];
+      const blockers = Array.isArray(preflight.blockers) ? preflight.blockers.map(String) : [];
       const nextActions = Array.isArray(preflight.next_actions)
         ? preflight.next_actions.map(String)
         : [];
