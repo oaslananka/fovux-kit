@@ -129,6 +129,13 @@ def _run_split(inp: DatasetSplitInput) -> DatasetSplitOutput:
             path.parent,
         ],
     )
+    # Never overwrite the source dataset or a directory containing its inputs.
+    source_dirs = (path / "images", path / "labels")
+    if any(
+        output_path == source or output_path in source.parents or source in output_path.parents
+        for source in source_dirs
+    ):
+        raise FovuxDatasetFormatError("Output path overlaps source dataset images or labels.")
     if output_path.exists() and not inp.overwrite:
         raise FovuxDatasetFormatError(f"Output path {output_path} exists. Use overwrite=True.")
     if output_path.exists():
@@ -179,11 +186,18 @@ def _run_split(inp: DatasetSplitInput) -> DatasetSplitOutput:
 def _write_yolo_split(output_path: Path, split: str, pairs: list[tuple[Path, Path]]) -> None:
     (output_path / "images" / split).mkdir(parents=True, exist_ok=True)
     (output_path / "labels" / split).mkdir(parents=True, exist_ok=True)
-    for img_p, lbl_p in pairs:
+    used_stems: set[str] = set()
+    for index, (img_p, lbl_p) in enumerate(pairs):
+        stem = img_p.stem
+        suffix = 0
+        while stem in used_stems:
+            suffix += 1
+            stem = f"{img_p.stem}_{index}_{suffix}"
+        used_stems.add(stem)
         if img_p.exists():
-            shutil.copy(img_p, output_path / "images" / split / img_p.name)
+            shutil.copy(img_p, output_path / "images" / split / f"{stem}{img_p.suffix}")
         if lbl_p.exists():
-            shutil.copy(lbl_p, output_path / "labels" / split / lbl_p.name)
+            shutil.copy(lbl_p, output_path / "labels" / split / f"{stem}{lbl_p.suffix}")
 
 
 def _shuffle_for_reproducible_split(

@@ -129,7 +129,18 @@ def run(run_dir: Path) -> None:
             "name": "weights",
             "exist_ok": True,
         }
+        train_kwargs.update(params.get("options", {}))
         train_kwargs.update(params.get("extra_args", {}))
+        # Generated run paths, dataset, device and resource parameters are
+        # controlled by validated training inputs, not worker-side extras.
+        for key in ("epochs", "batch", "imgsz", "device", "task"):
+            train_kwargs[key] = params[key]
+        train_kwargs["data"] = params["dataset_path"]
+        train_kwargs["project"] = str(run_dir)
+        train_kwargs["name"] = "weights"
+        train_kwargs["exist_ok"] = True
+        if params.get("max_runtime_seconds") is not None:
+            train_kwargs["time"] = params["max_runtime_seconds"] / 3600
         if params.get("resume_checkpoint"):
             train_kwargs["resume"] = True
 

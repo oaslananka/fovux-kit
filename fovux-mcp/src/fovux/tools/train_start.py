@@ -15,6 +15,7 @@ from fovux.core.dataset_config import validate_yolo_data_yaml
 from fovux.core.errors import (
     FovuxDatasetNotFoundError,
     FovuxTrainingAlreadyRunningError,
+    FovuxTrainingError,
     FovuxTrainingSubprocessError,
 )
 from fovux.core.json_io import write_json_atomically
@@ -90,6 +91,18 @@ def train_start(
 
 
 def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
+    if inp.max_disk_usage_gb is not None:
+        raise FovuxTrainingError(
+            "max_disk_usage_gb cannot currently be enforced during training; "
+            "remove this limit instead of relying on an ignored safeguard."
+        )
+    if inp.device_policy == "gpu_only" and inp.device == "auto":
+        raise FovuxTrainingError("gpu_only requires an explicit CUDA device, not auto.")
+    if any(
+        key in inp.options.model_fields_set
+        for key in ("teacher_checkpoint", "distillation_temperature", "distillation_alpha")
+    ):
+        raise FovuxTrainingError("Distillation options require the distill_model tool.")
     dataset_path = inp.dataset_path.expanduser().resolve()
     if not dataset_path.exists():
         raise FovuxDatasetNotFoundError(str(dataset_path))
@@ -104,9 +117,9 @@ def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
     existing = registry.get_run(run_id)
     if existing is not None:
         existing_status = str(existing.status)
-        if existing_status == "running":
+        if existing_status in {"running", "pending"}:
             raise FovuxTrainingAlreadyRunningError(
-                f"Run '{run_id}' is already running. Stop it before starting a new run."
+                f"Run '{run_id}' is already {existing_status}. Stop it before starting a new run."
             )
         if not inp.force:
             raise FovuxTrainingAlreadyRunningError(
@@ -115,7 +128,19 @@ def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
             )
 
     if existing is not None and inp.force:
-        shutil.rmtree(run_dir, ignore_errors=True)
+        from fovux.schemas.management import RunArchiveInput
+        from fovux.tools.run_archive import _run_run_archive
+
+        if inp.max_concurrent_runs > 0:
+            active = len(registry.list_runs(status="running", limit=10_000))
+            pending = len(registry.list_runs(status="pending", limit=10_000))
+            if active + pending >= inp.max_concurrent_runs:
+                raise FovuxTrainingAlreadyRunningError(
+                    f"Cannot replace run '{run_id}': training capacity is full."
+                )
+        # Preserve the previous checkpoints before reusing this run name.
+        _run_run_archive(RunArchiveInput(run_id=run_id, delete_original=False))
+        shutil.rmtree(run_dir)
         registry.delete_run(run_id)
 
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -126,8 +151,10 @@ def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
         "epochs": inp.epochs,
         "batch": inp.batch,
         "imgsz": inp.imgsz,
-        "device": inp.device,
+        "device": "cpu" if inp.device_policy == "cpu_only" else inp.device,
         "task": inp.task,
+        "options": inp.options.model_dump(exclude_unset=True),
+        "max_runtime_seconds": inp.max_runtime_seconds,
         "extra_args": inp.extra_args,
     }
     write_json_atomically(run_dir / "params.json", params)

@@ -100,6 +100,48 @@ def test_run_marks_training_complete(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert fake_model.train.call_args.kwargs["project"] == str(run_dir)
 
 
+def test_run_passes_validated_training_options_and_native_time_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The worker must honor explicit optimizer settings and Ultralytics' native time limit."""
+    run_dir = _managed_run_dir(tmp_path, monkeypatch, "run_options")
+    _write_params(
+        run_dir,
+        options={"optimizer": "AdamW", "lr0": 0.0004},
+        max_runtime_seconds=90,
+    )
+    fake_model = MagicMock()
+    with patch("fovux.core.train_worker.load_yolo_model", return_value=fake_model):
+        run(run_dir)
+
+    kwargs = fake_model.train.call_args.kwargs
+    assert kwargs["optimizer"] == "AdamW"  # nosec B101 - pytest assertion
+    assert kwargs["lr0"] == 0.0004  # nosec B101 - pytest assertion
+    assert kwargs["time"] == pytest.approx(90 / 3600)  # nosec B101 - pytest assertion
+
+
+def test_worker_extra_args_cannot_override_managed_execution_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Worker must enforce run/dataset/device choices even for modified params.json."""
+    run_dir = _managed_run_dir(tmp_path, monkeypatch, "run_protected")
+    _write_params(
+        run_dir,
+        options={"project": "/unexpected"},
+        extra_args={"data": "/unexpected", "name": "outside", "device": "cuda:99", "epochs": 999},
+    )
+    fake_model = MagicMock()
+    with patch("fovux.core.train_worker.load_yolo_model", return_value=fake_model):
+        run(run_dir)
+
+    kwargs = fake_model.train.call_args.kwargs
+    assert kwargs["data"] == str(run_dir / "dataset")  # nosec B101 - pytest assertion
+    assert kwargs["project"] == str(run_dir)  # nosec B101 - pytest assertion
+    assert kwargs["name"] == "weights"  # nosec B101 - pytest assertion
+    assert kwargs["device"] == "cpu"  # nosec B101 - pytest assertion
+    assert kwargs["epochs"] == 2  # nosec B101 - pytest assertion
+
+
 def test_run_uses_resume_checkpoint_with_user_dataset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
