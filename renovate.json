@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>oaslananka/.github:renovate-config"],
+  "extends": ["config:recommended"],
   "enabledManagers": [
     "pep621",
     "npm",
@@ -18,7 +18,7 @@
   "dependencyDashboardTitle": "Dependency Dashboard",
   "dependencyDashboardLabels": ["dependencies", "goal:supply-chain"],
   "prBodyNotes": [
-    "Fovux-specific dependency policy is defined in `renovate.json` and extends the shared `oaslananka/.github` baseline.",
+    "Fovux-specific dependency policy is defined in `renovate.json` and extends Renovate's `config:recommended` preset.",
     "Protected runtime, protocol, computer-vision, and security-tooling groups never automerge.",
     "GitHub Dependabot owns security-update pull requests during the initial hosted-App rollout; Renovate vulnerability alert sources are disabled to prevent duplicate remediation PRs."
   ],
