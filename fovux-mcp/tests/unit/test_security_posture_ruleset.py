@@ -15,7 +15,6 @@ EXPECTED_CHECKS = {
     "security-required",
     "dependency-review",
     "codeql-required",
-    "elevated-review-required",
 }
 
 
@@ -51,6 +50,12 @@ def test_tracked_main_ruleset_is_the_solo_maintainer_contract() -> None:
     assert isinstance(parameters, dict)
     assert parameters["strict_required_status_checks_policy"] is True
     assert {check["context"] for check in parameters["required_status_checks"]} == EXPECTED_CHECKS
+
+    pull_request_rule = next((rule for rule in rules if rule["type"] == "pull_request"), None)
+    assert pull_request_rule is not None, "Required pull_request rule is missing"
+    assert (
+        pull_request_rule["parameters"]["require_extra_approval_for_unattributed_changes"] is True
+    )
 
 
 def test_ruleset_comparison_ignores_api_metadata_and_order() -> None:
