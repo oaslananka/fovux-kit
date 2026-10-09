@@ -141,9 +141,11 @@ class RunRegistry:
         run_id: str,
         status: RunStatus,
         pid: int | None = None,
+        *,
+        expected_from: frozenset[str] | None = None,
     ) -> None:
         """Update run status and optional process ID."""
-        self._runs.update_status(run_id, status, pid)
+        self._runs.update_status(run_id, status, pid, expected_from=expected_from)
 
     def list_runs(
         self,
