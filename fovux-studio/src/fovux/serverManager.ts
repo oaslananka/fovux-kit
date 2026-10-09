@@ -104,7 +104,15 @@ async function startServerProcess(): Promise<void> {
     }
   });
 
-  await waitForServerHealthy(() => spawnError);
+  try {
+    await waitForServerHealthy(() => spawnError);
+  } catch (error) {
+    if (managedProcess === proc) {
+      managedProcess = null;
+      killProcessTree(proc);
+    }
+    throw error;
+  }
   void vscode.window.showInformationMessage("Fovux server started.");
 }
 

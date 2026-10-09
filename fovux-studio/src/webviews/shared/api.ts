@@ -157,7 +157,6 @@ async function streamEvents(
       );
       await sleep(delayMs, signal);
     }
-    attempt = 0;
   }
 }
 

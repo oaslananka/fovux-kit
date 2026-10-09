@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -28,6 +29,32 @@ describe("startFovuxServer", () => {
     await expect(startFovuxServer()).rejects.toThrow(/untrusted workspace/i);
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  it("stops a spawned server when readiness times out", async () => {
+    vi.useFakeTimers();
+    const proc = Object.assign(new EventEmitter(), {
+      pid: 123456,
+      stdout: new EventEmitter(),
+      stderr: new EventEmitter(),
+      kill: vi.fn(),
+    });
+    const spawn = vi.fn(() => proc);
+    vi.doMock("node:child_process", () => ({ spawn, execFile: vi.fn() }));
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    try {
+      const { startFovuxServer } = await import("../../src/fovux/serverManager");
+      const starting = startFovuxServer();
+      const failure = expect(starting).rejects.toThrow(/did not become healthy/i);
+      await vi.advanceTimersByTimeAsync(15_100);
+      await failure;
+      expect(spawn).toHaveBeenCalledOnce();
+      expect(proc.kill).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+      vi.doUnmock("node:child_process");
+      vi.unstubAllGlobals();
+    }
   });
 
   it("shows an information message when the server is already running", async () => {

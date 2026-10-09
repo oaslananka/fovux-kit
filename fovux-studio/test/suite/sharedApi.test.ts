@@ -108,6 +108,32 @@ describe("shared webview api", () => {
     vi.unstubAllGlobals();
   });
 
+  it("backs off exponentially after repeated SSE reconnect failures", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockRejectedValue(new Error("offline"));
+    vi.stubGlobal("fetch", fetchMock);
+    const errors: string[] = [];
+    const unsubscribe = subscribeToMetrics(
+      config,
+      "run1",
+      () => {},
+      (error) => errors.push(error)
+    );
+    try {
+      await vi.advanceTimersByTimeAsync(3_100);
+      expect(errors).toEqual([
+        expect.stringContaining("Reconnecting in 1000ms"),
+        expect.stringContaining("Reconnecting in 2000ms"),
+        expect.stringContaining("Reconnecting in 4000ms"),
+      ]);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      unsubscribe();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("falls back to polling when both SSE endpoints are unavailable", async () => {
     const received: unknown[] = [];
     const errors: string[] = [];
