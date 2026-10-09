@@ -131,7 +131,10 @@ async function streamEvents(
   let attempt = 0;
   while (!signal.aborted) {
     try {
-      const completed = await connectAndStream(config, runId, signal, onMetric);
+      const completed = await connectAndStream(config, runId, signal, (payload) => {
+        attempt = 0;
+        onMetric(payload);
+      });
       if (completed) {
         onDone?.();
         break;
@@ -157,7 +160,6 @@ async function streamEvents(
       );
       await sleep(delayMs, signal);
     }
-    attempt = 0;
   }
 }
 
