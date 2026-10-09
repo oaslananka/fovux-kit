@@ -25,7 +25,7 @@ import {
   type UserPreset,
 } from "../shared/types";
 
-function TrainingLauncherApp(): JSX.Element {
+export function TrainingLauncherApp(): JSX.Element {
   const [pendingChallenge, setPendingChallenge] = useState<{
     challenge: ChallengeResponse;
     resolve: (val: string) => void;
