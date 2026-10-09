@@ -206,6 +206,7 @@ def test_train_start_uses_explicit_options_and_cpu_policy(fake_fovux_home) -> No
         {"max_disk_usage_gb": 1.0},
         {"device_policy": "gpu_only", "device": "auto"},
         {"options": {"distillation_alpha": 0.5}},
+        {"extra_args": {"distillation_alpha": 0.5}},
     ],
 )
 def test_train_start_rejects_unenforceable_guards(fake_fovux_home, overrides) -> None:
