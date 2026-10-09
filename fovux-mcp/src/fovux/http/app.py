@@ -164,7 +164,8 @@ def _resolve_request_scopes(request: Request) -> tuple[set[Scope] | None, JSONRe
     if raw_token == request.app.state.auth_token:
         return ALL_SCOPES, None
     if is_known_session_token(raw_token):
-        return resolve_session_scopes(raw_token), None
+        scopes = resolve_session_scopes(raw_token)
+        return (scopes, None) if scopes else (None, _unauthorized_response())
     return None, _unauthorized_response()
 
 

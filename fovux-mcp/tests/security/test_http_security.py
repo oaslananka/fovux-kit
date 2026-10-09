@@ -270,6 +270,19 @@ def test_session_token_accepted_in_middleware() -> None:
 
 
 @pytest.mark.security
+def test_session_token_with_no_valid_scopes_rejected() -> None:
+    """Malformed or empty session scope metadata must not authenticate requests."""
+    with (
+        patch("fovux.http.app.is_known_session_token", return_value=True),
+        patch("fovux.http.app.resolve_session_scopes", return_value=set()),
+        TestClient(create_app()) as client,
+    ):
+        client.app.state.nonlocal_bind_allowed = True
+        response = client.get("/runs", headers={"Authorization": "Bearer empty-scope-session"})
+    assert response.status_code == 401
+
+
+@pytest.mark.security
 def test_session_token_lacking_scope_rejected() -> None:
     """A session token without the required scope (RUN_START) should get 403."""
     with (
