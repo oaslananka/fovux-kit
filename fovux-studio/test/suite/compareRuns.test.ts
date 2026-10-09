@@ -42,7 +42,6 @@ describe("compare-runs model", () => {
     ]);
   });
 
-
   it("sorts numeric metrics ascending", () => {
     expect(sortComparedRuns(RUNS, "epochs", "asc").map((run) => run.run_id)).toEqual([
       "fast",

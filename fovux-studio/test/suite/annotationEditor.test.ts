@@ -111,7 +111,6 @@ describe("annotation editor reducer", () => {
     expect(state.status).toBe("Reset status");
   });
 
-
   it("handles no-op editor actions without creating history", () => {
     const state = createAnnotationEditorState([]);
 

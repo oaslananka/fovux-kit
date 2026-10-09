@@ -51,9 +51,7 @@ describe("export wizard targets", () => {
   });
 
   it("extracts the exported artifact path from supported tool responses", () => {
-    expect(extractArtifactPath({ output_path: "/exports/model.onnx" })).toBe(
-      "/exports/model.onnx"
-    );
+    expect(extractArtifactPath({ output_path: "/exports/model.onnx" })).toBe("/exports/model.onnx");
     expect(extractArtifactPath({ quantized_path: "/exports/model-int8.onnx" })).toBe(
       "/exports/model-int8.onnx"
     );
@@ -126,5 +124,4 @@ describe("export wizard targets", () => {
     expect(targetGroupLabel("mobile")).toBe("Mobile Targets");
     expect(targetGroupLabel("custom")).toBe("custom");
   });
-
 });
