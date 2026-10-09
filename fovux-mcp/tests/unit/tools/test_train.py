@@ -995,6 +995,26 @@ def test_train_start_atomic_concurrency_lock(fake_fovux_home, tmp_path):
         _run_train_start(TrainStartInput(dataset_path=dataset, name="run_2", max_concurrent_runs=1))
 
 
+def test_resume_corrupt_params_ends_claim_without_spawning(fake_fovux_home) -> None:
+    """A claimed run must be marked failed if its resume inputs cannot be prepared."""
+    with patch("fovux.tools.train_start.subprocess.Popen", return_value=_fake_popen(pid=11111)):
+        started = _run_train_start(TrainStartInput(dataset_path=FIXTURES / "mini_yolo"))
+    registry = get_registry(FovuxPaths(fake_fovux_home).runs_db)
+    registry.update_status(started.run_id, "failed")
+    (started.run_path / "params.json").write_text("not-json", encoding="utf-8")
+    previous_pid = (started.run_path / "pid.txt").read_bytes()
+
+    with (
+        patch("fovux.tools.train_resume.subprocess.Popen") as spawn,
+        pytest.raises(json.JSONDecodeError),
+    ):
+        _run_train_resume(TrainResumeInput(run_id=started.run_id))
+
+    spawn.assert_not_called()
+    assert registry.get_run(started.run_id).status == "failed"  # nosec B101 - pytest assertion
+    assert (started.run_path / "pid.txt").read_bytes() == previous_pid  # nosec B101 - pytest assertion
+
+
 def test_resume_refuses_active_worker_without_mutating_run(fake_fovux_home) -> None:
     """A running run must keep its original process identity and parameters."""
     with patch("fovux.tools.train_start.subprocess.Popen", return_value=_fake_popen(pid=11111)):

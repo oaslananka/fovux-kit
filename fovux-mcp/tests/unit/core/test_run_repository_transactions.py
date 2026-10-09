@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy.orm import Session
 
+from fovux.core.errors import FovuxTrainingRunNotFoundError
 from fovux.core.run_registry.catalog_repository import CatalogRepository
 from fovux.core.run_registry.database import RegistryDatabase
 from fovux.core.run_registry.events import EventStore
@@ -159,5 +160,19 @@ def test_update_extra_handles_missing_and_legacy_non_mapping_values(tmp_path: Pa
         updated = repository.get_run("legacy-extra")
         assert updated is not None
         assert json.loads(str(updated.extra_json)) == {"new": True}
+    finally:
+        database.close()
+
+
+def test_resume_claim_for_missing_run_fails_closed(tmp_path: Path) -> None:
+    """An expected-state transition cannot create or silently ignore a missing run."""
+    database = RegistryDatabase(tmp_path / "runs.db")
+    repository, _ = _repository(database)
+    try:
+        with pytest.raises(FovuxTrainingRunNotFoundError, match="missing"):
+            repository.update_status(
+                "missing", "running", expected_from=frozenset({"stopped", "failed"})
+            )
+        assert repository.list_runs() == []  # nosec B101 - pytest assertion
     finally:
         database.close()
