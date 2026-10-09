@@ -104,8 +104,8 @@ def test_resolve_session_scopes_rejects_unknown_tokens(tmp_path: Path) -> None:
 def test_empty_session_scopes_grant_no_privileges(tmp_path: Path) -> None:
     """An explicitly empty scope list cannot silently become admin access."""
     token = create_session_token(scopes=set(), home=tmp_path)
-    assert is_known_session_token(token, home=tmp_path)
-    assert resolve_session_scopes(token, home=tmp_path) == set()
+    assert is_known_session_token(token, home=tmp_path)  # nosec B101 - pytest assertions are required
+    assert resolve_session_scopes(token, home=tmp_path) == set()  # nosec B101 - pytest assertions are required
 
 
 def test_revoke_session_token_removes_it(tmp_path: Path) -> None:
@@ -205,7 +205,7 @@ def test_resolve_session_scopes_rejects_non_list_scope_metadata(tmp_path: Path) 
     sessions[fingerprint]["scopes"] = "read"
     auth_session_path(tmp_path).write_text(json.dumps(sessions), encoding="utf-8")
 
-    assert resolve_session_scopes(raw, home=tmp_path) == set()
+    assert resolve_session_scopes(raw, home=tmp_path) == set()  # nosec B101 - pytest assertions are required
 
 
 def test_resolve_session_scopes_skips_invalid_entries(tmp_path: Path) -> None:
