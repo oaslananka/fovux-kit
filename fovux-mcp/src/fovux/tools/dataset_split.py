@@ -189,8 +189,10 @@ def _write_yolo_split(output_path: Path, split: str, pairs: list[tuple[Path, Pat
     used_stems: set[str] = set()
     for index, (img_p, lbl_p) in enumerate(pairs):
         stem = img_p.stem
-        if stem in used_stems:
-            stem = f"{img_p.parent.name}_{index}_{stem}"
+        suffix = 0
+        while stem in used_stems:
+            suffix += 1
+            stem = f"{img_p.stem}_{index}_{suffix}"
         used_stems.add(stem)
         if img_p.exists():
             shutil.copy(img_p, output_path / "images" / split / f"{stem}{img_p.suffix}")
