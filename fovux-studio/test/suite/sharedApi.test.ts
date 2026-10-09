@@ -108,6 +108,69 @@ describe("shared webview api", () => {
     vi.unstubAllGlobals();
   });
 
+  it("backs off exponentially after repeated SSE reconnect failures", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockRejectedValue(new Error("offline"));
+    vi.stubGlobal("fetch", fetchMock);
+    const errors: string[] = [];
+    const unsubscribe = subscribeToMetrics(
+      config,
+      "run1",
+      () => {},
+      (error) => errors.push(error)
+    );
+    try {
+      await vi.advanceTimersByTimeAsync(3_100);
+      expect(errors).toEqual([
+        expect.stringContaining("Reconnecting in 1000ms"),
+        expect.stringContaining("Reconnecting in 2000ms"),
+        expect.stringContaining("Reconnecting in 4000ms"),
+      ]);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      unsubscribe();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("resets SSE backoff when a valid metric arrives after reconnect", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls += 1;
+        if (calls === 2) {
+          return {
+            ok: true,
+            body: streamFrom([
+              'event: metric\ndata: {"runId":"run1","epoch":1,"metrics":{"mAP":0.7}}\n\n',
+            ]),
+          };
+        }
+        throw new Error("offline");
+      })
+    );
+    const errors: string[] = [];
+    const unsubscribe = subscribeToMetrics(
+      config,
+      "run1",
+      () => {},
+      (error) => errors.push(error)
+    );
+    try {
+      await vi.advanceTimersByTimeAsync(2_100);
+      expect(errors[0]).toContain("Reconnecting in 1000ms");
+      expect(errors[1]).toContain("Reconnecting in 1000ms");
+      expect(errors[2]).toContain("Reconnecting in 2000ms");
+    } finally {
+      unsubscribe();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("falls back to polling when both SSE endpoints are unavailable", async () => {
     const received: unknown[] = [];
     const errors: string[] = [];
