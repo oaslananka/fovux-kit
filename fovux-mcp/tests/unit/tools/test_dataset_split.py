@@ -125,8 +125,8 @@ def test_split_rejects_output_overlapping_source_dataset(
                 overwrite=True,
             )
         )
-    assert sentinel.read_bytes() == original
-    assert (source / "data.yaml").exists()
+    assert sentinel.read_bytes() == original  # nosec B101 - pytest assertion
+    assert (source / "data.yaml").exists()  # nosec B101 - pytest assertion
 
 
 def test_split_preserves_duplicate_basenames_across_original_splits(tmp_path: Path) -> None:
@@ -141,6 +141,6 @@ def test_split_preserves_duplicate_basenames_across_original_splits(tmp_path: Pa
     )
     image_files = list((output.output_path / "images" / "train").iterdir())
     label_files = list((output.output_path / "labels" / "train").iterdir())
-    assert len(image_files) == output.train_count
-    assert len(label_files) == output.train_count
-    assert {p.stem for p in image_files} == {p.stem for p in label_files}
+    assert len(image_files) == output.train_count  # nosec B101 - pytest assertion
+    assert len(label_files) == output.train_count  # nosec B101 - pytest assertion
+    assert {p.stem for p in image_files} == {p.stem for p in label_files}  # nosec B101 - pytest assertion
