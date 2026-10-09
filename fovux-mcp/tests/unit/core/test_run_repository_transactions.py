@@ -192,7 +192,7 @@ def test_atomic_reservation_rejects_parallel_second_slot(tmp_path: Path) -> None
     try:
         with ThreadPoolExecutor(max_workers=2) as pool:
             outcomes = list(pool.map(reserve, (1, 2)))
-        assert sorted(outcomes) == ["rejected", "reserved"]
-        assert len(repository.list_runs()) == 1
+        assert sorted(outcomes) == ["rejected", "reserved"]  # nosec B101 - pytest assertion
+        assert len(repository.list_runs()) == 1  # nosec B101 - pytest assertion
     finally:
         database.close()
