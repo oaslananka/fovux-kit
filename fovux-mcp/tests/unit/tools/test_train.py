@@ -13,6 +13,7 @@ import pytest
 from fovux.core.errors import (
     FovuxDatasetNotFoundError,
     FovuxTrainingAlreadyRunningError,
+    FovuxTrainingError,
     FovuxTrainingRunNotFoundError,
     FovuxTrainingSubprocessError,
 )
@@ -179,6 +180,41 @@ def test_train_start_force_overwrites_finished_run(fake_fovux_home):
     assert forced.run_id == "retryable"
     assert forced.pid == 101
     assert not (forced.run_path / "metrics.jsonl").exists()
+
+
+def test_train_start_uses_explicit_options_and_cpu_policy(fake_fovux_home) -> None:
+    """Train start must persist reviewed options rather than discard them."""
+    inp = TrainStartInput(
+        dataset_path=FIXTURES / "mini_yolo",
+        options={"optimizer": "AdamW", "lr0": 0.0004},
+        device_policy="cpu_only",
+        device="auto",
+        max_runtime_seconds=90,
+    )
+    with patch("fovux.tools.train_start.subprocess.Popen", return_value=_fake_popen()):
+        result = _run_train_start(inp)
+    params = json.loads((result.run_path / "params.json").read_text())
+    assert params["options"]["optimizer"] == "AdamW"  # nosec B101 - pytest assertion
+    assert params["options"]["lr0"] == 0.0004  # nosec B101 - pytest assertion
+    assert params["device"] == "cpu"  # nosec B101 - pytest assertion
+    assert params["max_runtime_seconds"] == 90  # nosec B101 - pytest assertion
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"max_disk_usage_gb": 1.0},
+        {"device_policy": "gpu_only", "device": "auto"},
+        {"options": {"distillation_alpha": 0.5}},
+        {"extra_args": {"distillation_alpha": 0.5}},
+    ],
+)
+def test_train_start_rejects_unenforceable_guards(fake_fovux_home, overrides) -> None:
+    """Never accept security/resource options that the worker will ignore."""
+    with patch("fovux.tools.train_start.subprocess.Popen") as spawn:
+        with pytest.raises(FovuxTrainingError):
+            _run_train_start(TrainStartInput(dataset_path=FIXTURES / "mini_yolo", **overrides))
+    spawn.assert_not_called()
 
 
 def test_train_start_enforces_max_concurrent_runs(fake_fovux_home):

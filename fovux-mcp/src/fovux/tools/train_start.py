@@ -15,6 +15,7 @@ from fovux.core.dataset_config import validate_yolo_data_yaml
 from fovux.core.errors import (
     FovuxDatasetNotFoundError,
     FovuxTrainingAlreadyRunningError,
+    FovuxTrainingError,
     FovuxTrainingSubprocessError,
 )
 from fovux.core.json_io import write_json_atomically
@@ -90,6 +91,18 @@ def train_start(
 
 
 def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
+    if inp.max_disk_usage_gb is not None:
+        raise FovuxTrainingError(
+            "max_disk_usage_gb cannot currently be enforced during training; "
+            "remove this limit instead of relying on an ignored safeguard."
+        )
+    if inp.device_policy == "gpu_only" and inp.device == "auto":
+        raise FovuxTrainingError("gpu_only requires an explicit CUDA device, not auto.")
+    if any(
+        key in inp.options.model_fields_set
+        for key in ("teacher_checkpoint", "distillation_temperature", "distillation_alpha")
+    ):
+        raise FovuxTrainingError("Distillation options require the distill_model tool.")
     dataset_path = inp.dataset_path.expanduser().resolve()
     if not dataset_path.exists():
         raise FovuxDatasetNotFoundError(str(dataset_path))
@@ -126,8 +139,10 @@ def _run_train_start(inp: TrainStartInput) -> TrainStartOutput:
         "epochs": inp.epochs,
         "batch": inp.batch,
         "imgsz": inp.imgsz,
-        "device": inp.device,
+        "device": "cpu" if inp.device_policy == "cpu_only" else inp.device,
         "task": inp.task,
+        "options": inp.options.model_dump(exclude_unset=True),
+        "max_runtime_seconds": inp.max_runtime_seconds,
         "extra_args": inp.extra_args,
     }
     write_json_atomically(run_dir / "params.json", params)
