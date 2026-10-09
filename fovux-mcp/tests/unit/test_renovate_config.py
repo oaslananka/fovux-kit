@@ -45,7 +45,7 @@ def test_repository_renovate_policy_has_expected_contract() -> None:
     module = _load_module()
     config = _load_config()
 
-    assert "github>oaslananka/.github:renovate-config" in config["extends"]
+    assert "config:recommended" in config["extends"]
     assert set(config["enabledManagers"]) == EXPECTED_MANAGERS
     assert config["timezone"] == "Europe/Istanbul"
     assert config["prHourlyLimit"] == 2
@@ -57,7 +57,7 @@ def test_repository_renovate_policy_has_expected_contract() -> None:
     labels = module.collect_configured_labels(config)
     catalog = module.load_label_names(REPO_ROOT / ".github" / "labels.yml")
     assert labels <= catalog
-    assert module.SHARED_PRESET_LABELS <= catalog
+    assert module.REQUIRED_POLICY_LABELS <= catalog
 
     for package in PROTECTED_PACKAGES:
         assert module.package_is_non_automerge(config, package), package
@@ -99,7 +99,7 @@ def test_validator_rejects_duplicate_security_pr_ownership(tmp_path: Path) -> No
     assert any("Dependabot" in error for error in errors)
 
 
-def test_validator_rejects_missing_shared_preset_label(tmp_path: Path) -> None:
+def test_validator_rejects_missing_required_policy_label(tmp_path: Path) -> None:
     module = _load_module()
     config = copy.deepcopy(_load_config())
     _write_fixture_repo(tmp_path, config)
