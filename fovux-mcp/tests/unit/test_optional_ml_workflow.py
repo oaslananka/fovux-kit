@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import tomllib
 from pathlib import Path
 
@@ -21,13 +22,39 @@ def test_yolo_extra_declares_validated_torch_stack() -> None:
     assert config["tool"]["uv"]["index"][0]["name"] == "pytorch-cpu"
 
 
-def test_lock_uses_torch_213_setuptools_83_and_no_cuda_runtime() -> None:
+def _assert_supported_setuptools_lock(lock: str) -> None:
+    """Keep the 83.0.0 compatibility floor without pinning a transitive lock entry."""
+    packages = tomllib.loads(lock)["package"]
+    versions = [p["version"] for p in packages if p["name"] == "setuptools"]
+    assert len(versions) == 1, "Expected one resolved setuptools package"
+    version = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", versions[0])
+    assert version is not None, "Expected a stable setuptools release"
+    assert tuple(map(int, version.groups())) >= (83, 0, 0)
+
+
+def test_lock_uses_torch_213_supported_setuptools_and_no_cuda_runtime() -> None:
     lock = LOCKFILE.read_text(encoding="utf-8")
     assert 'name = "torch"\nversion = "2.13.0+cpu"' in lock
     assert 'name = "torchvision"\nversion = "0.28.0+cpu"' in lock
-    assert 'name = "setuptools"\nversion = "83.0.0"' in lock
+    _assert_supported_setuptools_lock(lock)
     assert 'name = "triton"' not in lock
     assert 'name = "nvidia-cuda-runtime' not in lock
+
+
+def test_setuptools_lock_contract_rejects_missing_or_unsupported_versions() -> None:
+    for version in ("82.0.1", "84.0.0rc1"):
+        try:
+            _assert_supported_setuptools_lock(
+                f'[[package]]\nname = "setuptools"\nversion = "{version}"\n'
+            )
+        except AssertionError:
+            continue
+        raise AssertionError(f"setuptools {version} should not pass the compatibility gate")
+
+    for version in ("83.0.0", "84.2.1"):
+        _assert_supported_setuptools_lock(
+            f'[[package]]\nname = "setuptools"\nversion = "{version}"\n'
+        )
 
 
 def test_temporary_osv_exceptions_are_removed() -> None:
