@@ -106,9 +106,22 @@ def test_security_workflow_routes_pr_diff_and_full_osv_scans() -> None:
     assert "merge_group:" in workflow
     assert "osv-pr-scan:" in workflow
     assert "osv-full-scan:" in workflow
+    # PRs/merge-groups must check the entire candidate lockfile tree, not
+    # inherit failure from the vulnerable pre-fix base commit.
     assert (
-        "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@" + OSV_ACTION_SHA
-    ) in workflow
+        "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@" not in workflow
+    )
+    pr_job = workflow.split("  osv-pr-scan:", 1)[1].split("  osv-full-scan:", 1)[0]
+    assert (
+        "google/osv-scanner-action/osv-scanner-action@8dc09193bb540e09b23da07ad7e30bd33bf87018"
+    ) in pr_job
+    assert "--format=sarif" in pr_job
+    assert "if: always()" in pr_job
+    assert "sarif_file: results.sarif" in pr_job
+    assert "continue-on-error" not in pr_job
+    assert "fail-on-vuln: false" not in pr_job
+    for lockfile in LOCKFILES:
+        assert f"--lockfile={lockfile}" in pr_job
     assert (
         "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@" + OSV_ACTION_SHA
     ) in workflow

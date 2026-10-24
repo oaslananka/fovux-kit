@@ -216,16 +216,32 @@ jobs:
           github.event.pull_request.draft == false
         )
       )
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@9a498708959aeaef5ef730655706c5a1df1edbc2
-    with:
-      scan-args: |-
-        --lockfile=fovux-mcp/uv.lock
-        --lockfile=fovux-studio/pnpm-lock.yaml
-        --lockfile=fovux-mcp-npm/package-lock.json
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     permissions:
-      actions: read
       contents: read
       security-events: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      # The upstream reusable PR workflow can conclude FAILURE when its
+      # pre-fix BASE scan exits 1, even when the patched HEAD and diff are
+      # clean. Scan the entire candidate tree instead: this is STRICTER
+      # than the diff scan and fails on any remaining vulnerability.
+      - name: Strict OSV scan of all candidate lockfiles
+        uses: google/osv-scanner-action/osv-scanner-action@8dc09193bb540e09b23da07ad7e30bd33bf87018
+        with:
+          scan-args: |-
+            --format=sarif
+            --output=results.sarif
+            --lockfile=fovux-mcp/uv.lock
+            --lockfile=fovux-studio/pnpm-lock.yaml
+            --lockfile=fovux-mcp-npm/package-lock.json
+      - name: Upload OSV results to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e
+        with:
+          sarif_file: results.sarif
+          category: osv-pr-head
 
   osv-full-scan:
     name: OSV full dependency scan
