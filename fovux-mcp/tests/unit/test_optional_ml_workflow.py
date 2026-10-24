@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import tomllib
 from pathlib import Path
 
@@ -21,13 +22,38 @@ def test_yolo_extra_declares_validated_torch_stack() -> None:
     assert config["tool"]["uv"]["index"][0]["name"] == "pytorch-cpu"
 
 
-def test_lock_uses_torch_213_setuptools_83_and_no_cuda_runtime() -> None:
+def _assert_patched_setuptools(lock_text: str) -> None:
+    """Require one stable, security-patched setuptools, independent of lock maintenance."""
+    versions = [
+        pkg["version"] for pkg in tomllib.loads(lock_text)["package"] if pkg["name"] == "setuptools"
+    ]
+    if len(versions) != 1:
+        raise AssertionError("Expected exactly one setuptools distribution")
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", versions[0])
+    if match is None:
+        raise AssertionError("Setuptools must be a stable release")
+    if tuple(map(int, match.groups())) < (84, 1, 0):
+        raise AssertionError("Setuptools must include the security fix (>=84.1.0)")
+
+
+def test_lock_uses_torch_213_patched_setuptools_and_no_cuda_runtime() -> None:
     lock = LOCKFILE.read_text(encoding="utf-8")
     assert 'name = "torch"\nversion = "2.13.0+cpu"' in lock
     assert 'name = "torchvision"\nversion = "0.28.0+cpu"' in lock
-    assert 'name = "setuptools"\nversion = "83.0.0"' in lock
+    _assert_patched_setuptools(lock)
     assert 'name = "triton"' not in lock
     assert 'name = "nvidia-cuda-runtime' not in lock
+
+
+def test_patched_setuptools_contract_rejects_old_or_prerelease_versions() -> None:
+    for version in ("83.0.0", "84.0.99", "84.1.0rc1", "84.1.0.dev2"):
+        try:
+            _assert_patched_setuptools(f'[[package]]\nname = "setuptools"\nversion = "{version}"\n')
+        except AssertionError:
+            continue
+        raise AssertionError(f"Unpatched/unstable setuptools {version} was accepted")
+    for version in ("84.1.0", "84.2.1"):
+        _assert_patched_setuptools(f'[[package]]\nname = "setuptools"\nversion = "{version}"\n')
 
 
 def test_temporary_osv_exceptions_are_removed() -> None:

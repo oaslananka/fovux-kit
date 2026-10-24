@@ -106,9 +106,27 @@ def test_security_workflow_routes_pr_diff_and_full_osv_scans() -> None:
     assert "merge_group:" in workflow
     assert "osv-pr-scan:" in workflow
     assert "osv-full-scan:" in workflow
-    assert (
-        "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@" + OSV_ACTION_SHA
-    ) in workflow
+    # Scan the entire candidate lock tree, never inherit an old-base failure.
+    if "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@" in workflow:
+        raise AssertionError("Vulnerable-base diff workflow must not be used")
+    pr_job = workflow.split("  osv-pr-scan:", 1)[1].split("  osv-full-scan:", 1)[0]
+    required = (
+        (
+            "Pinned scanner",
+            "google/osv-scanner-action/osv-scanner-action@8dc09193bb540e09b23da07ad7e30bd33bf87018",
+        ),
+        ("SARIF scanner output", "--format=sarif"),
+        ("SARIF upload on all outcomes", "if: always()"),
+        ("Code Scanning upload", "sarif_file: results.sarif"),
+    )
+    for label, needle in required:
+        if needle not in pr_job:
+            raise AssertionError(f"Missing strict OSV requirement: {label}")
+    if "continue-on-error" in pr_job or "fail-on-vuln: false" in pr_job:
+        raise AssertionError("OSV vulnerability checks must fail closed")
+    for lockfile in LOCKFILES:
+        if f"--lockfile={lockfile}" not in pr_job:
+            raise AssertionError(f"Lockfile omitted from strict OSV scan: {lockfile}")
     assert (
         "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@" + OSV_ACTION_SHA
     ) in workflow
