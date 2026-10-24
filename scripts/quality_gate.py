@@ -352,6 +352,7 @@ def mcp_audit() -> None:
         [
             "uv",
             "export",
+            "--frozen",
             "--no-dev",
             "--no-editable",
             "--no-emit-project",
@@ -361,7 +362,20 @@ def mcp_audit() -> None:
         ],
         cwd=MCP_DIR,
     )
-    _run(["uvx", "pip-audit", "-r", "requirements-audit.txt"], cwd=MCP_DIR)
+    _run(
+        [
+            "uv",
+            "run",
+            "--frozen",
+            "--no-build",
+            "--no-sync",
+            "pip-audit",
+            "--requirement",
+            "requirements-audit.txt",
+            "--strict",
+        ],
+        cwd=MCP_DIR,
+    )
 
 
 def mcp_build() -> None:

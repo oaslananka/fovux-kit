@@ -114,7 +114,7 @@ tasks:
     desc: Audit exported backend runtime dependencies
     cmds:
       - cmd: cd fovux-mcp && uv export --frozen --no-dev --no-editable --no-emit-project --no-hashes --output-file requirements-audit.txt
-      - cmd: cd fovux-mcp && uv run --frozen pip-audit --requirement requirements-audit.txt --strict
+      - cmd: cd fovux-mcp && uv run --frozen --no-build --no-sync pip-audit --requirement requirements-audit.txt --strict
 
   security:pnpm-audit:
     desc: Audit Studio production dependencies
