@@ -27,10 +27,13 @@ def _assert_patched_setuptools(lock_text: str) -> None:
     versions = [
         pkg["version"] for pkg in tomllib.loads(lock_text)["package"] if pkg["name"] == "setuptools"
     ]
-    assert len(versions) == 1
+    if len(versions) != 1:
+        raise AssertionError("Expected exactly one setuptools distribution")
     match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", versions[0])
-    assert match is not None, "Setuptools must be a stable release"
-    assert tuple(map(int, match.groups())) >= (84, 1, 0)
+    if match is None:
+        raise AssertionError("Setuptools must be a stable release")
+    if tuple(map(int, match.groups())) < (84, 1, 0):
+        raise AssertionError("Setuptools must include the security fix (>=84.1.0)")
 
 
 def test_lock_uses_torch_213_patched_setuptools_and_no_cuda_runtime() -> None:

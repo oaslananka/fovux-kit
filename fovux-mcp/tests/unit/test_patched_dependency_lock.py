@@ -26,14 +26,20 @@ MIN_PATCHED = {
 }
 
 
+def _require(condition: bool, detail: object) -> None:
+    """Fail explicitly even under Python optimized execution (-O)."""
+    if not condition:
+        raise AssertionError(detail)
+
+
 def test_frozen_lock_contains_patched_stable_versions() -> None:
     packages = tomllib.loads(LOCK.read_text(encoding="utf-8"))["package"]
     for name, minimum in MIN_PATCHED.items():
         versions = [pkg["version"] for pkg in packages if pkg["name"] == name]
-        assert len(versions) == 1, name
+        _require(len(versions) == 1, name)
         match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", versions[0])
-        assert match is not None, (name, versions)
-        assert tuple(map(int, match.groups())) >= minimum, (name, versions[0], minimum)
+        _require(match is not None, (name, versions))
+        _require(tuple(map(int, match.groups())) >= minimum, (name, versions[0], minimum))
 
 
 def test_studio_manifest_and_lock_contain_patched_vitest_and_vite() -> None:
@@ -52,7 +58,7 @@ def test_studio_manifest_and_lock_contain_patched_vitest_and_vite() -> None:
         )
         version = str(definition[name]).lstrip("^~")
         match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", version)
-        assert match is not None and tuple(map(int, match.groups())) >= minimum
+        _require(match is not None and tuple(map(int, match.groups())) >= minimum, (name, version))
     resolved = lock["packages"]
     for name, minimum in (
         ("@vitest/mocker", (4, 1, 12)),
@@ -65,4 +71,6 @@ def test_studio_manifest_and_lock_contain_patched_vitest_and_vite() -> None:
             match = re.fullmatch(re.escape(name) + r"@(\d+)\.(\d+)\.(\d+)", key)
             if match is not None:
                 versions.append(tuple(map(int, match.groups())))
-        assert versions and all(version >= minimum for version in versions), (name, versions)
+        _require(
+            bool(versions) and all(version >= minimum for version in versions), (name, versions)
+        )
