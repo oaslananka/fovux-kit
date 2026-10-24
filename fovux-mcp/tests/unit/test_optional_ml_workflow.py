@@ -26,10 +26,13 @@ def _assert_supported_setuptools_lock(lock: str) -> None:
     """Keep the 83.0.0 compatibility floor without pinning a transitive lock entry."""
     packages = tomllib.loads(lock)["package"]
     versions = [p["version"] for p in packages if p["name"] == "setuptools"]
-    assert len(versions) == 1, "Expected one resolved setuptools package"
+    if len(versions) != 1:
+        raise AssertionError("Expected one resolved setuptools package")
     version = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", versions[0])
-    assert version is not None, "Expected a stable setuptools release"
-    assert tuple(map(int, version.groups())) >= (83, 0, 0)
+    if version is None:
+        raise AssertionError("Expected a stable setuptools release")
+    if tuple(map(int, version.groups())) < (83, 0, 0):
+        raise AssertionError("Expected setuptools >=83.0.0")
 
 
 def test_lock_uses_torch_213_supported_setuptools_and_no_cuda_runtime() -> None:
