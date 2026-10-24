@@ -61,9 +61,7 @@ class AuditEntryPointContractTests(unittest.TestCase):
 
     def test_taskfile_uses_identical_frozen_strict_audit_policy(self) -> None:
         taskfile = (Path(__file__).resolve().parents[3] / "Taskfile.yml").read_text()
-        task = taskfile.split("  security:pip-audit:", 1)[1].split(
-            "  security:pnpm-audit:", 1
-        )[0]
+        task = taskfile.split("  security:pip-audit:", 1)[1].split("  security:pnpm-audit:", 1)[0]
         self.assertIn(
             "uv export --frozen --no-dev --no-editable --no-emit-project",
             task,
